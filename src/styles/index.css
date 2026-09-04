@@ -1,0 +1,157 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-bebas: 'Bebas Neue', system-ui, sans-serif;
+}
+
+:root {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #0f172a;
+  background: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+@keyframes fadeInStep {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-step-fade {
+  animation: fadeInStep 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-search-panel {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.hero-search-field {
+  color: #0f172a;
+}
+
+.hero-field-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: #64748b;
+}
+
+.hero-field-value {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-date-input,
+.hero-time-input {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hero-date-input::-webkit-calendar-picker-indicator,
+.hero-time-input::-webkit-calendar-picker-indicator,
+.hero-date-input::-webkit-inner-spin-button,
+.hero-time-input::-webkit-inner-spin-button {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.font-bebas {
+  font-family: 'Bebas Neue', system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
