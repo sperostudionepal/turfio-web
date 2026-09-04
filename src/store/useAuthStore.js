@@ -110,6 +110,30 @@ export const useAuthStore = create((set) => ({
   },
 
   /**
+   * Owner self-registration (from "List Your Turf" when logged out).
+   * Persists the token so subsequent requests are authenticated, but does
+   * NOT set `user` — the caller submits the listing request first, then
+   * calls `initialize()` to hydrate and trigger the pending-page redirect.
+   */
+  registerOwner: async ({ name, email, password }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.registerOwner({ name, email, password });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+
+      set({ isLoading: false, error: null });
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
    * Google Login Action with ID token
    */
   googleLogin: async (idToken) => {
@@ -170,6 +194,22 @@ export const useAuthStore = create((set) => ({
       isAuthenticated: false,
       error: null,
     });
+  },
+
+  /**
+   * Permanently delete the current account (pending_owner only), then clear
+   * local auth state.
+   */
+  deleteAccount: async () => {
+    try {
+      await authService.deleteAccount();
+      localStorage.removeItem(TOKEN_KEY);
+      set({ user: null, token: null, isAuthenticated: false, error: null });
+      return { success: true };
+    } catch (err) {
+      set({ error: err.message });
+      return { success: false, error: err.message };
+    }
   },
 
   /**

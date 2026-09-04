@@ -15,6 +15,8 @@ import OnboardingPage from './pages/auth/OnboardingPage';
 import HeroSection from './components/HeroSection';
 import ListTurfPage from './pages/listTurf/ListTurfPage';
 import Dashboard from './pages/dashboard/Dashboard';
+import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
+import OwnerApplicationPendingPage from './pages/owner/OwnerApplicationPendingPage';
 import TurfListingPage from './pages/turfs/TurfListingPage';
 import BookingCheckoutPage from './pages/bookings/BookingCheckoutPage';
 import TurfDetailsPage from './pages/turfs/TurfDetailsPage';
@@ -26,6 +28,8 @@ function App() {
     login,
     signup,
     googleLogin,
+    registerOwner,
+    deleteAccount,
     updateProfile,
     logout,
     isInitializing,
@@ -425,8 +429,8 @@ function App() {
    * ---------------------------------------------------------
    */
   
-  // If user is a venue owner/admin or explicitly opened dashboard
-  if (user && (user.role === 'admin' || user.role === 'owner' || currentPage === 'dashboard')) {
+  // Platform staff — the super admin console (turf verification queue, etc.)
+  if (user && user.role === 'superadmin') {
     return (
       <>
         <div
@@ -434,12 +438,39 @@ function App() {
           className="fixed top-16 right-6 z-[9999]"
         />
 
-        <Dashboard
-          onLogout={handleLogout}
-          onSwitchToSuperadminView={
-            user.role === 'superadmin' ? () => setViewMode('superadmin') : null
-          }
+        <SuperadminDashboard onLogout={handleLogout} />
+      </>
+    );
+  }
+
+  // Prospective owner whose application is still under review — no access to
+  // anything except the status page. They can open the listing form to submit
+  // a fresh application (currentPage === 'listTurf').
+  if (user && user.role === 'pending_owner' && currentPage !== 'listTurf') {
+    return (
+      <OwnerApplicationPendingPage
+        user={user}
+        onLogout={handleLogout}
+        onNewRequest={() => setCurrentPage('listTurf')}
+        onDeleteAccount={async () => {
+          const result = await deleteAccount();
+          if (result.success) setCurrentPage('home');
+          return result;
+        }}
+      />
+    );
+  }
+
+  // Approved venue operator, or a user who explicitly opened the dashboard.
+  if (user && (user.role === 'owner' || currentPage === 'dashboard')) {
+    return (
+      <>
+        <div
+          id="gsi_prompt_container"
+          className="fixed top-16 right-6 z-[9999]"
         />
+
+        <Dashboard onLogout={handleLogout} />
 
         {showOnboardingModal && (
           <OnboardingPage
@@ -465,6 +496,8 @@ function App() {
         <ListTurfPage
           onLogin={() => setAuthMode('login')}
           user={user}
+          onRegisterOwner={registerOwner}
+          onAuthReady={initialize}
           onLogout={handleLogout}
           onHome={() => setCurrentPage('home')}
           onFindTurfs={() => setCurrentPage('turfListing')}

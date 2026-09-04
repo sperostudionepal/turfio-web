@@ -1,554 +1,413 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   Search,
   CheckCircle2,
   Clock,
   Eye,
-  Percent,
   Phone,
   Mail,
   FileText,
   X,
   Ban,
-  Download,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
+import ownerRequestService from '../../../services/ownerRequestService';
+import { useToast } from '../../../components/common/Toast';
+
+const STATUS_TABS = [
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+  { key: 'needs_changes', label: 'Needs changes' },
+  { key: 'all', label: 'All' },
+];
+
+const DOC_KIND_LABEL = {
+  registration: 'Company/Firm Registration',
+  pan: 'PAN / VAT Certificate',
+  lease: 'Lease / Ownership Deed',
+  citizenship: 'Citizenship',
+  other: 'Supporting Document',
+};
+
+function formatDate(value) {
+  if (!value) return '—';
+  try {
+    return new Date(value).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    pending: { cls: 'bg-amber-50 text-amber-700 border-amber-200/60', Icon: Clock, text: 'Pending review' },
+    needs_changes: { cls: 'bg-amber-50 text-amber-700 border-amber-200/60', Icon: Clock, text: 'Needs changes' },
+    approved: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200/60', Icon: CheckCircle2, text: 'Approved' },
+    rejected: { cls: 'bg-rose-50 text-rose-700 border-rose-200/60', Icon: Ban, text: 'Rejected' },
+    withdrawn: { cls: 'bg-slate-50 text-slate-600 border-slate-200/60', Icon: Ban, text: 'Withdrawn' },
+  };
+  const { cls, Icon, text } = map[status] || map.pending;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black border ${cls}`}>
+      <Icon size={12} /> {text}
+    </span>
+  );
+}
 
 function SuperadminVenuesPage() {
+  const { showToast } = useToast();
+
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [selectedArena, setSelectedArena] = useState(null);
-  const [isCommissionModalOpen, setIsCommissionModalOpen] = useState(false);
-  const [customCommissionRate, setCustomCommissionRate] = useState(8);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  // Robust mock multi-venue partner database
-  const [arenas, setArenas] = useState([
-    {
-      id: 'TRF-KTM-001',
-      name: 'Kathmandu Futsal Arena',
-      legalBusinessName: 'Kathmandu Sports Pvt. Ltd.',
-      panNumber: '602934812',
-      ownerName: 'Bikash Shrestha',
-      ownerEmail: 'bikash@kathmandufutsal.com',
-      ownerPhone: '+977 9841234567',
-      location: 'Naxal, Kathmandu',
-      city: 'Kathmandu',
-      pitchesCount: 3,
-      commissionRate: 8,
-      status: 'Verified',
-      kycStatus: 'Approved',
-      joinedDate: '2025-08-14',
-      totalGMV: 'NRs. 48,50,000',
-      payoutAccount: 'Nabil Bank (Acc: 01029384756)',
-      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80',
-      rating: 4.9,
-      kycDocuments: [
-        { name: 'Business Registration Certificate.pdf', verified: true },
-        { name: 'PAN / VAT Certificate.pdf', verified: true },
-        { name: 'Pitch Ownership Lease Deed.pdf', verified: true },
-      ],
-    },
-    {
-      id: 'TRF-PKR-002',
-      name: 'Pokhara Sky Pitch & Lounge',
-      legalBusinessName: 'Skyline Recreation & Sports Ltd.',
-      panNumber: '601827461',
-      ownerName: 'Anil Gurung',
-      ownerEmail: 'anil@pokharasky.com',
-      ownerPhone: '+977 9856012345',
-      location: 'Lakeside - 6, Pokhara',
-      city: 'Pokhara',
-      pitchesCount: 2,
-      commissionRate: 7.5,
-      status: 'Verified',
-      kycStatus: 'Approved',
-      joinedDate: '2025-09-02',
-      totalGMV: 'NRs. 32,80,000',
-      payoutAccount: 'Global IME (Acc: 20491827364)',
-      image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=600&auto=format&fit=crop&q=80',
-      rating: 4.8,
-      kycDocuments: [
-        { name: 'Company Registration.pdf', verified: true },
-        { name: 'Tax Clearance 2081.pdf', verified: true },
-      ],
-    },
-    {
-      id: 'TRF-LAL-003',
-      name: 'Lalitpur Champions Arena',
-      legalBusinessName: 'Champions Futsal & Fitness Club',
-      panNumber: '609182374',
-      ownerName: 'Ramesh Maharjan',
-      ownerEmail: 'ramesh@lalitpurchampions.np',
-      ownerPhone: '+977 9813928475',
-      location: 'Kumaripati, Lalitpur',
-      city: 'Lalitpur',
-      pitchesCount: 4,
-      commissionRate: 8.0,
-      status: 'Pending KYC',
-      kycStatus: 'Under Review',
-      joinedDate: '2026-06-01',
-      totalGMV: 'NRs. 0',
-      payoutAccount: 'NIC Asia (Acc: 98123471625)',
-      image: 'https://images.unsplash.com/photo-1518604666860-9ed391f76460?w=600&auto=format&fit=crop&q=80',
-      rating: 4.9,
-      kycDocuments: [
-        { name: 'PAN Registration Document.pdf', verified: false },
-        { name: 'Arena Lease Agreement.pdf', verified: false },
-        { name: 'Citizenship Front & Back.pdf', verified: false },
-      ],
-    },
-    {
-      id: 'TRF-BHK-004',
-      name: 'Bhaktapur Indoor Arena',
-      legalBusinessName: 'Heritage Sports Center',
-      panNumber: '604819283',
-      ownerName: 'Sunil Prajapati',
-      ownerEmail: 'sunil@bhaktapursports.com',
-      ownerPhone: '+977 9801827364',
-      location: 'Sallaghari, Bhaktapur',
-      city: 'Bhaktapur',
-      pitchesCount: 2,
-      commissionRate: 8.5,
-      status: 'Verified',
-      kycStatus: 'Approved',
-      joinedDate: '2025-11-20',
-      totalGMV: 'NRs. 19,40,000',
-      payoutAccount: 'Sanima Bank (Acc: 8172635481)',
-      image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&auto=format&fit=crop&q=80',
-      rating: 4.7,
-      kycDocuments: [
-        { name: 'Business License.pdf', verified: true },
-        { name: 'Bank Cheque Copy.pdf', verified: true },
-      ],
-    },
-    {
-      id: 'TRF-BTW-005',
-      name: 'Butwal Turf Hub',
-      legalBusinessName: 'Lumbini Turf Enterprise',
-      panNumber: '603819274',
-      ownerName: 'Deepak Thapa',
-      ownerEmail: 'deepak@butwalturf.com',
-      ownerPhone: '+977 9847182930',
-      location: 'Traffic Chowk, Butwal',
-      city: 'Butwal',
-      pitchesCount: 2,
-      commissionRate: 7.0,
-      status: 'Suspended',
-      kycStatus: 'Flagged',
-      joinedDate: '2025-10-10',
-      totalGMV: 'NRs. 11,20,000',
-      payoutAccount: 'Everest Bank (Acc: 1102938475)',
-      image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop&q=80',
-      rating: 4.2,
-      kycDocuments: [
-        { name: 'Pending Trade License.pdf', verified: false },
-      ],
-    },
-  ]);
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleApproveKYC = (arenaId) => {
-    setArenas((prev) =>
-      prev.map((a) =>
-        a.id === arenaId
-          ? { ...a, status: 'Verified', kycStatus: 'Approved' }
-          : a
-      )
-    );
-    setSelectedArena((prev) =>
-      prev && prev.id === arenaId
-        ? { ...prev, status: 'Verified', kycStatus: 'Approved' }
-        : prev
-    );
-  };
+  const [selectedId, setSelectedId] = useState(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [actionBusy, setActionBusy] = useState(false);
 
-  const handleToggleSuspend = (arenaId) => {
-    setArenas((prev) =>
-      prev.map((a) => {
-        if (a.id === arenaId) {
-          const newStatus = a.status === 'Suspended' ? 'Verified' : 'Suspended';
-          return { ...a, status: newStatus };
-        }
-        return a;
-      })
-    );
-    setSelectedArena((prev) =>
-      prev && prev.id === arenaId
-        ? { ...prev, status: prev.status === 'Suspended' ? 'Verified' : 'Suspended' }
-        : prev
-    );
-  };
+  const reqIdRef = useRef(0);
 
-  const handleSaveCommission = (arenaId, newRate) => {
-    setArenas((prev) =>
-      prev.map((a) =>
-        a.id === arenaId ? { ...a, commissionRate: Number(newRate) } : a
-      )
-    );
-    if (selectedArena) {
-      setSelectedArena({ ...selectedArena, commissionRate: Number(newRate) });
+  // Derive the open request from the latest list data so the modal always
+  // reflects a fresh decision without a syncing effect.
+  const selected = selectedId ? rows.find((r) => r._id === selectedId) || null : null;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const load = useCallback(async () => {
+    const ticket = ++reqIdRef.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await ownerRequestService.list({
+        status: statusFilter,
+        q: debouncedQuery,
+        limit: 50,
+      });
+      if (ticket !== reqIdRef.current) return; // stale response
+      setRows(res.data || []);
+      setTotal(res.total ?? (res.data || []).length);
+    } catch (err) {
+      if (ticket !== reqIdRef.current) return;
+      setError(err.message || 'Failed to load requests');
+      setRows([]);
+      setTotal(0);
+    } finally {
+      if (ticket === reqIdRef.current) setLoading(false);
     }
-    setIsCommissionModalOpen(false);
-  };
+  }, [statusFilter, debouncedQuery]);
 
-  const filteredArenas = arenas.filter((a) => {
-    const matchesQuery =
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.ownerName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'All' ||
-      (statusFilter === 'Verified' && a.status === 'Verified') ||
-      (statusFilter === 'Pending' && a.status === 'Pending KYC') ||
-      (statusFilter === 'Suspended' && a.status === 'Suspended');
-    return matchesQuery && matchesStatus;
-  });
+  useEffect(() => {
+    // Fetch on filter / search change (external-system sync).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Verified':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-            <CheckCircle2 size={12} /> Verified
-          </span>
-        );
-      case 'Pending KYC':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-50 text-amber-700 border border-amber-200/60">
-            <Clock size={12} /> Review Pending
-          </span>
-        );
-      case 'Suspended':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-200/60">
-            <Ban size={12} /> Suspended
-          </span>
-        );
-      default:
-        return null;
+  const decide = async (decision) => {
+    if (!selected) return;
+    if (decision === 'reject' && rejectNote.trim().length < 3) {
+      showToast('Add a short note explaining the rejection.', 'error');
+      return;
+    }
+    setActionBusy(true);
+    try {
+      await ownerRequestService.decide(
+        selected._id,
+        decision,
+        decision === 'reject' ? rejectNote.trim() : undefined,
+      );
+      showToast(
+        decision === 'approve' ? 'Arena approved and published.' : 'Request rejected.',
+        'success',
+      );
+      setSelectedId(null);
+      setRejectNote('');
+      load();
+    } catch (err) {
+      showToast(err.message || 'Action failed. Please try again.', 'error');
+    } finally {
+      setActionBusy(false);
     }
   };
+
+  const pendingCount = useMemo(
+    () => rows.filter((r) => r.status === 'pending' || r.status === 'needs_changes').length,
+    [rows],
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Building2 className="text-lime-600" /> Partner Venues & Arenas
+            <Building2 className="text-lime-600" /> Verifications &amp; KYC
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
-            Audit partner KYC submissions, configure take-rate commission tiers, and manage arena visibility.
+            Review turf listing requests and their submitted documents. Approve to publish the
+            arena and grant the applicant owner access, or reject with a reason.
           </p>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs border border-slate-200/60 cursor-pointer">
-            <Download size={14} />
-            <span>Export Partner Ledger</span>
-          </button>
-        </div>
+        {statusFilter === 'pending' && !loading && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200/70 px-3.5 py-1.5 text-xs font-black text-amber-700">
+            <Clock size={13} /> {pendingCount} awaiting review
+          </span>
+        )}
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filters */}
       <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Search Box */}
           <div className="relative w-full md:w-96">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by arena name, ID, city, or owner..."
+              placeholder="Search by arena, owner, email, PAN, or city…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-lime-300 focus:border-lime-400 transition-all"
             />
           </div>
-
-          {/* Status Filter Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
-            {['All', 'Verified', 'Pending', 'Suspended'].map((status) => (
+            {STATUS_TABS.map((tab) => (
               <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
-                  statusFilter === status
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                  statusFilter === tab.key
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                {status}
+                {tab.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Venues Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
-            <thead>
-              <tr className="text-[11px] font-extrabold text-slate-400 border-b border-slate-100 uppercase tracking-wider">
-                <th className="pb-3 pr-3">Arena ID & Name</th>
-                <th className="pb-3 pr-3">Owner Contact</th>
-                <th className="pb-3 pr-3">Location & Pitches</th>
-                <th className="pb-3 pr-3 text-center">Commission</th>
-                <th className="pb-3 pr-3 text-right">Lifetime GMV</th>
-                <th className="pb-3 pr-3 text-center">Status</th>
-                <th className="pb-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 text-xs font-semibold">
-              {filteredArenas.map((arena) => (
-                <tr key={arena.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 pr-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={arena.image}
-                        alt={arena.name}
-                        className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-100 shrink-0"
-                      />
-                      <div>
-                        <span className="font-extrabold text-slate-900 text-xs block">
-                          {arena.name}
-                        </span>
-                        <span className="text-[11px] text-lime-700 font-bold">
-                          {arena.id}
-                        </span>
+        {/* Table */}
+        <div className="overflow-x-auto min-h-[160px]">
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-slate-400 gap-2 text-sm font-bold">
+              <Loader2 size={16} className="animate-spin" /> Loading requests…
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <p className="text-sm font-bold text-rose-600">{error}</p>
+              <button
+                onClick={load}
+                className="px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-bold cursor-pointer hover:bg-slate-800"
+              >
+                Retry
+              </button>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <FileText size={28} className="mb-2" />
+              <p className="text-sm font-bold">No requests match this view.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="text-[11px] font-extrabold text-slate-400 border-b border-slate-100 uppercase tracking-wider">
+                  <th className="pb-3 pr-3">Arena &amp; Applicant</th>
+                  <th className="pb-3 pr-3">Business / PAN</th>
+                  <th className="pb-3 pr-3">Location &amp; Courts</th>
+                  <th className="pb-3 pr-3">Submitted</th>
+                  <th className="pb-3 pr-3 text-center">Status</th>
+                  <th className="pb-3 text-right">Review</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 text-xs font-semibold">
+                {rows.map((r) => (
+                  <tr key={r._id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 pr-3">
+                      <span className="font-extrabold text-slate-900 text-xs block">{r.arena?.name}</span>
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        {r.contact?.ownerName} · {r.contact?.email}
+                      </span>
+                    </td>
+                    <td className="py-3.5 pr-3">
+                      <div className="text-slate-800 font-bold">{r.business?.legalName}</div>
+                      <div className="text-[11px] text-slate-400 font-medium">PAN {r.business?.panNumber}</div>
+                    </td>
+                    <td className="py-3.5 pr-3">
+                      <div className="text-slate-800 font-bold">
+                        {[r.arena?.address?.area, r.arena?.address?.city].filter(Boolean).join(', ')}
                       </div>
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 pr-3">
-                    <div className="text-slate-900 font-bold">{arena.ownerName}</div>
-                    <div className="text-[11px] text-slate-400 font-medium">
-                      {arena.ownerPhone}
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 pr-3">
-                    <div className="text-slate-800 font-bold">{arena.location}</div>
-                    <div className="text-[11px] text-slate-400 font-medium">
-                      {arena.pitchesCount} Pitches • {arena.city}
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 pr-3 text-center">
-                    <button
-                      onClick={() => {
-                        setSelectedArena(arena);
-                        setCustomCommissionRate(arena.commissionRate);
-                        setIsCommissionModalOpen(true);
-                      }}
-                      className="px-2.5 py-1 rounded-full bg-lime-100 hover:bg-lime-200 text-lime-900 font-black text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Percent size={11} /> {arena.commissionRate}%
-                    </button>
-                  </td>
-
-                  <td className="py-3.5 pr-3 text-right font-black text-slate-900">
-                    {arena.totalGMV}
-                  </td>
-
-                  <td className="py-3.5 pr-3 text-center">
-                    {getStatusBadge(arena.status)}
-                  </td>
-
-                  <td className="py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                      <div className="text-[11px] text-slate-400 font-medium">{r.arena?.courts || 1} court(s)</div>
+                    </td>
+                    <td className="py-3.5 pr-3 text-slate-500">{formatDate(r.createdAt)}</td>
+                    <td className="py-3.5 pr-3 text-center">
+                      <StatusBadge status={r.status} />
+                    </td>
+                    <td className="py-3.5 text-right">
                       <button
-                        title="Inspect KYC & Details"
-                        onClick={() => setSelectedArena(arena)}
+                        title="Inspect & decide"
+                        onClick={() => {
+                          setSelectedId(r._id);
+                          setRejectNote('');
+                        }}
                         className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer"
                       >
                         <Eye size={14} />
                       </button>
-
-                      <button
-                        title={arena.status === 'Suspended' ? 'Unsuspend Arena' : 'Suspend Arena'}
-                        onClick={() => handleToggleSuspend(arena.id)}
-                        className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
-                          arena.status === 'Suspended'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            : 'border-slate-200 text-rose-600 hover:bg-rose-50 hover:border-rose-200'
-                        }`}
-                      >
-                        <Ban size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
+        {!loading && !error && rows.length > 0 && (
+          <p className="text-[11px] font-semibold text-slate-400">
+            Showing {rows.length} of {total}
+          </p>
+        )}
       </div>
 
-      {/* Inspect & KYC Modal */}
-      {selectedArena && !isCommissionModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-slate-100 w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95">
-            {/* Modal Header */}
+      {/* Inspect & decide modal */}
+      {selected && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 w-full max-w-xl overflow-hidden shadow-2xl">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-black text-slate-900">{selectedArena.name}</h3>
-                  {getStatusBadge(selectedArena.status)}
+                  <h3 className="text-lg font-black text-slate-900">{selected.arena?.name}</h3>
+                  <StatusBadge status={selected.status} />
                 </div>
                 <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                  ID: {selectedArena.id} • Registered PAN: {selectedArena.panNumber}
+                  PAN {selected.business?.panNumber} · Submitted {formatDate(selected.createdAt)}
                 </p>
               </div>
               <button
-                onClick={() => setSelectedArena(null)}
+                onClick={() => setSelectedId(null)}
                 className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <img
-                src={selectedArena.image}
-                alt={selectedArena.name}
-                className="w-full h-44 rounded-2xl object-cover shadow-2xs"
-              />
-
-              {/* Business Info Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Legal Entity
-                  </span>
-                  <p className="font-extrabold text-slate-900">{selectedArena.legalBusinessName}</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Legal Entity</span>
+                  <p className="font-extrabold text-slate-900">{selected.business?.legalName}</p>
                 </div>
-
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Payout Settlement Account
-                  </span>
-                  <p className="font-extrabold text-slate-900">{selectedArena.payoutAccount}</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</span>
+                  <p className="font-extrabold text-slate-900">
+                    {[selected.arena?.address?.area, selected.arena?.address?.city].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Courts</span>
+                  <p className="font-extrabold text-slate-900">{selected.arena?.courts || 1}</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Price / hour</span>
+                  <p className="font-extrabold text-slate-900">
+                    Rs. {selected.arena?.pricePerHour} <span className="text-slate-400 font-medium">({selected.arena?.priceRangeLabel})</span>
+                  </p>
                 </div>
               </div>
 
-              {/* Owner Contact */}
               <div className="p-4 rounded-2xl bg-lime-50/60 border border-lime-100 space-y-2 text-xs">
-                <span className="text-[11px] font-black text-lime-900 uppercase tracking-wider block">
-                  Primary Owner Contact
-                </span>
-                <div className="flex flex-col sm:flex-row justify-between gap-2 text-slate-800 font-bold">
+                <span className="text-[11px] font-black text-lime-900 uppercase tracking-wider block">Applicant Contact</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 text-slate-800 font-bold">
                   <span className="flex items-center gap-1.5">
-                    <Mail size={13} className="text-lime-700" /> {selectedArena.ownerEmail}
+                    <Mail size={13} className="text-lime-700" /> {selected.contact?.email}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Phone size={13} className="text-lime-700" /> {selectedArena.ownerPhone}
+                    <Phone size={13} className="text-lime-700" /> {selected.contact?.phone}
                   </span>
                 </div>
               </div>
 
-              {/* KYC Documents Section */}
+              {selected.arena?.description && (
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">{selected.arena.description}</p>
+              )}
+
               <div className="space-y-2">
-                <span className="text-xs font-black text-slate-900 block">
-                  Uploaded Compliance & KYC Documents
-                </span>
+                <span className="text-xs font-black text-slate-900 block">Submitted Documents</span>
                 <div className="space-y-2">
-                  {selectedArena.kycDocuments.map((doc, idx) => (
-                    <div
+                  {(selected.documents || []).map((doc, idx) => (
+                    <a
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs"
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs hover:border-lime-300 hover:bg-lime-50/40 transition-all"
                     >
-                      <div className="flex items-center gap-2 font-bold text-slate-700">
-                        <FileText size={15} className="text-slate-400" />
-                        <span>{doc.name}</span>
+                      <div className="flex items-center gap-2 font-bold text-slate-700 min-w-0">
+                        <FileText size={15} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{doc.originalName}</span>
                       </div>
-                      <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                          doc.verified
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {doc.verified ? 'Verified Document' : 'Requires Review'}
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                          {DOC_KIND_LABEL[doc.kind] || doc.kind}
+                        </span>
+                        <ExternalLink size={13} className="text-slate-400" />
                       </span>
-                    </div>
+                    </a>
                   ))}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                {selectedArena.status === 'Pending KYC' && (
-                  <button
-                    onClick={() => handleApproveKYC(selectedArena.id)}
-                    className="flex-1 py-3 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <CheckCircle2 size={15} /> Approve & Verify Arena
-                  </button>
-                )}
-                <button
-                  onClick={() => setSelectedArena(null)}
-                  className="px-5 py-3 rounded-full border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              {['rejected', 'needs_changes'].includes(selected.status) && selected.review?.note && (
+                <div className="rounded-2xl bg-rose-50/70 border border-rose-100 p-3.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-rose-800">Previous decision note</p>
+                  <p className="mt-1 text-xs font-medium text-slate-700">{selected.review.note}</p>
+                </div>
+              )}
 
-      {/* Commission Rate Config Modal */}
-      {isCommissionModalOpen && selectedArena && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-slate-100 w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900">Custom Take-Rate</h3>
-              <button
-                onClick={() => setIsCommissionModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-full"
-              >
-                <X size={16} />
-              </button>
-            </div>
+              {(selected.status === 'pending' || selected.status === 'needs_changes') && (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <textarea
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    rows={2}
+                    placeholder="Reason (required to reject, optional when approving)…"
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-lime-300 outline-none transition-all"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={actionBusy}
+                      onClick={() => decide('reject')}
+                      className="flex-1 py-3 rounded-full border border-rose-200 text-rose-700 font-black text-xs transition-all hover:bg-rose-50 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {actionBusy ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />} Reject
+                    </button>
+                    <button
+                      disabled={actionBusy}
+                      onClick={() => decide('approve')}
+                      className="flex-1 py-3 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 font-black text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {actionBusy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={15} />} Approve &amp; Publish
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <p className="text-xs text-slate-500 font-medium">
-              Configure Turfio's platform commission take-rate for{' '}
-              <strong className="text-slate-900">{selectedArena.name}</strong>.
-            </p>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Commission Percentage (%)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  max="30"
-                  value={customCommissionRate}
-                  onChange={(e) => setCustomCommissionRate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-black text-sm focus:ring-2 focus:ring-lime-300 focus:border-lime-400 outline-none"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-slate-400">
-                  %
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setIsCommissionModalOpen(false)}
-                className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSaveCommission(selectedArena.id, customCommissionRate)}
-                className="flex-1 py-2.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 font-black text-xs transition-all cursor-pointer shadow-xs"
-              >
-                Update Rate
-              </button>
+              {selected.status === 'approved' && (
+                <div className="pt-2 border-t border-slate-100 text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                  <CheckCircle2 size={14} /> Approved — turf published and applicant granted owner access.
+                </div>
+              )}
             </div>
           </div>
         </div>
