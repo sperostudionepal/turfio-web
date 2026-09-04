@@ -12,7 +12,7 @@ function getDisplayName(user) {
   return f || user.username || 'Player';
 }
 
-export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, onFindTurfs }) {
+export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, onFindTurfs, onDashboard }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -245,13 +245,19 @@ export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, on
                       </p>
                     </div>
 
-                    <a
-                      href="#"
-                      className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <UserIcon size={14} className="text-slate-400" />
-                      <span>My Profile</span>
-                    </a>
+                    {(user.role === 'admin' || user.role === 'owner') && onDashboard && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          onDashboard();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-lime-700 hover:bg-lime-50 transition-colors cursor-pointer text-left"
+                      >
+                        <UserIcon size={14} className="text-lime-600" />
+                        <span>Arena Dashboard</span>
+                      </button>
+                    )}
 
                     {onLogout && (
                       <button

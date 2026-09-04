@@ -425,8 +425,8 @@ function App() {
    * ---------------------------------------------------------
    */
   
-  // Show Dashboard if user is authenticated
-  if (user) {
+  // If user is a venue owner/admin or explicitly opened dashboard
+  if (user && (user.role === 'admin' || user.role === 'owner' || currentPage === 'dashboard')) {
     return (
       <>
         <div
@@ -436,6 +436,9 @@ function App() {
 
         <Dashboard
           onLogout={handleLogout}
+          onSwitchToSuperadminView={
+            user.role === 'superadmin' ? () => setViewMode('superadmin') : null
+          }
         />
 
         {showOnboardingModal && (
@@ -604,6 +607,7 @@ function App() {
         onHome={() => setCurrentPage('home')}
         onViewTurfDetails={(turf) => setSelectedTurf(turf)}
         onFindTurfs={() => setCurrentPage('turfListing')}
+        onDashboard={() => setCurrentPage('dashboard')}
       />
 
       {showOnboardingModal && (
