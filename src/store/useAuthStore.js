@@ -3,7 +3,7 @@ import authService from '../services/authService';
 
 const TOKEN_KEY = 'turfio_token';
 
-export const useAuthStore = create((set, get) => ({
+export const useAuthStore = create((set) => ({
   user: null,
   token: localStorage.getItem(TOKEN_KEY) || null,
   isAuthenticated: false,
@@ -53,38 +53,6 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      // Frontend-only validation for admin credentials
-      const ADMIN_EMAIL = 'admin@turfio.app';
-      const ADMIN_PASSWORD = 'Admin@123456';
-      
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        // Create a mock admin user
-        const adminUser = {
-          id: 'admin_user_001',
-          email: ADMIN_EMAIL,
-          firstName: 'Admin',
-          lastName: 'User',
-          role: 'admin',
-          isProfileCompleted: true,
-        };
-        
-        // Create a mock token
-        const mockToken = 'mock_admin_token_' + Date.now();
-        
-        localStorage.setItem(TOKEN_KEY, mockToken);
-        
-        set({
-          user: adminUser,
-          token: mockToken,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-        
-        return { success: true, user: adminUser, token: mockToken };
-      }
-      
-      // For other credentials, attempt backend login
       const response = await authService.login({ email, password });
       const { user, token } = response.data || {};
 
