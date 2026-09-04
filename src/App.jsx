@@ -52,6 +52,17 @@ function App() {
 
   /**
    * ---------------------------------------------------------
+   * Automatically show onboarding if profile is incomplete
+   * ---------------------------------------------------------
+   */
+  useEffect(() => {
+    if (user && !user.isProfileCompleted && !isInitializing) {
+      setShowOnboardingModal(true);
+    }
+  }, [user, isInitializing]);
+
+  /**
+   * ---------------------------------------------------------
    * Google authentication
    * ---------------------------------------------------------
    */
@@ -356,6 +367,11 @@ function App() {
 
     if (result.success) {
       setShowOnboardingModal(false);
+    } else {
+      // Create a temporary toast element or use alert if useToast is not accessible here
+      // But since we don't have useToast in App.jsx scope directly (it's inside ToastProvider),
+      // we can use standard alert for now, or dispatch a custom event if there's a global toast.
+      alert(`Profile update failed: ${result.error}`);
     }
   };
 

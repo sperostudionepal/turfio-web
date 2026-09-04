@@ -5,7 +5,8 @@ function OnboardingPage({ onComplete, onClose, userData = {} }) {
   const [step, setStep] = useState(1);
 
   // Step 1 Form Data - Personal Details
-  const [username, setUsername] = useState(userData.firstName ? `${userData.firstName.toLowerCase()}_baller` : '');
+  const randomSuffix = useRef(Math.floor(1000 + Math.random() * 9000)).current;
+  const [username, setUsername] = useState(userData.firstName ? `${userData.firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${randomSuffix}` : `baller${randomSuffix}`);
   const [dob, setDob] = useState('2000-01-01');
   const [gender, setGender] = useState('Male');
   const [city, setCity] = useState('Kathmandu');

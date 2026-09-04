@@ -22,8 +22,13 @@ import {
   Zap,
   X,
   ChevronLeft,
+  ChevronDown,
   Maximize2,
   ImageIcon,
+  Trophy,
+  MessageSquare,
+  Tag,
+  Key
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -155,6 +160,83 @@ const allTurfs = [
   },
 ];
 
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'];
+
+function CustomTimePickerDropdown({ timeObj, duration, onChange, isTimeSlotAvailable }) {
+  return (
+    <div className="absolute top-[110%] left-0 w-[200px] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-slate-100 z-50 overflow-hidden cursor-default" onClick={(e) => e.stopPropagation()}>
+      {/* Top Display */}
+      <div className="flex items-center justify-center gap-2 p-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-2xl font-bold">
+          {timeObj.hour}
+        </div>
+        <span className="text-2xl font-bold text-slate-800 pb-1">:</span>
+        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-2xl font-bold">
+          00
+        </div>
+        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-xl font-bold ml-2">
+          {timeObj.period}
+        </div>
+      </div>
+
+      {/* Columns */}
+      <div className="grid grid-cols-2 h-[200px] divide-x divide-slate-100 relative bg-white">
+        {/* Hours */}
+        <div className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth py-2">
+          <div className="text-[10px] font-bold text-slate-500 text-center mb-2 tracking-widest">HOURS</div>
+          {HOURS.map((h) => {
+            const isAvailable = isTimeSlotAvailable ? isTimeSlotAvailable(h, timeObj.period, duration) : true;
+            return (
+              <button
+                key={`h-${h}`}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  if (isAvailable) {
+                    onChange({ ...timeObj, hour: h, minute: '00' });
+                  }
+                }}
+                className={`w-12 h-10 mx-auto flex items-center justify-center rounded-lg text-sm font-semibold transition-colors mb-1 ${
+                  !isAvailable 
+                    ? 'text-slate-300 cursor-not-allowed line-through bg-slate-50' 
+                    : timeObj.hour === h ? 'bg-[#96D800] text-white' : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                {h}
+              </button>
+            );
+          })}
+        </div>
+        {/* Periods */}
+        <div className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth py-2">
+          <div className="text-[10px] font-bold text-slate-500 text-center mb-2 tracking-widest">PERIOD</div>
+          {PERIODS.map((p) => {
+            const isAvailable = isTimeSlotAvailable ? isTimeSlotAvailable(timeObj.hour, p, duration) : true;
+            return (
+              <button
+                key={`p-${p}`}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  if (isAvailable) {
+                    onChange({ ...timeObj, period: p, minute: '00' });
+                  }
+                }}
+                className={`w-12 h-10 mx-auto flex items-center justify-center rounded-lg text-sm font-semibold transition-colors mb-1 ${
+                  !isAvailable 
+                    ? 'text-slate-300 cursor-not-allowed line-through bg-slate-50' 
+                    : timeObj.period === p ? 'bg-[#96D800] text-white' : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
@@ -170,8 +252,10 @@ export default function TurfDetailsPage({
   onViewTurfDetails,
   user,
 }) {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedTimeObj, setSelectedTimeObj] = useState({ hour: '06', minute: '00', period: 'AM' });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [duration, setDuration] = useState(1);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -182,6 +266,46 @@ export default function TurfDetailsPage({
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImageIndex(0);
   }, [turf?.id]);
+
+  // ── FILTERING & TIME HELPERS ──
+  // Mock booked slots for demonstration of filtering (e.g. today)
+  const mockedBookedSlots = ['07:00 AM', '08:00 AM', '05:00 PM'];
+  
+  const isTimeSlotAvailable = (hourStr, period, checkDuration) => {
+    let startHour24 = parseInt(hourStr, 10);
+    if (period === 'PM' && startHour24 !== 12) startHour24 += 12;
+    if (period === 'AM' && startHour24 === 12) startHour24 = 0;
+    
+    // Check every 1-hour block for overlap
+    for (let i = 0; i < Math.ceil(checkDuration); i++) {
+      let checkHour24 = (startHour24 + i) % 24;
+      let checkPeriod = checkHour24 >= 12 ? 'PM' : 'AM';
+      let checkHour12 = checkHour24 % 12;
+      if (checkHour12 === 0) checkHour12 = 12;
+      let checkTimeStr = `${checkHour12.toString().padStart(2, '0')}:00 ${checkPeriod}`;
+      
+      if (mockedBookedSlots.includes(checkTimeStr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const getEndTimeStr = () => {
+    let h = parseInt(selectedTimeObj.hour, 10);
+    if (selectedTimeObj.period === 'PM' && h !== 12) h += 12;
+    if (selectedTimeObj.period === 'AM' && h === 12) h = 0;
+    
+    let endHour24 = h + Math.floor(duration);
+    let endMinute = (duration % 1) * 60; 
+    
+    let endPeriod = (endHour24 % 24) >= 12 ? 'PM' : 'AM';
+    let endHour12 = (endHour24 % 24) % 12;
+    if (endHour12 === 0) endHour12 = 12;
+    
+    const endMinStr = endMinute === 0 ? '00' : endMinute.toString().padStart(2, '0');
+    return `${endHour12.toString().padStart(2, '0')}:${endMinStr} ${endPeriod}`;
+  };
 
   if (!turf) return null;
 
@@ -416,60 +540,35 @@ export default function TurfDetailsPage({
               </div>
             </div>
 
-            {/* Quick info bar */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { icon: Compass, label: 'Type', value: turf.type },
-                { icon: Users, label: 'Capacity', value: turf.size },
-                { icon: Zap, label: 'Surface', value: turf.surface || 'Artificial' },
-                { icon: MapPin, label: 'Dimensions', value: turf.dimensions || 'Standard' },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3.5"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium text-slate-400">{item.label}</p>
-                      <p className="text-sm font-bold text-slate-900 truncate">{item.value}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
             {/* About */}
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">About This Turf</h2>
-              <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-              <p className="mt-4 text-[15px] leading-relaxed text-slate-600 font-medium">
+            <div className="py-8 border-b border-slate-200">
+              <h2 className="text-[22px] font-semibold text-slate-900 mb-4">About This Turf</h2>
+              <p className="text-[16px] leading-[26px] text-slate-700">
                 {turf.description || 'A premium futsal turf with excellent facilities, perfect for your next game. Book your slot now and experience the best playing conditions in the area.'}
               </p>
             </div>
 
             {/* Amenities */}
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">Amenities & Facilities</h2>
-              <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {(turf.amenities || ['Parking', 'Washrooms', 'Floodlights']).map((amenity) => {
+            <div className="py-8 border-b border-slate-200">
+              <h2 className="text-[22px] font-semibold text-slate-900 mb-6">What this place offers</h2>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                {(turf.amenities || ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'First Aid', 'Drinking Water']).slice(0, 10).map((amenity) => {
                   const Icon = amenityIconMap[amenity] || Check;
                   return (
                     <div
                       key={amenity}
-                      className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3.5 py-3 transition-colors hover:border-lime-200 hover:bg-lime-50/40"
+                      className="flex items-center gap-4 py-2"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-100/80 text-lime-600">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="text-sm font-semibold text-slate-700">{amenity}</span>
+                      <Icon className="h-6 w-6 text-slate-800 shrink-0" strokeWidth={1.5} />
+                      <span className="text-[16px] text-slate-700">{amenity}</span>
                     </div>
                   );
                 })}
+              </div>
+              <div className="mt-8">
+                <button className="px-6 py-3.5 rounded-xl border border-slate-900 bg-white text-slate-900 font-semibold text-[16px] hover:bg-slate-50 transition-colors cursor-pointer active:scale-[0.98]">
+                  Show all {(turf.amenities || [1,2,3,4,5,6]).length} amenities
+                </button>
               </div>
             </div>
 
@@ -503,28 +602,30 @@ export default function TurfDetailsPage({
             )}
 
             {/* Location */}
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">Location</h2>
-              <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-              <div className="mt-4 rounded-2xl border border-slate-100 overflow-hidden">
-                {/* Map placeholder */}
-                <div className="h-52 bg-slate-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-8 w-8 text-lime-500 mx-auto" />
-                    <p className="mt-2 text-sm font-semibold text-slate-500">Map view</p>
-                    <p className="text-xs text-slate-400">Interactive map coming soon</p>
-                  </div>
+            <div className="py-6 border-b border-slate-200">
+              <h2 className="text-[22px] font-semibold text-slate-900 mb-4">Where you'll be</h2>
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                {/* Map iframe */}
+                <div className="h-96 bg-slate-100 flex items-center justify-center relative">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    allowFullScreen
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(turf.address || turf.location || 'Kathmandu')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    title="Google Maps Preview"
+                  ></iframe>
                 </div>
-                <div className="px-5 py-4">
-                  <p className="flex items-start gap-2 text-sm font-semibold text-slate-700">
-                    <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-lime-500" />
+                <div className="px-5 py-4 bg-white">
+                  <p className="text-[16px] font-semibold text-slate-900">
                     {turf.address || turf.location}
                   </p>
                   <a
                     href={`https://maps.google.com/?q=${encodeURIComponent(turf.address || turf.location)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-lime-600 hover:text-lime-700 transition-colors"
+                    className="mt-1 inline-flex items-center gap-1 text-[15px] font-semibold text-slate-900 underline hover:text-slate-600 transition-colors"
                   >
                     Get Directions <ArrowRight className="h-3.5 w-3.5" />
                   </a>
@@ -533,70 +634,52 @@ export default function TurfDetailsPage({
             </div>
 
             {/* Reviews & Ratings */}
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">Reviews & Ratings</h2>
-              <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-
-              <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-12">
-                {/* Rating summary */}
-                <div className="sm:col-span-4 flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/60 p-5">
-                  <span className="text-4xl font-black text-slate-900">{turf.rating}</span>
-                  <StarRating rating={turf.rating} size="h-5 w-5" />
-                  <p className="mt-1 text-xs font-medium text-slate-400">
-                    {turf.reviews} reviews
-                  </p>
+            <div className="py-12 border-b border-slate-200">
+              <div className="flex flex-col items-center justify-center text-center mb-10">
+                <div className="flex items-center justify-center gap-6 mb-2">
+                  <img src="/grain_left.png" alt="left laurel" className="h-20 w-auto object-contain" />
+                  <span className="text-[80px] font-bold text-slate-900 leading-none tracking-tight">
+                    {turf.rating}
+                  </span>
+                  <img src="/grain_right.png" alt="right laurel" className="h-20 w-auto object-contain" />
                 </div>
-
-                {/* Breakdown bars */}
-                <div className="sm:col-span-8 flex flex-col justify-center gap-2">
-                  {ratingBreakdown.map((row) => (
-                    <div key={row.stars} className="flex items-center gap-2.5">
-                      <span className="w-5 text-right text-xs font-bold text-slate-500">
-                        {row.stars}
-                      </span>
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-amber-400 transition-all"
-                          style={{ width: `${row.percent}%` }}
-                        />
-                      </div>
-                      <span className="w-8 text-right text-xs font-medium text-slate-400">
-                        {row.percent}%
-                      </span>
-                    </div>
-                  ))}
+                <h3 className="text-[22px] font-semibold text-slate-900 mt-2">Players favorite</h3>
+                <p className="mt-2 text-[16px] text-slate-500 max-w-sm mx-auto">
+                  One of the most loved turfs on Turfio based on ratings, reviews, and reliability
+                </p>
+                <div className="mt-3 font-semibold text-[14px] text-slate-900 underline cursor-pointer">
+                  {turf.reviews} reviews
                 </div>
               </div>
 
+              {/* Sub ratings */}
+              
+
               {/* Individual reviews */}
               {turf.reviewsList && turf.reviewsList.length > 0 && (
-                <div className="mt-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-10 border-t border-slate-200 pt-8">
                   {turf.reviewsList.map((review, i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl border border-slate-100 bg-white p-5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={review.avatar}
-                            alt={review.name}
-                            className="h-10 w-10 rounded-full object-cover ring-2 ring-lime-400/20"
-                          />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-bold text-slate-900">{review.name}</span>
-                              <CheckCircle2 className="h-3.5 w-3.5 text-lime-500" />
-                            </div>
-                            <p className="text-xs font-medium text-slate-400">{review.date}</p>
-                          </div>
+                    <div key={i} className="flex flex-col">
+                      <div className="flex items-center gap-4 mb-3">
+                        <img
+                          src={review.avatar}
+                          alt={review.name}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <div className="text-[16px] font-semibold text-slate-900">{review.name}</div>
+                          <div className="text-[14px] text-slate-500">2 years on Turfio</div>
                         </div>
-                        <StarRating rating={review.rating} size="h-3.5 w-3.5" />
                       </div>
-                      <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600">
-                        "{review.comment}"
+                      <div className="flex items-center gap-1 mb-2">
+                        <StarRating rating={review.rating} size="h-3 w-3" />
+                        <span className="text-[12px] font-semibold text-slate-900 ml-1">·</span>
+                        <span className="text-[14px] font-medium text-slate-900">{review.date}</span>
+                      </div>
+                      <p className="text-[16px] leading-relaxed text-slate-800 line-clamp-4">
+                        {review.comment}
                       </p>
+                      <button className="mt-2 text-left text-[15px] font-semibold text-slate-900 underline self-start hover:text-slate-600 transition-colors">Show more</button>
                     </div>
                   ))}
                 </div>
@@ -646,69 +729,94 @@ export default function TurfDetailsPage({
                   </span>
                 </div>
 
-                <div className="my-5 h-px bg-slate-100" />
-
-                {/* Date picker */}
-                <div className="space-y-3">
-                  <label className="group flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 transition-colors focus-within:border-lime-400 focus-within:ring-1 focus-within:ring-lime-400 hover:border-slate-300">
-                    <Calendar className="h-4.5 w-4.5 text-slate-400 group-focus-within:text-lime-500" />
-                    <div className="flex-1 min-w-0">
-                      <span className="block text-[11px] font-medium text-slate-400">Select Date</span>
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="mt-0.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-slate-900 outline-none"
-                      />
-                    </div>
+                {/* Date, Time & Duration Picker (Airbnb Style) */}
+                <div className="rounded-lg border border-slate-400 overflow-visible mb-4 bg-white relative">
+                  {/* Date picker */}
+                  <label className="flex flex-col border-b border-slate-400 px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative group">
+                    <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Date</span>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full border-0 bg-transparent p-0 pt-0.5 text-[14px] font-medium text-slate-900 outline-none cursor-pointer"
+                    />
                   </label>
 
-                  {/* Time slot picker */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <Clock className="h-4 w-4 text-slate-400" />
-                      <span className="text-[11px] font-medium text-slate-400">Select Time Slot</span>
+                  <div className="flex divide-x divide-slate-400">
+                    {/* Custom Time slot picker */}
+                    <div 
+                      className="flex-1 flex flex-col px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative"
+                      onClick={() => setShowTimePicker(!showTimePicker)}
+                    >
+                      <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Time</span>
+                      <div className="w-full text-[14px] font-medium text-slate-900 pt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                        {`${selectedTimeObj.hour}:00 ${selectedTimeObj.period} - ${getEndTimeStr()}`}
+                      </div>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 pointer-events-none" />
+                      
+                      {showTimePicker && (
+                        <CustomTimePickerDropdown 
+                          timeObj={selectedTimeObj} 
+                          duration={duration}
+                          onChange={setSelectedTimeObj} 
+                          isTimeSlotAvailable={isTimeSlotAvailable}
+                        />
+                      )}
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {timeSlots.slice(0, 9).map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setSelectedTime(slot)}
-                          className={`rounded-xl px-2 py-2 text-xs font-semibold transition-all ${
-                            selectedTime === slot
-                              ? 'bg-lime-400 text-slate-900 ring-2 ring-lime-300'
-                              : 'border border-slate-200 bg-white text-slate-600 hover:border-lime-300 hover:bg-lime-50'
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
-                    {timeSlots.length > 9 && !selectedTime && (
-                      <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
-                        Scroll for more slots
-                      </p>
-                    )}
+
+                    {/* Duration picker */}
+                    <label className="flex-1 flex flex-col px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative group">
+                      <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Duration</span>
+                      <select
+                        value={duration}
+                        onChange={(e) => setDuration(Number(e.target.value))}
+                        className="w-full border-0 bg-transparent p-0 pt-0.5 text-[14px] font-medium text-slate-900 outline-none cursor-pointer appearance-none"
+                      >
+                        {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((d) => (
+                          <option key={d} value={d}>{d} {d === 1 ? 'hour' : 'hours'}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 pointer-events-none" />
+                    </label>
                   </div>
                 </div>
-
-                <div className="my-5 h-px bg-slate-100" />
 
                 {/* Book now CTA */}
                 <button
                   type="button"
-                  onClick={() => onBookNow?.(turf)}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-lime-400 px-6 py-3.5 text-[15px] font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-lime-300"
+                  onClick={() => onBookNow?.({ ...turf, selectedDate, selectedTime: `${selectedTimeObj.hour}:00 ${selectedTimeObj.period}`, duration })}
+                  className="w-full inline-flex items-center justify-center rounded-xl bg-lime-400 hover:bg-lime-500 px-6 py-3.5 text-[16px] font-bold text-slate-900 transition-all active:scale-[0.98] focus:outline-none"
                 >
                   Book Now
-                  <ArrowRight className="h-4 w-4" />
                 </button>
 
-                <p className="mt-3 text-center text-xs font-medium text-slate-400">
-                  <CheckCircle2 className="inline h-3 w-3 text-lime-500 mr-1" />
-                  Instant confirmation • No hidden fees
+                <p className="mt-3 text-center text-[14px] text-slate-500">
+                  You won't be charged yet
                 </p>
+
+                {/* Price Breakdown Preview */}
+                {selectedDate && (
+                  <div className="mt-5 space-y-3 text-[15px] text-slate-700">
+                    <div className="flex justify-between">
+                      <span className="underline">
+                        NPR {turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0} x {duration} {duration === 1 ? 'hour' : 'hours'}
+                      </span>
+                      <span>
+                        NPR {((turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0) * duration).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="underline">Service fee</span>
+                      <span>NPR 0</span>
+                    </div>
+                    <div className="pt-4 mt-4 border-t border-slate-200 flex justify-between font-semibold text-slate-900 text-[16px]">
+                      <span>Total</span>
+                      <span>
+                        NPR {((turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0) * duration).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Contact info */}
