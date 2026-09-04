@@ -286,7 +286,7 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
       <HowItWorksAndDownloadSection />
       <ReviewsSection />
       <AboutUsSection />
-      <CtaBannerSection onBookNow={onLogin} />
+      <CtaBannerSection onBookNow={user ? onFindTurfs : onLogin} />
       <Footer />
       <BackToTopButton />
     </div>

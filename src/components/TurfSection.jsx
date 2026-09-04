@@ -39,9 +39,9 @@ const turfs = [
     phone: '+977-9841-234567',
     email: 'info@greathimalayan.com',
     policies: [
-      { title: 'Cancellation Policy', description: 'Free cancellation up to 2 hours before your booking. 50% charge for cancellations within 2 hours.' },
-      { title: 'House Rules', description: 'Only futsal shoes allowed on the pitch. No metal studs. Players must bring their own sportswear.' },
-      { title: 'Refund Policy', description: 'Full refund issued within 3-5 business days for eligible cancellations. Rain-outs are fully refunded.' },
+      { title: 'Cancellation Policy', description: 'Free cancellation before 6 hours of the booked time. 25% charge for refunds after booking hours.' },
+      { title: 'House Rules', description: 'Whatever Shoes are allowed No metal studs. Players can bring their own sportswear.' },
+      { title: 'Refund Policy', description: 'Full refund issued within 1-3 business days for eligible cancellations. Rain-outs are fully refunded.' },
     ],
     reviewsList: [
       { name: 'Saugat Shahi', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80', rating: 5, date: '2 weeks ago', comment: 'Excellent turf quality and the staff is very helpful. Booking through Turfio was super smooth!' },
