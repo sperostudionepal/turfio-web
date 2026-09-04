@@ -245,7 +245,7 @@ export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, on
                       </p>
                     </div>
 
-                    {(user.role === 'admin' || user.role === 'owner') && onDashboard && (
+                    {user.role === 'owner' && onDashboard && (
                       <button
                         type="button"
                         onClick={() => {

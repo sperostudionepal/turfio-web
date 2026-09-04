@@ -20,6 +20,20 @@ export const authService = {
   },
 
   /**
+   * Register a prospective venue owner (no account required beforehand).
+   * Creates a `pending_owner` — no access until a superadmin approves.
+   * @param {{ name, email, password }} data
+   */
+  async registerOwner(data) {
+    const response = await apiClient.post('/auth/register-owner', {
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    });
+    return response; // { success, message, data: { user, token } }
+  },
+
+  /**
    * Login user
    * @param {{ email, password }} data
    */
@@ -46,6 +60,13 @@ export const authService = {
   async getCurrentUser() {
     const response = await apiClient.get('/auth/me');
     return response; // { success: true, message, data: { user } }
+  },
+
+  /**
+   * Self-delete the current account (only permitted for a pending_owner).
+   */
+  async deleteAccount() {
+    return apiClient.delete('/auth/me');
   },
 
   /**

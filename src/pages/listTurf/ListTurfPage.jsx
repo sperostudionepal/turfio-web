@@ -9,13 +9,6 @@ import {
   ChevronDown,
   Check,
   Clock,
-  TrendingUp,
-  CalendarCheck,
-  ShieldCheck,
-  BarChart3,
-  Headphones,
-  Users,
-  Sparkles,
   CheckCircle2,
   Car,
   Wifi,
@@ -25,8 +18,6 @@ import {
   Shirt,
   HeartPulse,
   Dumbbell,
-  Calculator,
-  HelpCircle,
   ChevronUp,
   FileText,
 } from 'lucide-react';
@@ -34,12 +25,41 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import MapPinPositioner from '../../components/common/MapPinPositioner';
 import TimePickerDropdown from '../../components/common/TimePickerDropdown';
+import { useToast } from '../../components/common/Toast';
+import ownerRequestService from '../../services/ownerRequestService';
 
-export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTurfs }) {
+const DOC_KINDS = [
+  { value: 'registration', label: 'Company/Firm Registration' },
+  { value: 'pan', label: 'PAN / VAT Certificate' },
+  { value: 'lease', label: 'Lease / Ownership Deed' },
+  { value: 'citizenship', label: 'Citizenship' },
+  { value: 'other', label: 'Other' },
+];
+
+const DAY_KEYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
+
+const REQUEST_STATUS_META = {
+  pending: { label: 'Under review', tone: 'amber', blurb: 'Our team is verifying your documents. This usually takes under 24 hours.' },
+  needs_changes: { label: 'Changes requested', tone: 'amber', blurb: 'The reviewer needs more information before approving.' },
+  approved: { label: 'Approved', tone: 'lime', blurb: 'Your arena is live. Manage it from your owner dashboard.' },
+  rejected: { label: 'Not approved', tone: 'rose', blurb: 'This request was not approved. You can submit a new one.' },
+  withdrawn: { label: 'Withdrawn', tone: 'slate', blurb: 'This request was withdrawn.' },
+};
+
+export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs }) {
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
     email: '',
+    password: '',
     phone: '',
     address: '',
     city: '',
@@ -49,6 +69,8 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
     courtsCount: '2',
     priceRange: '1000-1500',
     turfDescription: '',
+    legalBusinessName: '',
+    panNumber: '',
     amenities: ['Parking', 'WiFi'],
     operatingHours: {
       monday: { open: '06:00', close: '23:00', isClosed: false },
@@ -109,6 +131,42 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [formStep, setFormStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [myRequest, setMyRequest] = useState(null);
+
+  const { showToast } = useToast();
+
+  // Contact defaults from the signed-in account. Used as the input fallback
+  // and merged in buildPayload so a resubmitting pending_owner isn't retyping
+  // what we already know (and it's clear this does not make a second account).
+  const accountOwnerName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(' ')
+    : '';
+  const accountEmail = user?.email || '';
+
+  // Poll the applicant's latest request while a submission is in progress /
+  // awaiting review, so the status card reflects the reviewer's decision.
+  useEffect(() => {
+    if (!user || !isSubmitted) return undefined;
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await ownerRequestService.mine();
+        const latest = (res.data || [])[0] || null;
+        if (!cancelled) setMyRequest(latest);
+      } catch {
+        /* transient — keep showing the last known status */
+      }
+    };
+
+    load();
+    const id = setInterval(load, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [user, isSubmitted]);
 
   const amenitiesList = [
     { name: 'Parking', icon: Car },
@@ -166,20 +224,43 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
 
   const handleDocumentUpload = (e) => {
     const files = e.target.files;
-    if (files) {
+    if (!files || !files.length) return;
+
+    setFormData((prev) => {
+      const kinds = prev.documents.map((d) => d.kind);
+      const pickKind = () => {
+        if (!kinds.includes('registration')) {
+          kinds.push('registration');
+          return 'registration';
+        }
+        if (!kinds.includes('pan')) {
+          kinds.push('pan');
+          return 'pan';
+        }
+        return 'other';
+      };
+
       const newDocuments = Array.from(files).map((file) => ({
         id: Math.random().toString(36).substr(2, 9),
         name: file.name,
         size: file.size,
         type: file.type,
-        file: file,
+        file,
+        kind: pickKind(),
         preview: URL.createObjectURL(file),
       }));
-      setFormData((prev) => ({
-        ...prev,
-        documents: [...prev.documents, ...newDocuments],
-      }));
-    }
+
+      return { ...prev, documents: [...prev.documents, ...newDocuments] };
+    });
+  };
+
+  const handleDocumentKindChange = (docId, kind) => {
+    setFormData((prev) => ({
+      ...prev,
+      documents: prev.documents.map((doc) =>
+        doc.id === docId ? { ...doc, kind } : doc,
+      ),
+    }));
   };
 
   const handleRemoveDocument = (docId) => {
@@ -202,10 +283,112 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
     }));
   };
 
-  const handleSubmit = (e) => {
+  const buildPayload = () => {
+    const operatingHours = {};
+    DAY_KEYS.forEach((d) => {
+      const src = formData.operatingHours[d] || {};
+      operatingHours[d] = {
+        open: src.open || '06:00',
+        close: src.close || '22:00',
+        isClosed: !!src.isClosed,
+      };
+    });
+
+    return {
+      contact: {
+        ownerName: (formData.ownerName || accountOwnerName).trim(),
+        email: (formData.email || accountEmail).trim(),
+        phone: formData.phone.trim(),
+      },
+      arena: {
+        name: formData.arenaName.trim(),
+        description: formData.turfDescription.trim(),
+        courts: Math.max(1, parseInt(formData.courtsCount, 10) || 1),
+        priceRange: formData.priceRange,
+        amenities: formData.amenities,
+        address: { city: formData.city, area: formData.address.trim() },
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude),
+        operatingHours,
+      },
+      business: {
+        legalName: formData.legalBusinessName.trim(),
+        panNumber: formData.panNumber.trim(),
+      },
+      documents: formData.documents.map((d) => ({ kind: d.kind })),
+    };
+  };
+
+  const validateBeforeSubmit = () => {
+    if (!user) {
+      if (!formData.ownerName.trim()) return 'Your name is required.';
+      if (!/^\S+@\S+\.\S+$/.test(formData.email.trim()))
+        return 'A valid email is required to create your owner account.';
+      if (formData.password.length < 8)
+        return 'Choose a password of at least 8 characters.';
+    }
+    if (!formData.latitude || !formData.longitude)
+      return 'Please pin your arena location on the map.';
+    if (!formData.legalBusinessName.trim())
+      return 'Legal business name is required.';
+    if (!/^\d{9}$/.test(formData.panNumber.trim()))
+      return 'PAN number must be exactly 9 digits.';
+    if (!formData.documents.length)
+      return 'Please upload your registration and PAN documents.';
+    if (!formData.documents.some((d) => d.kind === 'registration'))
+      return 'Mark one document as the Company/Firm Registration Certificate.';
+    if (!formData.documents.some((d) => d.kind === 'pan'))
+      return 'Mark one document as the PAN / VAT Certificate.';
+    if (!formData.agreeTerms) return 'Please accept the Terms of Service.';
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    setIsSubmitted(true);
+    if (submitting) return;
+
+    const validationError = validateBeforeSubmit();
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Not logged in → create the owner account first (token is persisted
+      // by the store so the submit call below is authenticated).
+      let justRegistered = false;
+      if (!user) {
+        const reg = await onRegisterOwner?.({
+          name: formData.ownerName.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+        });
+        if (!reg?.success) {
+          showToast(reg?.error || 'Could not create your account.', 'error');
+          setSubmitting(false);
+          return;
+        }
+        justRegistered = true;
+      }
+
+      const res = await ownerRequestService.submit({
+        payload: buildPayload(),
+        documents: formData.documents,
+      });
+      setMyRequest(res.data || null);
+      setIsSubmitted(true);
+      showToast('Your application has been submitted for review.', 'success');
+      scrollToTop();
+
+      // Hydrate auth state → App routes the new pending_owner to the
+      // "under review" page.
+      if (justRegistered) await onAuthReady?.();
+    } catch (error) {
+      showToast(error.message || 'Submission failed. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -300,6 +483,9 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
             
             {/* Left Column: Form */}
             <div className="lg:col-span-7">
+              {isSubmitted ? (
+                <RequestStatusPanel request={myRequest} onHome={onHome} />
+              ) : (
               <form onSubmit={handleSubmit} data-form-section className="space-y-6">
                 {/* Step 1: Arena Details */}
                 {formStep === 1 && (
@@ -337,7 +523,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                     <input
                       type="text"
                       placeholder="Your full name"
-                      value={formData.ownerName}
+                      value={formData.ownerName || accountOwnerName}
                       onChange={(e) => handleInputChange('ownerName', e.target.value)}
                       className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
                       required
@@ -356,7 +542,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                       <input
                         type="email"
                         placeholder="your@email.com"
-                        value={formData.email}
+                        value={formData.email || accountEmail}
                         onChange={(e) => handleInputChange('email', e.target.value)}
                         className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
                         required
@@ -380,6 +566,38 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                     </div>
                   </div>
                 </div>
+
+                {/* Account credentials — only when not signed in */}
+                {!user && (
+                  <div className="rounded-2xl bg-lime-50/60 border border-lime-100 p-4 space-y-3">
+                    <p className="text-xs font-bold text-slate-700">
+                      Create your owner account
+                      <span className="font-medium text-slate-500"> — you&apos;ll use this to track your application and manage your arena.</span>
+                    </p>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="At least 8 characters"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        className="w-full px-4 py-3.5 rounded-2xl bg-white text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:ring-2 focus:ring-lime-400 outline-none transition-all"
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Already have an account?{' '}
+                      <button type="button" onClick={onLogin} className="font-bold text-lime-700 hover:underline cursor-pointer">
+                        Log in
+                      </button>{' '}
+                      first.
+                    </p>
+                  </div>
+                )}
 
                 {/* Row 3: Address & City */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -496,10 +714,10 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                         required
                       >
                         <option value="">Select price range</option>
-                        <option value="0-500">Rs. 500 - 1,000</option>
+                        <option value="500-1000">Rs. 500 - 1,000</option>
                         <option value="1000-1500">Rs. 1,000 - 1,500</option>
                         <option value="1500-2000">Rs. 1,500 - 2,000</option>
-                        <option value="2000+">Rs. 2,000+</option>
+                        <option value="2000-3000">Rs. 2,000+</option>
                       </select>
                       <ChevronDown className="absolute right-4 h-4 w-4 text-slate-400 pointer-events-none" />
                     </div>
@@ -705,6 +923,40 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                       </p>
                     </div>
 
+                    {/* Business Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
+                          Legal Business Name *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="As registered with OCR"
+                          value={formData.legalBusinessName}
+                          onChange={(e) => handleInputChange('legalBusinessName', e.target.value)}
+                          className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
+                          PAN / VAT Number *
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={9}
+                          placeholder="9-digit number"
+                          value={formData.panNumber}
+                          onChange={(e) =>
+                            handleInputChange('panNumber', e.target.value.replace(/\D/g, '').slice(0, 9))
+                          }
+                          className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
+                          required
+                        />
+                      </div>
+                    </div>
+
                       {/* Required Documents Info - Individual Cards */}
                       <div className="space-y-3 mb-6">
                         <div className="bg-blue-50 rounded-2xl p-5">
@@ -763,30 +1015,48 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                             {formData.documents.map((doc) => (
                               <div
                                 key={doc.id}
-                                className="flex items-center justify-between bg-white rounded-xl p-3 border border-slate-100"
+                                className="bg-white rounded-xl p-3 border border-slate-100 space-y-2.5"
                               >
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                                    {doc.type.includes('pdf') ? (
-                                      <span className="text-xs font-bold text-red-600">PDF</span>
-                                    ) : (
-                                      <span className="text-xs font-bold text-blue-600">IMG</span>
-                                    )}
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                                      {doc.type.includes('pdf') ? (
+                                        <span className="text-xs font-bold text-red-600">PDF</span>
+                                      ) : (
+                                        <span className="text-xs font-bold text-blue-600">IMG</span>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-semibold text-slate-900 truncate">{doc.name}</p>
+                                      <p className="text-[11px] text-slate-400 font-medium">
+                                        {(doc.size / 1024).toFixed(2)} KB
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-semibold text-slate-900 truncate">{doc.name}</p>
-                                    <p className="text-[11px] text-slate-400 font-medium">
-                                      {(doc.size / 1024).toFixed(2)} KB
-                                    </p>
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDocument(doc.id)}
+                                    className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors shrink-0"
+                                  >
+                                    ✕
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveDocument(doc.id)}
-                                  className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors shrink-0"
-                                >
-                                  ✕
-                                </button>
+                                <div className="flex items-center gap-2 pl-1">
+                                  <span className="text-[11px] font-bold text-slate-500 shrink-0">
+                                    Document type
+                                  </span>
+                                  <select
+                                    value={doc.kind}
+                                    onChange={(e) => handleDocumentKindChange(doc.id, e.target.value)}
+                                    className="flex-1 px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all cursor-pointer"
+                                  >
+                                    {DOC_KINDS.map((k) => (
+                                      <option key={k.value} value={k.value}>
+                                        {k.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -822,15 +1092,17 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                       </button>
                       <button
                         type="submit"
-                        className="px-8 py-3.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                        disabled={submitting}
+                        className="px-8 py-3.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <span>Submit Application</span>
-                        <ArrowRight className="h-4 w-4" />
+                        <span>{submitting ? 'Submitting…' : 'Submit Application'}</span>
+                        {!submitting && <ArrowRight className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
                 )}
               </form>
+              )}
             </div>
 
             {/* Right Column: How Verification Works & Partner FAQs */}
@@ -954,6 +1226,71 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
           }}
         />
       )}
+    </div>
+  );
+}
+
+const TONE_CLASSES = {
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  lime: 'bg-lime-50 text-lime-700 border-lime-200',
+  rose: 'bg-rose-50 text-rose-700 border-rose-200',
+  slate: 'bg-slate-50 text-slate-600 border-slate-200',
+};
+
+function RequestStatusPanel({ request, onHome }) {
+  const status = request?.status || 'pending';
+  const meta = REQUEST_STATUS_META[status] || REQUEST_STATUS_META.pending;
+
+  return (
+    <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08)]">
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-600">
+          <CheckCircle2 className="h-6 w-6" />
+        </span>
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900">Request submitted</h2>
+          <p className="text-sm font-medium text-slate-500">
+            {request?.arena?.name ? `Arena: ${request.arena.name}` : 'We have received your listing request.'}
+          </p>
+        </div>
+      </div>
+
+      <div className={`mt-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold ${TONE_CLASSES[meta.tone]}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        {meta.label}
+      </div>
+
+      <p className="mt-4 text-sm leading-relaxed text-slate-600">{meta.blurb}</p>
+
+      {(status === 'rejected' || status === 'needs_changes') && request?.review?.note && (
+        <div className="mt-4 rounded-2xl bg-rose-50/70 border border-rose-100 p-4">
+          <p className="text-[11px] font-black uppercase tracking-wider text-rose-800">Reviewer note</p>
+          <p className="mt-1 text-xs font-medium text-slate-700">{request.review.note}</p>
+        </div>
+      )}
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onHome}
+          className="rounded-full bg-slate-900 px-6 py-3 text-xs font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.99] cursor-pointer"
+        >
+          Back to Home
+        </button>
+        {status === 'approved' && (
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-full bg-lime-400 px-6 py-3 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-[0.99] cursor-pointer"
+          >
+            Go to Owner Dashboard
+          </button>
+        )}
+      </div>
+
+      <p className="mt-6 text-[11px] font-medium text-slate-400">
+        This page refreshes the status automatically. You will also receive an email when a decision is made.
+      </p>
     </div>
   );
 }
