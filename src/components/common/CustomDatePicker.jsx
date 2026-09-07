@@ -118,18 +118,46 @@ export default function CustomDatePicker({
     if (!value) return 'Select date';
     const [y, m, d] = value.split('-').map(Number);
     const date = new Date(y, m - 1, d);
+    if (variant === 'searchPill') {
+      return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    }
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
-  }, [value]);
+  }, [value, variant]);
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {/* Trigger Button */}
-      {variant === 'cell' ? (
+      {variant === 'searchPill' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer w-full select-none ${buttonClassName} ${
+            isOpen ? 'bg-slate-50' : ''
+          }`}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-hover:bg-lime-100 group-hover:text-lime-700">
+            <CalendarIcon className="h-4 w-4 stroke-[2.2]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold text-slate-900 leading-tight">
+              {label || 'Date'}
+            </span>
+            <span className="mt-0.5 block text-[14px] font-medium text-slate-400 truncate">
+              {displayValue}
+            </span>
+          </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-slate-900' : ''
+            }`}
+          />
+        </button>
+      ) : variant === 'cell' ? (
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
@@ -172,7 +200,7 @@ export default function CustomDatePicker({
 
       {/* Calendar Popover */}
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-2 w-[310px] rounded-2xl bg-white p-5 shadow-[0_16px_40px_-6px_rgba(0,0,0,0.15)] border border-slate-100 animate-in fade-in zoom-in-95 duration-150 select-none">
+        <div className="absolute top-full left-0 z-[9999] mt-2 w-[310px] rounded-2xl bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 animate-in fade-in zoom-in-95 duration-150 select-none">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
             <button
