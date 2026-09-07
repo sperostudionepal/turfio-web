@@ -50,7 +50,32 @@ export default function CustomDropdown({
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      {variant === 'cell' ? (
+      {variant === 'searchPill' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer w-full select-none ${buttonClassName} ${
+            isOpen ? 'bg-slate-50' : ''
+          }`}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-hover:bg-lime-100 group-hover:text-lime-700">
+            {Icon ? <Icon className="h-4 w-4 stroke-[2.2]" /> : <ChevronDown className="h-4 w-4" />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold text-slate-900 leading-tight">
+              {label || 'Select'}
+            </span>
+            <span className="mt-0.5 block text-[14px] font-medium text-slate-400 truncate">
+              {displayLabel}
+            </span>
+          </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-slate-900' : ''
+            }`}
+          />
+        </button>
+      ) : variant === 'cell' ? (
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
@@ -97,7 +122,7 @@ export default function CustomDropdown({
       )}
 
       {isOpen && (
-        <div className={`absolute top-full left-0 right-0 mt-1.5 z-50 bg-white rounded-xl border border-slate-100 shadow-[0_12px_32px_-4px_rgba(0,0,0,0.12)] px-2 py-1.5 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 ${popoverClassName}`}>
+        <div className={`absolute top-full left-0 min-w-[180px] mt-2 z-[9999] bg-white rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-2 py-2 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none ${popoverClassName}`}>
           {options.map((option) => {
             const optValue = typeof option === 'object' ? option.value : option;
             const optLabel = typeof option === 'object' ? option.label : option;

@@ -351,11 +351,17 @@ export default function TurfListingPage({
   onSelectTurf,
   onNavigateRoute,
 }) {
-  // Search parameters
-  const [searchLocation, setSearchLocation] = useState('');
-  const [searchDate, setSearchDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [searchTime, setSearchTime] = useState('07:00 PM');
-  const [searchPlayers, setSearchPlayers] = useState('Any Size');
+  // Search draft input parameters (user typing / selecting before clicking Search)
+  const [locationInput, setLocationInput] = useState('');
+  const [dateInput, setDateInput] = useState(() => new Date().toISOString().split('T')[0]);
+  const [timeInput, setTimeInput] = useState('07:00 PM');
+  const [playersInput, setPlayersInput] = useState('Any Size');
+
+  // Applied search parameters (only updated when Search button clicked or form submitted)
+  const [appliedLocation, setAppliedLocation] = useState('');
+  const [appliedDate, setAppliedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [appliedTime, setAppliedTime] = useState('07:00 PM');
+  const [appliedPlayers, setAppliedPlayers] = useState('Any Size');
 
   // Sidebar filters
   const [selectedTypes, setSelectedTypes] = useState([]);
@@ -382,9 +388,20 @@ export default function TurfListingPage({
   const listScrollContainerRef = useRef(null);
   const [offscreenDirection, setOffscreenDirection] = useState(null); // 'up' | 'down' | null
 
+  // Apply search execution when Search button is clicked or form submitted
+  const handleApplySearch = (e) => {
+    if (e) e.preventDefault();
+    setAppliedLocation(locationInput.trim());
+    setAppliedDate(dateInput);
+    setAppliedTime(timeInput);
+    setAppliedPlayers(playersInput);
+    setCurrentPage(1);
+  };
+
   // Helper to reset map to original state and clear location filters
   const handleResetMap = () => {
-    setSearchLocation('');
+    setLocationInput('');
+    setAppliedLocation('');
     setResetMapKey((prev) => prev + 1);
   };
 
@@ -495,7 +512,8 @@ export default function TurfListingPage({
     setSelectedSizes([]);
     setMaxPrice(2500);
     setSelectedAmenities([]);
-    setSearchLocation('');
+    setLocationInput('');
+    setAppliedLocation('');
     setCurrentPage(1);
   };
 
@@ -510,16 +528,16 @@ export default function TurfListingPage({
     return turfs
       .filter((turf) => {
         const locMatch =
-          !searchLocation ||
-          (turf.title && turf.title.toLowerCase().includes(searchLocation.toLowerCase())) ||
-          (turf.location && turf.location.toLowerCase().includes(searchLocation.toLowerCase()));
+          !appliedLocation ||
+          (turf.title && turf.title.toLowerCase().includes(appliedLocation.toLowerCase())) ||
+          (turf.location && turf.location.toLowerCase().includes(appliedLocation.toLowerCase()));
 
         const typeMatch =
           selectedTypes.length === 0 || (turf.type && selectedTypes.includes(turf.type));
 
         const sizeMatch =
           (selectedSizes.length === 0 || (turf.size && selectedSizes.includes(turf.size))) &&
-          (searchPlayers === 'Any Size' || turf.size === searchPlayers);
+          (appliedPlayers === 'Any Size' || turf.size === appliedPlayers);
 
         const priceMatch = turf.priceVal ? turf.priceVal <= maxPrice : true;
 
@@ -536,7 +554,7 @@ export default function TurfListingPage({
         if (sortBy === 'price-high') return (b.priceVal || 0) - (a.priceVal || 0);
         return 0;
       });
-  }, [turfs, searchLocation, selectedTypes, selectedSizes, searchPlayers, maxPrice, selectedAmenities, sortBy]);
+  }, [turfs, appliedLocation, selectedTypes, selectedSizes, appliedPlayers, maxPrice, selectedAmenities, sortBy]);
 
   // 2. Viewport-filtered turfs: The map bounding box is the source of truth for the list
   const filteredTurfs = useMemo(() => {
@@ -561,8 +579,8 @@ export default function TurfListingPage({
     return filteredTurfs.slice(start, start + itemsPerPage);
   }, [filteredTurfs, currentPage, itemsPerPage]);
 
-  const activeLocationQuery = searchLocation
-    ? `${searchLocation}, Nepal`
+  const activeLocationQuery = appliedLocation
+    ? `${appliedLocation}, Nepal`
     : 'Kathmandu, Nepal';
 
   return (
@@ -579,12 +597,12 @@ export default function TurfListingPage({
         />
 
         {/* ─── FLOATING ALWAYS-VISIBLE SEARCH BAR WIDGET + CONTROLS ─── */}
-        <section className="bg-white/95 backdrop-blur-md pt-10 pb-8">
+        <section className="relative z-40 bg-white/95 backdrop-blur-md pt-10 pb-8">
           <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 flex flex-col lg:flex-row items-center justify-between gap-4">
             {/* Search Pill */}
-            <div className="w-full max-w-[860px] rounded-full bg-white ring-1 ring-slate-100/60 shadow-[0_0_25px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="w-full max-w-[860px] rounded-full bg-white ring-1 ring-slate-100/60 shadow-[0_0_25px_rgba(0,0,0,0.04)] overflow-visible relative z-50">
               <form
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={handleApplySearch}
                 className="flex flex-col items-stretch divide-y divide-slate-100/90 lg:divide-y-0 lg:flex-row lg:items-center lg:gap-0"
               >
                 {/* Location - Expanded Width */}
@@ -596,8 +614,8 @@ export default function TurfListingPage({
                     <span className="block text-[13px] font-bold text-slate-900 leading-tight">Location</span>
                     <input
                       type="text"
-                      value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
                       placeholder="Search location"
                       className="mt-0.5 w-full border-0 bg-transparent p-0 text-[14px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
                     />
@@ -608,73 +626,54 @@ export default function TurfListingPage({
                 <div className="hidden h-7 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
                 {/* Date */}
-                <label className="group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
-                    <Calendar className="h-4 w-4 stroke-[2.2]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold text-slate-900 leading-tight">Date</span>
-                    <span className="mt-0.5 block text-[14px] font-medium text-slate-400">
-                      {searchDate ? searchDate.split('-').reverse().join('/') : '06/09/2026'}
-                    </span>
-                    <input
-                      type="date"
-                      value={searchDate}
-                      onChange={(e) => setSearchDate(e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-600" />
-                </label>
+                <div className="flex-1 min-w-0">
+                  <CustomDatePicker
+                    variant="searchPill"
+                    label="Date"
+                    value={dateInput}
+                    onChange={setDateInput}
+                    minDate={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
 
                 <div className="hidden h-7 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
                 {/* Time */}
-                <label className="group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
-                    <Clock className="h-4 w-4 stroke-[2.2]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold text-slate-900 leading-tight">Time</span>
-                    <span className="mt-0.5 block text-[14px] font-medium text-slate-400">
-                      {searchTime || '07:00 PM'}
-                    </span>
-                    <select
-                      value={searchTime}
-                      onChange={(e) => setSearchTime(e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    >
-                      {TIME_SLOT_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-600" />
-                </label>
+                <div className="flex-1 min-w-0">
+                  <CustomDropdown
+                    variant="searchPill"
+                    label="Time"
+                    icon={Clock}
+                    value={timeInput}
+                    onChange={setTimeInput}
+                    options={TIME_SLOT_OPTIONS}
+                  />
+                </div>
 
                 <div className="hidden h-7 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
                 {/* Players */}
-                <label className="group flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
+                <label className="group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50">
+                  <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
                     <Users className="h-4 w-4 stroke-[2.2]" />
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="relative z-10 min-w-0 flex-1 pointer-events-none">
                     <span className="block text-[13px] font-bold text-slate-900 leading-tight">Players</span>
-                    <select
-                      value={searchPlayers}
-                      onChange={(e) => setSearchPlayers(e.target.value)}
-                      className="mt-0.5 w-full appearance-none border-0 bg-transparent p-0 text-[14px] font-medium text-slate-400 outline-none cursor-pointer"
-                    >
-                      <option value="Any Size">Random</option>
-                      <option value="5v5">5v5</option>
-                      <option value="7v7">7v7</option>
-                      <option value="9v9">9v9</option>
-                    </select>
+                    <span className="block mt-0.5 w-full text-[14px] font-medium text-slate-400 truncate">
+                      {playersInput === 'Any Size' ? 'Random' : playersInput}
+                    </span>
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+                  <ChevronDown className="relative z-10 h-3.5 w-3.5 shrink-0 text-slate-600 pointer-events-none" />
+                  <select
+                    value={playersInput}
+                    onChange={(e) => setPlayersInput(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                  >
+                    <option value="Any Size">Random</option>
+                    <option value="5v5">5v5</option>
+                    <option value="7v7">7v7</option>
+                    <option value="9v9">9v9</option>
+                  </select>
                 </label>
 
                 {/* Action Buttons: Search Icon Only */}
@@ -774,7 +773,7 @@ export default function TurfListingPage({
                     onHoverTurf={setHoveredFromMapId}
                     onBoundsChange={setMapBounds}
                     onNavigateRoute={onNavigateRoute}
-                    searchLocation={searchLocation}
+                    searchLocation={appliedLocation}
                     activeLocationQuery={activeLocationQuery}
                   />
                 </div>
@@ -798,7 +797,7 @@ export default function TurfListingPage({
                   ) : (
                     <>
                       <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                        Futsal Arenas in {searchLocation || 'Kathmandu Valley'}
+                        Futsal Arenas in {appliedLocation || 'Kathmandu Valley'}
                       </h1>
                       <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
                         Over <span className="font-semibold text-slate-800">{filteredTurfs.length} arenas</span> available for instant booking
