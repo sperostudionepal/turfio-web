@@ -6,11 +6,18 @@ export default function CtaBannerSection({ onBookNow }) {
       <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
         <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-lime-200/50 via-lime-50/70 to-lime-100/60 p-5 sm:p-6 lg:p-7">
           {/* Football Graphic in Original Crisp Colors */}
-          <img
-            src="/football.png"
-            alt="Football"
-            className="absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 h-[160%] max-h-[160px] w-auto object-contain pointer-events-none z-0"
-          />
+          <picture>
+            <source srcSet="/football.webp" type="image/webp" />
+            <img
+              src="/football.png"
+              alt="Football"
+              className="absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 h-[160%] max-h-[160px] w-auto object-contain pointer-events-none z-0"
+              loading="lazy"
+              decoding="async"
+              width="160"
+              height="160"
+            />
+          </picture>
 
           <div className="relative z-10 flex flex-col items-center justify-between gap-5 md:flex-row md:gap-8 pl-28 sm:pl-40 md:pl-48 lg:pl-52">
             {/* Left Text Group */}

@@ -161,11 +161,18 @@ export default function DownloadAppSection() {
               </div>
 
               {/* Central Phone Mockups Image */}
-              <img
-                src="/mockup.png"
-                alt="Turfio App Mobile Mockup"
-                className="relative z-0 w-full max-w-[420px] object-contain drop-shadow-md transition-transform duration-500 hover:scale-[1.02]"
-              />
+              <picture>
+                <source srcSet="/mockup.webp" type="image/webp" />
+                <img
+                  src="/mockup.png"
+                  alt="Turfio App Mobile Mockup"
+                  className="relative z-0 w-full max-w-[420px] object-contain drop-shadow-md transition-transform duration-500 hover:scale-[1.02]"
+                  loading="lazy"
+                  decoding="async"
+                  width="420"
+                  height="700"
+                />
+              </picture>
             </div>
           </div>
         </div>

@@ -11,11 +11,18 @@ export default function Footer() {
             <div>
               {/* Brand Logo */}
               <div className="flex items-center gap-2.5">
-                <img
-                  src="/logo.png"
-                  alt="Turfio Logo"
-                  className="h-9 w-auto object-contain"
-                />
+                <picture>
+                  <source srcSet="/logo.webp" type="image/webp" />
+                  <img
+                    src="/logo.png"
+                    alt="Turfio Logo"
+                    className="h-9 w-auto object-contain"
+                    loading="lazy"
+                    decoding="async"
+                    width="36"
+                    height="36"
+                  />
+                </picture>
                 <span className="leading-tight">
                   <span className="block text-lg font-extrabold tracking-tight text-slate-900">
                     TURFIO

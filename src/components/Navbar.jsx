@@ -134,11 +134,18 @@ export default function Navbar({
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 md:px-14 lg:px-20">
         {/* Brand Logo */}
         <a href="#" onClick={(e) => { e.preventDefault(); onHome?.(); }} className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity">
-          <img
-            src="/logo.png"
-            alt="Turfio Logo"
-            className="h-9 w-auto object-contain"
-          />
+          <picture>
+            <source srcSet="/logo.webp" type="image/webp" />
+            <img
+              src="/logo.png"
+              alt="Turfio Logo"
+              className="h-9 w-auto object-contain"
+              loading="eager"
+              decoding="async"
+              width="36"
+              height="36"
+            />
+          </picture>
           <span className="leading-tight">
             <span className="block text-lg font-extrabold tracking-tight text-slate-900">
               TURFIO
