@@ -30,7 +30,7 @@ const stats = [
 export default function HeroStats() {
   return (
     <section className="w-full bg-white pt-6 pb-10 md:pt-8 md:pb-12">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4 lg:gap-8 justify-items-center">
           {stats.map((stat) => {
             const Icon = stat.icon;

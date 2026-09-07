@@ -16,6 +16,7 @@ import Navbar from './Navbar';
 import HeroStats from './HeroStats';
 import TurfSection from './TurfSection';
 import HowItWorksAndDownloadSection from './HowItWorksAndDownloadSection';
+import PricingSection from './PricingSection';
 import ReviewsSection from './ReviewsSection';
 import AboutUsSection from './AboutUsSection';
 import CtaBannerSection from './CtaBannerSection';
@@ -43,7 +44,7 @@ function formatTime(t) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard }) {
+export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard, isInitializing = false }) {
   const [form, setForm] = useState(initialForm);
 
   const updateField = (field, value) => {
@@ -52,7 +53,17 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
 
   return (
     <div className="bg-white">
-      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onListTurf={onListTurf} onHome={onHome} onFindTurfs={onFindTurfs} onDashboard={onDashboard} />
+      <Navbar
+        onLogin={onLogin}
+        onSignUp={onSignUp}
+        user={user}
+        isInitializing={isInitializing}
+        onLogout={onLogout}
+        onListTurf={onListTurf}
+        onHome={onHome}
+        onFindTurfs={onFindTurfs}
+        onDashboard={onDashboard}
+      />
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
@@ -180,38 +191,38 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
             </div>
           </div>
 
-          {/* Search panel (Shifted slightly up, balanced padding) */}
-          <div className="relative z-10 mx-auto mt-6 w-full max-w-[1280px] sm:mt-8 lg:mt-10">
-            <div className="rounded-[24px] bg-white p-2 sm:p-2.5 shadow-[0_10px_25px_-10px_rgba(15,23,42,0.1)] ring-1 ring-slate-100">
+          {/* Search panel (Fully rounded pill shape, shifted slightly higher) */}
+          <div className="relative z-10 mx-auto mt-2 w-full max-w-[1200px] sm:mt-3 lg:mt-4">
+            <div className="rounded-full bg-white shadow-[0_10px_25px_-10px_rgba(15,23,42,0.1)] ring-1 ring-slate-100 overflow-hidden">
               <form
                 onSubmit={(e) => { e.preventDefault(); onFindTurfs?.(); }}
                 className="flex flex-col items-stretch divide-y divide-slate-100/90 lg:divide-y-0 lg:flex-row lg:items-center lg:gap-0"
               >
-                <label className="group flex flex-1 items-center gap-2.5 rounded-xl px-3 py-3 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 lg:rounded-2xl lg:pl-3 lg:pr-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-600">
-                    <MapPin className="h-4 w-4" />
+                <label className="group flex flex-[1.3] items-center gap-2.5 rounded-full px-6 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
+                    <MapPin className="h-4 w-4 stroke-[2.2]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-medium text-slate-400">Location</span>
+                    <span className="block text-[14px] font-bold text-slate-900">Location</span>
                     <input
                       type="text"
                       value={form.location}
                       onChange={(event) => updateField('location', event.target.value)}
-                      className="mt-0.5 w-full border-0 bg-transparent p-0 text-[15px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                      className="mt-0.5 w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
                     />
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
-                <label className="group relative flex flex-1 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 lg:rounded-2xl lg:px-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-600">
-                    <Calendar className="h-4 w-4" />
+                <label className="group relative flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
+                    <Calendar className="h-4 w-4 stroke-[2.2]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-medium text-slate-400">Date</span>
-                    <span className="mt-0.5 block text-[15px] font-semibold text-slate-900">
+                    <span className="block text-[14px] font-bold text-slate-900">Date</span>
+                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400">
                       {formatDate(form.date)}
                     </span>
                     <input
@@ -221,18 +232,18 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
                       className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     />
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
-                <label className="group relative flex flex-1 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 lg:rounded-2xl lg:px-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-600">
-                    <Clock className="h-4 w-4" />
+                <label className="group relative flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
+                    <Clock className="h-4 w-4 stroke-[2.2]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-medium text-slate-400">Time</span>
-                    <span className="mt-0.5 block text-[15px] font-semibold text-slate-900">
+                    <span className="block text-[14px] font-bold text-slate-900">Time</span>
+                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400">
                       {formatTime(form.time)}
                     </span>
                     <input
@@ -242,21 +253,21 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
                       className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     />
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
-                <label className="group flex flex-1 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 lg:rounded-2xl lg:px-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-600">
-                    <Users className="h-4 w-4" />
+                <label className="group flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
+                    <Users className="h-4 w-4 stroke-[2.2]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-medium text-slate-400">Players</span>
+                    <span className="block text-[14px] font-bold text-slate-900">Players</span>
                     <select
                       value={form.players}
                       onChange={(event) => updateField('players', event.target.value)}
-                      className="mt-0.5 w-full appearance-none border-0 bg-transparent p-0 text-[15px] font-semibold text-slate-900 outline-none"
+                      className="mt-0.5 w-full appearance-none border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none cursor-pointer"
                     >
                       <option value="Random">Random</option>
                       <option value="5v5">5v5</option>
@@ -264,16 +275,16 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
                       <option value="9v9">9v9</option>
                     </select>
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
-                <div className="flex items-center justify-center pt-3 pb-1 lg:py-0 lg:pl-2 lg:pr-2">
+                <div className="flex items-center justify-center p-2 lg:p-2 lg:pr-3">
                   <button
                     type="submit"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime-400 px-7 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 lg:w-auto"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime-400 px-7 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 lg:w-auto cursor-pointer"
                   >
                     Search Turfs
-                    <Search className="h-4 w-4" />
+                    <Search className="h-4 w-4 stroke-[2.5]" />
                   </button>
                 </div>
               </form>
@@ -284,6 +295,7 @@ export default function HeroSection({ onLogin, user, onLogout, onListTurf, onHom
       <HeroStats />
       <TurfSection onBookNow={onLogin} onViewDetails={onViewTurfDetails} />
       <HowItWorksAndDownloadSection />
+      <PricingSection onExploreTurfs={onFindTurfs} />
       <ReviewsSection />
       <AboutUsSection />
       <CtaBannerSection onBookNow={user ? onFindTurfs : onLogin} />

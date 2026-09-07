@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import LottieAnimation from '../../components/common/LottieAnimation';
 import {
   ArrowRight,
   Building2,
@@ -26,7 +27,7 @@ import Footer from '../../components/Footer';
 import MapPinPositioner from '../../components/common/MapPinPositioner';
 import TimePickerDropdown from '../../components/common/TimePickerDropdown';
 import { useToast } from '../../components/common/Toast';
-import ownerRequestService from '../../services/ownerRequestService';
+import ownerApplicationService from '../../services/ownerApplicationService';
 
 const DOC_KINDS = [
   { value: 'registration', label: 'Company/Firm Registration' },
@@ -54,12 +55,11 @@ const REQUEST_STATUS_META = {
   withdrawn: { label: 'Withdrawn', tone: 'slate', blurb: 'This request was withdrawn.' },
 };
 
-export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs }) {
+export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs, onSubmitted }) {
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
     email: '',
-    password: '',
     phone: '',
     address: '',
     city: '',
@@ -132,41 +132,27 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
   const [formStep, setFormStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [myRequest, setMyRequest] = useState(null);
+  const [submittedData, setSubmittedData] = useState(null);
+
+  // Lock body scrolling when submitting overlay or map modal is open
+  useEffect(() => {
+    if (submitting || isMapOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [submitting, isMapOpen]);
 
   const { showToast } = useToast();
 
-  // Contact defaults from the signed-in account. Used as the input fallback
-  // and merged in buildPayload so a resubmitting pending_owner isn't retyping
-  // what we already know (and it's clear this does not make a second account).
+  // Contact defaults from the signed-in account.
   const accountOwnerName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(' ')
     : '';
   const accountEmail = user?.email || '';
-
-  // Poll the applicant's latest request while a submission is in progress /
-  // awaiting review, so the status card reflects the reviewer's decision.
-  useEffect(() => {
-    if (!user || !isSubmitted) return undefined;
-
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await ownerRequestService.mine();
-        const latest = (res.data || [])[0] || null;
-        if (!cancelled) setMyRequest(latest);
-      } catch {
-        /* transient — keep showing the last known status */
-      }
-    };
-
-    load();
-    const id = setInterval(load, 20000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [user, isSubmitted]);
 
   const amenitiesList = [
     { name: 'Parking', icon: Car },
@@ -186,7 +172,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
     },
     {
       q: 'How long does the verification process take?',
-      a: 'Our partner verification team reviews your documents within 24 hours. Once verified, your arena goes live immediately.',
+      a: 'Our partner verification team reviews your documents within 24 hours. Once verified, you will receive an email invitation to set up your owner dashboard.',
     },
     {
       q: 'Can I still accept manual over-the-counter bookings?',
@@ -201,7 +187,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
   const scrollToTop = () => {
     const formSection = document.querySelector('[data-form-section]');
     if (formSection) {
-      const offset = 158; // Scroll 55% above the form (additional 5% increase)
+      const offset = 158;
       const elementPosition = formSection.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
     } else {
@@ -222,9 +208,60 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
     }));
   };
 
-  const handleDocumentUpload = (e) => {
-    const files = e.target.files;
-    if (!files || !files.length) return;
+  const compressImageFile = (file, maxWidth = 1800, quality = 0.8) => {
+    return new Promise((resolve) => {
+      // If file is not an image (e.g. PDF), return original as-is
+      if (!file.type.startsWith('image/')) {
+        return resolve(file);
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size < file.size) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
+  const handleDocumentUpload = async (e) => {
+    const rawFiles = Array.from(e.target.files || []);
+    if (!rawFiles.length) return;
+
+    const compressedFiles = await Promise.all(rawFiles.map((file) => compressImageFile(file)));
 
     setFormData((prev) => {
       const kinds = prev.documents.map((d) => d.kind);
@@ -240,7 +277,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
         return 'other';
       };
 
-      const newDocuments = Array.from(files).map((file) => ({
+      const newDocuments = compressedFiles.map((file) => ({
         id: Math.random().toString(36).substr(2, 9),
         name: file.name,
         size: file.size,
@@ -312,27 +349,30 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
         operatingHours,
       },
       business: {
-        legalName: formData.legalBusinessName.trim(),
-        panNumber: formData.panNumber.trim(),
+        legalName: (formData.legalBusinessName || formData.arenaName || '').trim(),
+        panNumber: (formData.panNumber || '').trim(),
       },
       documents: formData.documents.map((d) => ({ kind: d.kind })),
     };
   };
 
   const validateBeforeSubmit = () => {
-    if (!user) {
-      if (!formData.ownerName.trim()) return 'Your name is required.';
-      if (!/^\S+@\S+\.\S+$/.test(formData.email.trim()))
-        return 'A valid email is required to create your owner account.';
-      if (formData.password.length < 8)
-        return 'Choose a password of at least 8 characters.';
-    }
+    const ownerNameVal = (formData.ownerName || accountOwnerName).trim();
+    const emailVal = (formData.email || accountEmail).trim();
+
+    if (!ownerNameVal) return 'Your name is required.';
+    if (!/^\S+@\S+\.\S+$/.test(emailVal))
+      return 'A valid email is required for confirmation and tracking.';
+    if (!formData.phone.trim())
+      return 'Phone number is required.';
+    if (!formData.arenaName.trim())
+      return 'Arena name is required.';
+    if (!formData.address.trim())
+      return 'Full address is required.';
+    if (!formData.city)
+      return 'Please select your city.';
     if (!formData.latitude || !formData.longitude)
       return 'Please pin your arena location on the map.';
-    if (!formData.legalBusinessName.trim())
-      return 'Legal business name is required.';
-    if (!/^\d{9}$/.test(formData.panNumber.trim()))
-      return 'PAN number must be exactly 9 digits.';
     if (!formData.documents.length)
       return 'Please upload your registration and PAN documents.';
     if (!formData.documents.some((d) => d.kind === 'registration'))
@@ -355,35 +395,25 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
 
     setSubmitting(true);
     try {
-      // Not logged in → create the owner account first (token is persisted
-      // by the store so the submit call below is authenticated).
-      let justRegistered = false;
-      if (!user) {
-        const reg = await onRegisterOwner?.({
-          name: formData.ownerName.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-        });
-        if (!reg?.success) {
-          showToast(reg?.error || 'Could not create your account.', 'error');
-          setSubmitting(false);
-          return;
-        }
-        justRegistered = true;
-      }
-
-      const res = await ownerRequestService.submit({
+      const res = await ownerApplicationService.submit({
         payload: buildPayload(),
         documents: formData.documents,
       });
-      setMyRequest(res.data || null);
-      setIsSubmitted(true);
-      showToast('Your application has been submitted for review.', 'success');
-      scrollToTop();
 
-      // Hydrate auth state → App routes the new pending_owner to the
-      // "under review" page.
-      if (justRegistered) await onAuthReady?.();
+      const submissionResult = {
+        ...(res.data || {}),
+        email: res.data?.email || formData.email,
+        arenaName: res.data?.arenaName || formData.arenaName,
+      };
+
+      setSubmittedData(submissionResult);
+      setIsSubmitted(true);
+      showToast('Application received — check your email for your status tracking link.', 'success');
+      if (onSubmitted) {
+        onSubmitted(submissionResult);
+      } else {
+        scrollToTop();
+      }
     } catch (error) {
       showToast(error.message || 'Submission failed. Please try again.', 'error');
     } finally {
@@ -397,9 +427,9 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
       <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} />
 
       {/* 1. Hero Section */}
-      <section className="relative isolate overflow-hidden bg-white pt-20 md:pt-32 lg:pt-40 pb-6 md:pb-12 lg:pb-16">
+      <section className="relative isolate overflow-hidden bg-white pt-16 md:pt-24 lg:pt-28 pb-8 md:pb-12">
         {/* Background Image */}
-        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.05]">
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
           <img
             src="/hero-image.png"
             alt="Hero Background"
@@ -411,25 +441,20 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Hero Content */}
-            <div className="lg:col-span-7 -mt-16 lg:-mt-24">
+            <div className="lg:col-span-7 -mt-10 lg:-mt-16">
               <span className="inline-flex items-center gap-2 rounded-full bg-lime-100 px-4 py-1.5 text-xs font-extrabold text-slate-800 mb-6">
                 <Building2 className="h-4 w-4 text-lime-600" />
                 Grow Your Futsal Business
               </span>
 
-              <h1 className="font-bebas text-[3.5rem] sm:text-[4.2rem] lg:text-[4rem] xl:text-[4.5rem] font-black uppercase leading-[0.92] tracking-[-0.04em] text-slate-900">
+              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-slate-900 leading-[1.12]">
                 List Your Turf
               </h1>
-              <h2 className="font-bebas text-[3.5rem] sm:text-[4.2rem] lg:text-[4rem] xl:text-[4.5rem] font-black uppercase leading-[0.92] tracking-[-0.04em] text-lime-500 mb-6">
+              <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-lime-500 mb-5 leading-[1.12]">
                 On Turfio Today
               </h2>
 
-              <div className="flex items-center gap-3 mb-6">
-                <span className="h-1.5 w-14 rounded-full bg-lime-400" />
-                <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
-              </div>
-
-              <p className="mt-7 max-w-md text-[17px] leading-[1.5] text-slate-500">
+              <p className="max-w-md text-base leading-relaxed text-slate-500">
                 Join 500+ successful arena owners across Nepal.
                 <span className="block">Fill empty slot hours, automate bookings & scale revenue.</span>
               </p>
@@ -458,10 +483,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
 
             {/* Right Tablet Mockup */}
             <div className="lg:col-span-5 flex justify-center lg:justify-end h-full items-start pt-12">
-              <div className="relative w-full h-full" style={{ transform: 'translateY(20px) translateX(0px)' }}>
-                {/* Blob Gradient Background */}
-                <div className="absolute -inset-20 -top-96 -left-96 bg-gradient-to-br from-lime-400/15 via-lime-300/10 to-transparent rounded-full blur-3xl -z-10" style={{ borderRadius: '63% 37% 54% 46% / 55% 48% 52% 45%' }}></div>
-                
+              <div className="relative w-full h-full" style={{ transform: 'translateY(44px) translateX(0px)' }}>
                 <img
                   src="/tablet-mockup.png"
                   alt="Turfio Arena Owner Dashboard Mockup"
@@ -484,7 +506,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
             {/* Left Column: Form */}
             <div className="lg:col-span-7">
               {isSubmitted ? (
-                <RequestStatusPanel request={myRequest} onHome={onHome} />
+                <RequestStatusPanel data={submittedData} onHome={onHome} />
               ) : (
               <form onSubmit={handleSubmit} data-form-section className="space-y-6">
                 {/* Step 1: Arena Details */}
@@ -504,8 +526,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Arena Name *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Arena Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -517,8 +539,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Owner Name *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Owner Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -534,8 +556,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                 {/* Row 2: Email & Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Email Address *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Email Address <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <Mail className="absolute left-4 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -550,8 +572,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Phone Number *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Phone Number <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <Phone className="absolute left-4 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -567,43 +589,11 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                   </div>
                 </div>
 
-                {/* Account credentials — only when not signed in */}
-                {!user && (
-                  <div className="rounded-2xl bg-lime-50/60 border border-lime-100 p-4 space-y-3">
-                    <p className="text-xs font-bold text-slate-700">
-                      Create your owner account
-                      <span className="font-medium text-slate-500"> — you&apos;ll use this to track your application and manage your arena.</span>
-                    </p>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                        Password *
-                      </label>
-                      <input
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="At least 8 characters"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className="w-full px-4 py-3.5 rounded-2xl bg-white text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:ring-2 focus:ring-lime-400 outline-none transition-all"
-                        required
-                        minLength={8}
-                      />
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-500">
-                      Already have an account?{' '}
-                      <button type="button" onClick={onLogin} className="font-bold text-lime-700 hover:underline cursor-pointer">
-                        Log in
-                      </button>{' '}
-                      first.
-                    </p>
-                  </div>
-                )}
-
                 {/* Row 3: Address & City */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Full Address *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Full Address <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <MapPin className="absolute left-4 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -618,8 +608,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      City / Region *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      City / Region <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <select
@@ -643,8 +633,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
 
                 {/* Map Pin Location Section */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                    Map Location *
+                  <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                    Map Location <span className="text-rose-500">*</span>
                   </label>
                   <div className="bg-slate-50 rounded-2xl p-5">
                     {formData.latitude && formData.longitude ? (
@@ -675,10 +665,9 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                         <button
                           type="button"
                           onClick={() => setIsMapOpen(true)}
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+                          className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
                         >
-                          <MapPin className="h-4 w-4 text-lime-400" />
-                          <span>Select Location on Map</span>
+                          Select Location on Map
                         </button>
                       </div>
                     )}
@@ -690,8 +679,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                 {/* Row 4: Courts & Price Range */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Number of Courts *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Number of Courts <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -703,8 +692,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                      Price Range (per hour) *
+                    <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                      Price Range (per hour) <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <select
@@ -726,7 +715,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
 
                 {/* Amenities Toggle Grid */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 tracking-wide mb-3">
+                  <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-3">
                     Amenities Available
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -738,7 +727,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                           key={item.name}
                           type="button"
                           onClick={() => handleAmenityToggle(item.name)}
-                          className={`px-3.5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          className={`px-3.5 py-3 rounded-2xl text-[13px] font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                             isSelected
                               ? 'bg-lime-400 text-slate-900 scale-[1.02]'
                               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -923,40 +912,6 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                       </p>
                     </div>
 
-                    {/* Business Details */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                          Legal Business Name *
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="As registered with OCR"
-                          value={formData.legalBusinessName}
-                          onChange={(e) => handleInputChange('legalBusinessName', e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 tracking-wide mb-2">
-                          PAN / VAT Number *
-                        </label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={9}
-                          placeholder="9-digit number"
-                          value={formData.panNumber}
-                          onChange={(e) =>
-                            handleInputChange('panNumber', e.target.value.replace(/\D/g, '').slice(0, 9))
-                          }
-                          className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
-                          required
-                        />
-                      </div>
-                    </div>
-
                       {/* Required Documents Info - Individual Cards */}
                       <div className="space-y-3 mb-6">
                         <div className="bg-blue-50 rounded-2xl p-5">
@@ -1095,8 +1050,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                         disabled={submitting}
                         className="px-8 py-3.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <span>{submitting ? 'Submitting…' : 'Submit Application'}</span>
-                        {!submitting && <ArrowRight className="h-4 w-4" />}
+                        <span>Submit Application</span>
+                        <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -1144,8 +1099,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                         {st.step}
                       </div>
                       <div className="pt-2">
-                        <h4 className="font-extrabold text-slate-900 text-sm">{st.title}</h4>
-                        <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">{st.desc}</p>
+                        <h4 className="font-extrabold text-slate-900 text-[15px]">{st.title}</h4>
+                        <p className="text-[13px] text-slate-500 font-medium leading-relaxed mt-1">{st.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -1153,11 +1108,11 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
               </div>
 
               {/* Owner Testimonial Card */}
-              <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
-                <div className="flex items-center gap-1 text-amber-400 mb-3">
+              <div className="bg-slate-50 rounded-3xl p-6 shadow-[0_2px_18px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center gap-1 text-amber-400 mb-3 text-base">
                   {'★'.repeat(5)}
                 </div>
-                <p className="text-xs text-slate-700 font-medium leading-relaxed italic mb-4">
+                <p className="text-[13px] text-slate-700 font-medium leading-relaxed italic mb-4">
                   "Since listing on Turfio, our off-peak afternoon slots are almost always filled. The automated payment system saves us hours of manual math every week."
                 </p>
                 <div className="flex items-center gap-3">
@@ -1165,8 +1120,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     HS
                   </div>
                   <div>
-                    <p className="text-xs font-extrabold text-slate-900">Hattiban Sports Arena</p>
-                    <p className="text-[11px] text-slate-500 font-medium">Lalitpur, Nepal</p>
+                    <p className="text-[13px] font-extrabold text-slate-900">Hattiban Sports Arena</p>
+                    <p className="text-xs text-slate-500 font-medium">Lalitpur, Nepal</p>
                   </div>
                 </div>
               </div>
@@ -1184,13 +1139,13 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                         <button
                           type="button"
                           onClick={() => setActiveFaq(isOpen ? null : idx)}
-                          className="w-full p-4 text-left flex items-center justify-between text-xs font-bold text-slate-900 cursor-pointer hover:bg-slate-50 transition-colors"
+                          className="w-full p-4 text-left flex items-center justify-between text-[13px] font-bold text-slate-900 cursor-pointer hover:bg-slate-50 transition-colors"
                         >
                           <span>{faq.q}</span>
                           {isOpen ? <ChevronUp size={16} className="text-slate-400 shrink-0" /> : <ChevronDown size={16} className="text-slate-400 shrink-0" />}
                         </button>
                         {isOpen && (
-                          <div className="px-4 pb-4 text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-2">
+                          <div className="px-4 pb-4 text-[13px] text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-2">
                             {faq.a}
                           </div>
                         )}
@@ -1226,6 +1181,37 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
           }}
         />
       )}
+
+      {/* Fullscreen Lottie Football Progress Indicator Overlay */}
+      {submitting && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/60 backdrop-blur-xs transition-all duration-300 touch-none overscroll-none select-none"
+          onWheel={(e) => e.preventDefault()}
+          onTouchMove={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col items-center justify-center p-8 text-center max-w-sm -translate-y-16 sm:-translate-y-20">
+            <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center">
+              <LottieAnimation
+                src="/Football.json"
+                loop={true}
+                autoplay={true}
+                className="w-full h-full"
+              />
+            </div>
+            <p className="text-slate-900 font-black text-xl sm:text-2xl mt-3 tracking-tight inline-flex items-center">
+              <span>Submitting Application</span>
+              <span className="inline-flex ml-0.5">
+                <span className="animate-pulse" style={{ animationDuration: '1s', animationDelay: '0ms' }}>.</span>
+                <span className="animate-pulse" style={{ animationDuration: '1s', animationDelay: '200ms' }}>.</span>
+                <span className="animate-pulse" style={{ animationDuration: '1s', animationDelay: '400ms' }}>.</span>
+              </span>
+            </p>
+            <p className="text-slate-600 text-xs sm:text-sm font-medium mt-1.5 leading-relaxed">
+              Uploading documents and court specifications. Please wait.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1237,59 +1223,80 @@ const TONE_CLASSES = {
   slate: 'bg-slate-50 text-slate-600 border-slate-200',
 };
 
-function RequestStatusPanel({ request, onHome }) {
-  const status = request?.status || 'pending';
-  const meta = REQUEST_STATUS_META[status] || REQUEST_STATUS_META.pending;
+function RequestStatusPanel({ data, onHome }) {
+  const [copied, setCopied] = useState(false);
+  const trackingUrl = data?.trackingUrl || `${window.location.origin}/application-status?token=${data?.trackingToken || ''}`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(trackingUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08)]">
-      <div className="flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-600">
-          <CheckCircle2 className="h-6 w-6" />
+    <div className="rounded-3xl border border-slate-100 bg-white p-8 md:p-10 shadow-[0_15px_40px_-12px_rgba(0,0,0,0.08)] space-y-6">
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-lime-100 text-lime-600">
+          <CheckCircle2 className="h-7 w-7 stroke-[2.5]" />
         </span>
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900">Request submitted</h2>
-          <p className="text-sm font-medium text-slate-500">
-            {request?.arena?.name ? `Arena: ${request.arena.name}` : 'We have received your listing request.'}
+          <h2 className="text-2xl font-black text-slate-900">Application Received!</h2>
+          <p className="text-xs font-semibold text-slate-500 mt-0.5">
+            {data?.arenaName ? `Arena: ${data.arenaName}` : 'Your arena details have been submitted.'}
           </p>
         </div>
       </div>
 
-      <div className={`mt-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold ${TONE_CLASSES[meta.tone]}`}>
-        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-        {meta.label}
+      <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-black text-amber-800">
+        <Clock size={13} /> Under Verification (within 24 hours)
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-slate-600">{meta.blurb}</p>
+      <p className="text-sm leading-relaxed text-slate-600 font-medium">
+        We&apos;ve received your application and sent a confirmation email with your private status tracking link. Our partner team verifies documents within 24 hours.
+      </p>
 
-      {(status === 'rejected' || status === 'needs_changes') && request?.review?.note && (
-        <div className="mt-4 rounded-2xl bg-rose-50/70 border border-rose-100 p-4">
-          <p className="text-[11px] font-black uppercase tracking-wider text-rose-800">Reviewer note</p>
-          <p className="mt-1 text-xs font-medium text-slate-700">{request.review.note}</p>
+      {/* Tracking Link Box */}
+      {data?.trackingToken && (
+        <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+              Your Application Tracking Link
+            </span>
+            <button
+              type="button"
+              onClick={copyToClipboard}
+              className="text-[11px] font-bold text-lime-700 hover:underline cursor-pointer"
+            >
+              {copied ? '✓ Copied' : 'Copy link'}
+            </button>
+          </div>
+          <p className="text-xs font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200/60 truncate">
+            {trackingUrl}
+          </p>
         </div>
       )}
 
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="pt-2 flex flex-wrap gap-3">
+        {data?.trackingToken && (
+          <a
+            href={trackingUrl}
+            className="rounded-full bg-lime-400 px-6 py-3 text-xs font-black text-slate-900 transition-all hover:bg-lime-500 active:scale-[0.99] cursor-pointer inline-flex items-center gap-2"
+          >
+            <span>Track Application Status</span>
+            <ArrowRight size={14} />
+          </a>
+        )}
         <button
           type="button"
           onClick={onHome}
-          className="rounded-full bg-slate-900 px-6 py-3 text-xs font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.99] cursor-pointer"
+          className="rounded-full bg-slate-100 hover:bg-slate-200 px-6 py-3 text-xs font-bold text-slate-800 transition-all active:scale-[0.99] cursor-pointer"
         >
           Back to Home
         </button>
-        {status === 'approved' && (
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="rounded-full bg-lime-400 px-6 py-3 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-[0.99] cursor-pointer"
-          >
-            Go to Owner Dashboard
-          </button>
-        )}
       </div>
 
-      <p className="mt-6 text-[11px] font-medium text-slate-400">
-        This page refreshes the status automatically. You will also receive an email when a decision is made.
+      <p className="text-[11px] font-medium text-slate-400">
+        Check your email for the direct link. When approved, you will receive an invitation to set up your owner dashboard password.
       </p>
     </div>
   );

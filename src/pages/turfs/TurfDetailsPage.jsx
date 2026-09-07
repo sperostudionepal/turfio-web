@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
   Calendar,
   Check,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   Heart,
   MapPin,
   Mail,
+  MessageCircle,
   Phone,
   Share2,
   Shield,
@@ -25,33 +27,67 @@ import {
   ChevronDown,
   Maximize2,
   ImageIcon,
+  Grip,
   Trophy,
-  MessageSquare,
   Tag,
-  Key
+  Sparkles,
+  Navigation,
+  Info,
+  Award,
+  Layers,
+  ThumbsUp,
+  Flag,
+  Coffee,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import BackToTopButton from '../../components/BackToTopButton';
+import CustomDropdown from '../../components/common/CustomDropdown';
+import CustomDatePicker from '../../components/common/CustomDatePicker';
+import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
+import turfService from '../../services/turfService';
 
-/* ─── amenity icon map ─── */
+/* ─── Amenity Icon Mapping ─── */
 const amenityIconMap = {
   Parking: Car,
   WiFi: Wifi,
   Washrooms: Droplets,
   'Changing Rooms': Users,
-  Canteen: Zap,
+  Canteen: Coffee,
   'First Aid': Shield,
   Floodlights: Zap,
   'Drinking Water': Droplets,
   'Locker Rooms': Shield,
   'Spectator Seating': Users,
+  'Bibs & Balls': Trophy,
+  'Air Conditioning': Zap,
+  'Shower Rooms': Droplets,
+  'Sound System': Zap,
+  'CCTV Security': Shield,
 };
 
-/* ─── star component ─── */
+/* ─── Amenity Categories ─── */
+const amenityCategories = [
+  {
+    category: 'Field & Game',
+    items: ['Floodlights', 'Bibs & Balls', 'Spectator Seating', 'CCTV Security'],
+  },
+  {
+    category: 'Player Comfort',
+    items: ['Changing Rooms', 'Locker Rooms', 'Shower Rooms', 'Drinking Water', 'Washrooms'],
+  },
+  {
+    category: 'Facility & Tech',
+    items: ['Parking', 'WiFi', 'Canteen', 'First Aid'],
+  },
+];
+
+/* ─── Star Rating Component ─── */
 function StarRating({ rating, size = 'h-4 w-4' }) {
   return (
-    <div className="flex">
+    <div className="flex items-center gap-0.5">
       {[...Array(5)].map((_, i) => (
         <Star
           key={i}
@@ -68,8 +104,8 @@ function StarRating({ rating, size = 'h-4 w-4' }) {
   );
 }
 
-/* ─── image gallery lightbox ─── */
-function ImageLightbox({ images, currentIndex, onClose, onPrev, onNext }) {
+/* ─── Image Gallery Lightbox ─── */
+function ImageLightbox({ images, currentIndex, onClose, onPrev, onNext, onSelect }) {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -81,49 +117,131 @@ function ImageLightbox({ images, currentIndex, onClose, onPrev, onNext }) {
   }, [onClose, onPrev, onNext]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90">
-      <button
-        onClick={onClose}
-        className="absolute top-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
-      >
-        <X className="h-5 w-5" />
-      </button>
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black/95 p-4 md:p-8 backdrop-blur-md animate-fadeIn">
+      {/* Top Bar */}
+      <div className="flex w-full max-w-7xl items-center justify-between text-white">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold tracking-wider text-slate-400">
+            PHOTO {currentIndex + 1} OF {images.length}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/25 hover:rotate-90 cursor-pointer"
+          aria-label="Close fullscreen gallery"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-      <button
-        onClick={onPrev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
-      >
-        <ChevronLeft className="h-6 w-6" />
-      </button>
+      {/* Main Preview Area */}
+      <div className="relative flex w-full max-w-6xl flex-1 items-center justify-center py-4">
+        <button
+          onClick={onPrev}
+          className="absolute left-2 md:left-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 cursor-pointer"
+          aria-label="Previous image"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
 
-      <img
-        src={images[currentIndex]}
-        alt={`Gallery ${currentIndex + 1}`}
-        className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain"
-      />
+        <img
+          src={images[currentIndex]}
+          alt={`Arena photo ${currentIndex + 1}`}
+          className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-2xl transition-all duration-300 select-none"
+        />
 
-      <button
-        onClick={onNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
-      >
-        <ChevronRight className="h-6 w-6" />
-      </button>
+        <button
+          onClick={onNext}
+          className="absolute right-2 md:right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 cursor-pointer"
+          aria-label="Next image"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      </div>
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
-        {images.map((_, i) => (
-          <span
-            key={i}
-            className={`h-2 rounded-full transition-all ${
-              i === currentIndex ? 'w-6 bg-white' : 'w-2 bg-white/40'
+      {/* Thumbnails Row */}
+      <div className="flex w-full max-w-4xl items-center justify-center gap-2 overflow-x-auto py-2">
+        {images.map((img, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onSelect(idx)}
+            className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-all cursor-pointer ${
+              idx === currentIndex ? 'scale-105 opacity-100 shadow-md ring-2 ring-lime-400' : 'opacity-40 hover:opacity-80'
             }`}
-          />
+          >
+            <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-/* ─── similar turfs data (subset for "Similar Turfs" section) ─── */
+/* ─── Amenities Full Modal ─── */
+function AmenitiesModal({ isOpen, onClose, amenities }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl">
+        <div className="flex items-center justify-between pb-5">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">All Venue Amenities & Facilities</h3>
+            <p className="text-xs font-medium text-slate-500 mt-0.5">Everything available on-site for players and spectators</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-6">
+          {amenityCategories.map((group) => {
+            const activeItems = group.items.filter((item) => amenities.includes(item) || true);
+            return (
+              <div key={group.category} className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{group.category}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activeItems.map((item) => {
+                    const Icon = amenityIconMap[item] || CheckCircle2;
+                    return (
+                      <div
+                        key={item}
+                        className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 text-slate-800"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-700">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{item}</p>
+                          <p className="text-xs text-slate-500">Free access with booking</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 pt-4">
+          <button
+            onClick={onClose}
+            className="w-full rounded-full bg-slate-900 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 cursor-pointer"
+          >
+            Got it, Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Mock Similar Turfs ─── */
 const allTurfs = [
   {
     id: 1,
@@ -160,86 +278,30 @@ const allTurfs = [
   },
 ];
 
-const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-const PERIODS = ['AM', 'PM'];
+/* ─── Available Time Slots ─── */
+const ALL_TIME_SLOTS = [
+  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
+  '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM', '10:00 PM',
+];
 
-function CustomTimePickerDropdown({ timeObj, duration, onChange, isTimeSlotAvailable }) {
-  return (
-    <div className="absolute top-[110%] left-0 w-[200px] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-slate-100 z-50 overflow-hidden cursor-default" onClick={(e) => e.stopPropagation()}>
-      {/* Top Display */}
-      <div className="flex items-center justify-center gap-2 p-4 border-b border-slate-100 bg-slate-50/50">
-        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-2xl font-bold">
-          {timeObj.hour}
-        </div>
-        <span className="text-2xl font-bold text-slate-800 pb-1">:</span>
-        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-2xl font-bold">
-          00
-        </div>
-        <div className="w-16 h-14 bg-[#96D800] rounded-xl flex items-center justify-center text-white text-xl font-bold ml-2">
-          {timeObj.period}
-        </div>
-      </div>
+const TIME_SLOT_OPTIONS = ALL_TIME_SLOTS.map((slot) => ({
+  value: slot,
+  label: slot,
+}));
 
-      {/* Columns */}
-      <div className="grid grid-cols-2 h-[200px] divide-x divide-slate-100 relative bg-white">
-        {/* Hours */}
-        <div className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth py-2">
-          <div className="text-[10px] font-bold text-slate-500 text-center mb-2 tracking-widest">HOURS</div>
-          {HOURS.map((h) => {
-            const isAvailable = isTimeSlotAvailable ? isTimeSlotAvailable(h, timeObj.period, duration) : true;
-            return (
-              <button
-                key={`h-${h}`}
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  if (isAvailable) {
-                    onChange({ ...timeObj, hour: h, minute: '00' });
-                  }
-                }}
-                className={`w-12 h-10 mx-auto flex items-center justify-center rounded-lg text-sm font-semibold transition-colors mb-1 ${
-                  !isAvailable 
-                    ? 'text-slate-300 cursor-not-allowed line-through bg-slate-50' 
-                    : timeObj.hour === h ? 'bg-[#96D800] text-white' : 'text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                {h}
-              </button>
-            );
-          })}
-        </div>
-        {/* Periods */}
-        <div className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth py-2">
-          <div className="text-[10px] font-bold text-slate-500 text-center mb-2 tracking-widest">PERIOD</div>
-          {PERIODS.map((p) => {
-            const isAvailable = isTimeSlotAvailable ? isTimeSlotAvailable(timeObj.hour, p, duration) : true;
-            return (
-              <button
-                key={`p-${p}`}
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  if (isAvailable) {
-                    onChange({ ...timeObj, period: p, minute: '00' });
-                  }
-                }}
-                className={`w-12 h-10 mx-auto flex items-center justify-center rounded-lg text-sm font-semibold transition-colors mb-1 ${
-                  !isAvailable 
-                    ? 'text-slate-300 cursor-not-allowed line-through bg-slate-50' 
-                    : timeObj.period === p ? 'bg-[#96D800] text-white' : 'text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                {p}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+const DURATION_OPTIONS = [
+  { value: 1, label: '1 Hour' },
+  { value: 1.5, label: '1.5 Hours' },
+  { value: 2, label: '2 Hours' },
+  { value: 2.5, label: '2.5 Hours' },
+  { value: 3, label: '3 Hours' },
+  { value: 4, label: '4 Hours' },
+];
 
-/* ═══════════════════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT (BORDERLESS STYLING)
+   ═══════════════════════════════════════════════════════════════ */
 export default function TurfDetailsPage({
   turf,
   onHome,
@@ -250,109 +312,221 @@ export default function TurfDetailsPage({
   onListTurf,
   onBookNow,
   onViewTurfDetails,
+  onNavigateRoute,
   user,
 }) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedTimeObj, setSelectedTimeObj] = useState({ hour: '06', minute: '00', period: 'AM' });
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [duration, setDuration] = useState(1);
-  const [isFavorited, setIsFavorited] = useState(false);
+  // Gallery state
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  // Scroll to top on mount
+  // Modals
+  const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
+  const [showFullAbout, setShowFullAbout] = useState(false);
+  const [previewReviewImage, setPreviewReviewImage] = useState(null);
+
+  // Favorites & Social Feedback
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Booking Card State
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('07:00 PM');
+  const [duration, setDuration] = useState(1);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [showPromoInput, setShowPromoInput] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [copiedAddress, setCopiedAddress] = useState(false);
+
+  // Scroll to top on load
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImageIndex(0);
   }, [turf?.id]);
 
-  // ── FILTERING & TIME HELPERS ──
-  // Mock booked slots for demonstration of filtering (e.g. today)
-  const mockedBookedSlots = ['07:00 AM', '08:00 AM', '05:00 PM'];
-  
-  const isTimeSlotAvailable = (hourStr, period, checkDuration) => {
-    let startHour24 = parseInt(hourStr, 10);
-    if (period === 'PM' && startHour24 !== 12) startHour24 += 12;
-    if (period === 'AM' && startHour24 === 12) startHour24 = 0;
-    
-    // Check every 1-hour block for overlap
-    for (let i = 0; i < Math.ceil(checkDuration); i++) {
-      let checkHour24 = (startHour24 + i) % 24;
-      let checkPeriod = checkHour24 >= 12 ? 'PM' : 'AM';
-      let checkHour12 = checkHour24 % 12;
-      if (checkHour12 === 0) checkHour12 = 12;
-      let checkTimeStr = `${checkHour12.toString().padStart(2, '0')}:00 ${checkPeriod}`;
-      
-      if (mockedBookedSlots.includes(checkTimeStr)) {
-        return false;
-      }
-    }
-    return true;
-  };
+  // Gallery Fallback
+  const gallery = useMemo(() => {
+    if (turf?.gallery && turf.gallery.length > 0) return turf.gallery;
+    if (turf?.image) return [turf.image];
+    return ['/image.png'];
+  }, [turf]);
 
-  const getEndTimeStr = () => {
-    let h = parseInt(selectedTimeObj.hour, 10);
-    if (selectedTimeObj.period === 'PM' && h !== 12) h += 12;
-    if (selectedTimeObj.period === 'AM' && h === 12) h = 0;
-    
-    let endHour24 = h + Math.floor(duration);
-    let endMinute = (duration % 1) * 60; 
-    
-    let endPeriod = (endHour24 % 24) >= 12 ? 'PM' : 'AM';
-    let endHour12 = (endHour24 % 24) % 12;
+  // Price calculation
+  const baseRateNumeric = useMemo(() => {
+    const priceStr = turf?.price || '1000';
+    const match = priceStr.match(/(\d+,?\d*)/);
+    return match ? parseInt(match[1].replace(/,/g, ''), 10) : 1000;
+  }, [turf]);
+
+  const subtotal = baseRateNumeric * duration;
+  const discountAmount = Math.round(subtotal * appliedDiscount);
+  const totalAmount = Math.max(0, subtotal - discountAmount);
+
+  // Calculate End Time
+  const endTimeStr = useMemo(() => {
+    if (!selectedTimeSlot) return '';
+    const [time, period] = selectedTimeSlot.split(' ');
+    let [hour, min] = time.split(':').map(Number);
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+
+    const totalMinutes = hour * 60 + min + duration * 60;
+    const endHour24 = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    const endPeriod = endHour24 >= 12 ? 'PM' : 'AM';
+    let endHour12 = endHour24 % 12;
     if (endHour12 === 0) endHour12 = 12;
-    
-    const endMinStr = endMinute === 0 ? '00' : endMinute.toString().padStart(2, '0');
-    return `${endHour12.toString().padStart(2, '0')}:${endMinStr} ${endPeriod}`;
+
+    return `${String(endHour12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
+  }, [selectedTimeSlot, duration]);
+
+  // Quick Date Helpers
+  const handleSetQuickDate = (type) => {
+    const date = new Date();
+    if (type === 'tomorrow') {
+      date.setDate(date.getDate() + 1);
+    } else if (type === 'saturday') {
+      const day = date.getDay();
+      const diff = (6 - day + 7) % 7 || 7;
+      date.setDate(date.getDate() + diff);
+    }
+    setSelectedDate(date.toISOString().split('T')[0]);
   };
 
-  if (!turf) return null;
+  // Promo Code Handler
+  const handleApplyPromo = (e) => {
+    e.preventDefault();
+    setPromoError('');
+    if (!promoCode.trim()) return;
 
-  const gallery = turf.gallery || [turf.image];
-  const similarTurfs = allTurfs.filter((t) => t.id !== turf.id);
+    if (promoCode.trim().toUpperCase() === 'TURF10' || promoCode.trim().toUpperCase() === 'KICKOFF') {
+      setAppliedDiscount(0.1);
+      triggerToast('🎉 10% discount promo applied successfully!');
+    } else if (promoCode.trim().toUpperCase() === 'TURF20') {
+      setAppliedDiscount(0.2);
+      triggerToast('🔥 20% discount promo applied successfully!');
+    } else {
+      setPromoError('Invalid coupon code. Try TURF10');
+    }
+  };
 
+  // Toast Notification helper
+  const triggerToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // Review Feedback Handlers
+  const [helpfulReviews, setHelpfulReviews] = useState({});
+  const [reportedReviews, setReportedReviews] = useState({});
+
+  const handleToggleHelpful = (reviewIndex) => {
+    setHelpfulReviews((prev) => {
+      const isHelpful = !prev[reviewIndex];
+      triggerToast(isHelpful ? 'Marked review as helpful' : 'Helpful feedback removed');
+      return { ...prev, [reviewIndex]: isHelpful };
+    });
+  };
+
+  const handleReportReview = (reviewIndex) => {
+    if (reportedReviews[reviewIndex]) {
+      triggerToast('Review already reported for moderation');
+      return;
+    }
+    setReportedReviews((prev) => ({ ...prev, [reviewIndex]: true }));
+    triggerToast('Review reported. Thank you for keeping our community safe!');
+  };
+
+  // Share action
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: turf.title,
+          text: `Check out ${turf.title} on Turfio!`,
+          url,
+        });
+      } catch (err) {
+        navigator.clipboard?.writeText(url);
+        triggerToast('Link copied to clipboard!');
+      }
+    } else {
+      navigator.clipboard?.writeText(url);
+      triggerToast('Link copied to clipboard!');
+    }
+  };
+
+  // Copy address
+  const handleCopyAddress = () => {
+    const address = turf.address || turf.location || 'Kathmandu, Nepal';
+    navigator.clipboard?.writeText(address);
+    setCopiedAddress(true);
+    triggerToast('Address copied to clipboard!');
+    setTimeout(() => setCopiedAddress(false), 2500);
+  };
+
+  // Lightbox handlers
   const openLightbox = (index) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
-
   const handlePrevImage = () => {
     setLightboxIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1));
   };
-
   const handleNextImage = () => {
     setLightboxIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1));
   };
 
-  const handlePrevMain = (e) => {
-    e?.stopPropagation();
-    setActiveImageIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1));
-  };
+  if (!turf) return null;
 
-  const handleNextMain = (e) => {
-    e?.stopPropagation();
-    setActiveImageIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1));
-  };
-
-  /* ─── time slots ─── */
-  const timeSlots = [
-    '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
-    '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
-    '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
+  const amenities = turf.amenities || [
+    'Parking',
+    'WiFi',
+    'Washrooms',
+    'Changing Rooms',
+    'Canteen',
+    'First Aid',
+    'Floodlights',
+    'Drinking Water',
+    'Spectator Seating',
   ];
 
-  /* ─── rating breakdown ─── */
-  const ratingBreakdown = [
-    { stars: 5, percent: 72 },
-    { stars: 4, percent: 18 },
-    { stars: 3, percent: 7 },
-    { stars: 2, percent: 2 },
-    { stars: 1, percent: 1 },
-  ];
+  // Similar turfs state from backend
+  const [similarTurfs, setSimilarTurfs] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    turfService.getTurfs().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setSimilarTurfs(data.filter((t) => t.id !== turf?.id));
+      }
+    }).catch((err) => {
+      console.warn('Failed to load similar turfs:', err);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [turf?.id]);
+
+  // Prepare active turf with coordinates
+  const currentTurfWithCoords = useMemo(() => {
+    if (!turf) return null;
+    return {
+      ...turf,
+      lat: turf.lat || 27.71585,
+      lng: turf.lng || turf.lon || 85.36209,
+    };
+  }, [turf]);
+
+  const displayedSimilarTurfs = similarTurfs.length > 0 ? similarTurfs : allTurfs.filter((t) => t.id !== turf?.id);
 
   return (
-    <div className="min-h-screen bg-white font-sans antialiased">
+    <div className="min-h-screen bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900">
       <Navbar
         onLogin={onLogin}
         user={user}
@@ -362,567 +536,763 @@ export default function TurfDetailsPage({
         onFindTurfs={onFindTurfs}
       />
 
-      {/* ─── BREADCRUMB (Matches Navbar px exactly: px-6 md:px-14 lg:px-20 max-w-[1440px], seamless background without border stroke) ─── */}
-      <div className="bg-white">
-        <div className="mx-auto max-w-[1440px] px-6 pt-5 pb-2 md:px-14 lg:px-20">
-          <nav className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <button onClick={onHome} className="transition-colors hover:text-slate-900 cursor-pointer">
-              Home
-            </button>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-            <button onClick={onFindTurfs} className="transition-colors hover:text-slate-900 cursor-pointer">
-              Find Turfs
-            </button>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-            <span className="font-semibold text-slate-900 truncate max-w-[240px]">
-              {turf.title}
-            </span>
-          </nav>
+      {/* ─── FLOATING TOAST NOTIFICATION ─── */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-[9999] flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-2xl transition-all animate-slide-in">
+          <Sparkles className="h-4 w-4 text-lime-400" />
+          <span>{toastMessage}</span>
         </div>
+      )}
+
+      {/* ─── BREADCRUMB (ABOVE GALLERY) ─── */}
+      <div className="mx-auto max-w-[1440px] px-6 pt-6 pb-3.5 md:px-14 lg:px-20">
+        <nav className="flex items-center gap-2 text-xs md:text-sm font-medium text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={onHome}
+            className="transition-colors hover:text-slate-900 cursor-pointer"
+          >
+            Home
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <button
+            type="button"
+            onClick={onFindTurfs}
+            className="transition-colors hover:text-slate-900 cursor-pointer"
+          >
+            Find Turfs
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <span className="font-semibold text-slate-900 truncate max-w-[200px] sm:max-w-xs">
+            {turf.title}
+          </span>
+        </nav>
       </div>
 
-      {/* ─── REDESIGNED IMAGE SHOWCASE & CAROUSEL (Matches Navbar px exactly: px-6 md:px-14 lg:px-20 max-w-[1440px]) ─── */}
-      <section className="mx-auto max-w-[1440px] px-6 pt-6 pb-2 md:px-14 lg:px-20">
-        <div className="space-y-3">
-          {/* Main Hero Showcase Window */}
-          <div className="relative aspect-[16/9] sm:aspect-[21/9] lg:aspect-[2.4/1] w-full overflow-hidden rounded-3xl bg-slate-900 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] group">
-            {/* Active Display Image */}
+      {/* ─── SECTION 1: 5-IMAGE SHOWCASE GRID (NO BORDER) ─── */}
+      <section className="mx-auto max-w-[1440px] px-6 pb-2 md:px-14 lg:px-20">
+        {/* Desktop 5-Photo Mosaic Grid */}
+        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[380px] lg:h-[430px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
+          {/* Main Hero Shot */}
+          <div
+            onClick={() => openLightbox(0)}
+            className="col-span-2 row-span-2 relative group overflow-hidden bg-slate-900 cursor-pointer"
+          >
             <img
-              src={gallery[activeImageIndex] || gallery[0]}
-              alt={`${turf.title} - View ${activeImageIndex + 1}`}
-              className="h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-105 cursor-pointer select-none"
-              onClick={() => openLightbox(activeImageIndex)}
-              onError={(e) => { e.target.onerror = null; e.target.src = '/image.png'; }}
+              src={gallery[0]}
+              alt={`${turf.title} main pitch`}
+              className="h-full w-full object-cover transition-opacity duration-300"
             />
-
-            {/* Subtle Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-slate-950/20 pointer-events-none" />
-
-            {/* Floating Carousel Navigation Arrows */}
-            {gallery.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={handlePrevMain}
-                  aria-label="Previous photo"
-                  className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-xl backdrop-blur-md border border-white/60 transition-all duration-200 hover:bg-lime-400 hover:scale-110 active:scale-95 cursor-pointer z-10"
-                >
-                  <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleNextMain}
-                  aria-label="Next photo"
-                  className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-xl backdrop-blur-md border border-white/60 transition-all duration-200 hover:bg-lime-400 hover:scale-110 active:scale-95 cursor-pointer z-10"
-                >
-                  <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
-                </button>
-              </>
-            )}
-
-            {/* Bottom Indicator Dots (Mobile) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:hidden z-10">
-              {gallery.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveImageIndex(i)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === activeImageIndex ? 'w-6 bg-lime-400' : 'w-1.5 bg-white/50'
-                  }`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+              <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Maximize2 className="h-4 w-4" /> View full resolution
+              </span>
             </div>
           </div>
 
-          {/* Thumbnail Strip with Active Lime Border & View All Button */}
-          {gallery.length > 1 && (
-            <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {gallery.map((img, i) => {
-                const isActive = i === activeImageIndex;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setActiveImageIndex(i)}
-                    className={`relative shrink-0 h-16 sm:h-20 aspect-[16/10] overflow-hidden rounded-2xl transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? 'ring-3 ring-lime-400 ring-offset-2 scale-100 shadow-md'
-                        : 'opacity-65 hover:opacity-100 hover:scale-95'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Thumbnail ${i + 1}`}
-                      className="h-full w-full object-cover"
-                      onError={(e) => { e.target.onerror = null; e.target.src = '/image.png'; }}
-                    />
-                    {isActive && (
-                      <div className="absolute inset-0 bg-lime-400/10 pointer-events-none" />
-                    )}
-                  </button>
-                );
-              })}
+          {/* Sub Images 1 to 4 */}
+          {[1, 2, 3, 4].map((index) => {
+            const imgSrc = gallery[index] || gallery[0];
+            return (
+              <div
+                key={index}
+                onClick={() => openLightbox(index)}
+                className="relative group overflow-hidden bg-slate-900 cursor-pointer"
+              >
+                <img
+                  src={imgSrc}
+                  alt={`${turf.title} view ${index + 1}`}
+                  className="h-full w-full object-cover transition-opacity duration-300"
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            );
+          })}
 
-              {/* View All Photos Thumbnail Trigger */}
+          {/* "Show All Photos" Floating Trigger Badge */}
+          <button
+            type="button"
+            onClick={() => openLightbox(0)}
+            className="absolute bottom-5 right-5 flex items-center gap-2 rounded-lg bg-white/95 backdrop-blur-md px-3.5 py-2 text-xs font-semibold text-slate-900 shadow-md border border-slate-200/60 transition-all hover:bg-white active:scale-95 cursor-pointer z-10"
+          >
+            <Grip className="h-3.5 w-3.5 text-slate-900" />
+            <span>Show all {gallery.length} photos</span>
+          </button>
+        </div>
+
+        {/* Mobile Swipeable Carousel */}
+        <div className="md:hidden relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-slate-900 shadow-md">
+          <img
+            src={gallery[activeImageIndex] || gallery[0]}
+            alt={`${turf.title} mobile preview`}
+            onClick={() => openLightbox(activeImageIndex)}
+            className="h-full w-full object-cover"
+          />
+          {gallery.length > 1 && (
+            <>
               <button
                 type="button"
-                onClick={() => openLightbox(activeImageIndex)}
-                className="shrink-0 h-16 sm:h-20 px-4 sm:px-5 rounded-2xl bg-slate-100 hover:bg-lime-100/80 text-slate-800 hover:text-lime-900 border border-slate-200/80 font-bold text-xs transition-all flex flex-col items-center justify-center gap-1 cursor-pointer"
+                onClick={() =>
+                  setActiveImageIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1))
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-md backdrop-blur-sm"
               >
-                <ImageIcon className="h-4 w-4 text-lime-600" />
-                <span>All {gallery.length} Photos</span>
+                <ChevronLeft className="h-5 w-5" />
               </button>
-            </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveImageIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1))
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-md backdrop-blur-sm"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-3 right-3 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-white">
+                {activeImageIndex + 1} / {gallery.length}
+              </div>
+            </>
           )}
         </div>
       </section>
 
-      {/* ─── MAIN CONTENT: TWO COLUMNS (Matches Navbar px exactly: px-6 md:px-14 lg:px-20 max-w-[1440px]) ─── */}
-      <section className="mx-auto max-w-[1440px] px-6 py-6 md:px-14 lg:px-20 lg:py-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
-          {/* ── LEFT COLUMN ── */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
-            {/* Turf header */}
+      {/* ─── MAIN TWO-COLUMN CONTENT GRID (EXPLICIT FR + FIXED SIDEBAR) ─── */}
+      <main className="mx-auto max-w-[1440px] px-6 py-6 md:px-14 lg:px-20">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_440px] lg:gap-8 xl:gap-12">
+          {/* ══════════════════════════════════════
+              LEFT MAIN CONTENT COLUMN (NO BORDERS)
+             ══════════════════════════════════════ */}
+          <div className="min-w-0 space-y-10">
+            {/* ── HEADER BANNER (NO CARD CONTAINER) ── */}
             <div>
+              {/* Title & Actions Row */}
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-1 text-xs font-semibold text-lime-700">
-                      <Compass className="h-3 w-3" /> {turf.type}
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      <Users className="h-3 w-3" /> {turf.size}
-                    </span>
-                    {turf.surface && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                        {turf.surface}
-                      </span>
-                    )}
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl lg:text-[32px] font-extrabold tracking-tight text-slate-900 leading-tight">
+                      {turf.title}
+                    </h1>
+                    <BadgeCheck className="h-6 w-6 fill-lime-500 text-white stroke-[2.2] shrink-0" title="Verified Arena" />
                   </div>
 
-                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
-                    {turf.title}
-                  </h1>
+                  {/* Row 1: Location & Rating */}
+                  <div className="mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-slate-600">
+                    <button
+                      type="button"
+                      onClick={handleCopyAddress}
+                      className="inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
+                      <MapPin className="h-4 w-4 text-lime-600 shrink-0" />
+                      <span>{turf.address || turf.location || 'Kathmandu, Nepal'}</span>
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <a
+                      href="#reviews"
+                      className="inline-flex items-center gap-1 font-bold text-slate-900 hover:text-lime-700 transition-colors"
+                    >
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span>{turf.rating || 4.8}</span>
+                      <span className="font-semibold text-slate-500 underline decoration-slate-300 underline-offset-4 ml-0.5">
+                        ({turf.reviews || 321} reviews)
+                      </span>
+                    </a>
+                  </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <MapPin className="h-4 w-4 text-lime-500" />
-                      {turf.location || 'Kathmandu, Nepal'}
-                    </span>
-                    <span className="text-slate-300">|</span>
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <StarRating rating={turf.rating} />
-                      <span className="text-slate-900">{turf.rating}</span>
-                      <span className="text-slate-400">({turf.reviews} reviews)</span>
+                  {/* Row 2: Type, Format & Opening Hours */}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-slate-600">
+                    {turf.type && (
+                      <>
+                        <span className="font-semibold text-slate-700 inline-flex items-center gap-1.5">
+                          <Compass className="h-3.5 w-3.5 text-slate-400" />
+                          {turf.type}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                      </>
+                    )}
+                    {turf.size && (
+                      <>
+                        <span className="font-semibold text-slate-700 inline-flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-slate-400" />
+                          {turf.size}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                      </>
+                    )}
+                    <span className="font-semibold text-lime-600">
+                      Open Now ({turf.openingHours?.start || '6:00 AM'} – {turf.openingHours?.end || '10:30 PM'})
                     </span>
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="hidden sm:flex items-center gap-2 shrink-0">
+                {/* Circular Action buttons */}
+                <div className="hidden sm:flex items-center gap-2.5 shrink-0 pt-1.5">
                   <button
-                    onClick={() => setIsFavorited(!isFavorited)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all ${
+                    type="button"
+                    onClick={handleShare}
+                    aria-label="Share"
+                    title="Share this venue"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Share2 className="h-4.5 w-4.5 text-slate-700" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFavorited(!isFavorited);
+                      triggerToast(!isFavorited ? 'Saved to your favorites!' : 'Removed from favorites');
+                    }}
+                    aria-label="Save to favorites"
+                    title="Save to favorites"
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer ${
                       isFavorited
-                        ? 'border-rose-200 bg-rose-50 text-rose-500'
-                        : 'border-slate-200 bg-white text-slate-400 hover:text-rose-500 hover:border-rose-200'
+                        ? 'bg-rose-50 text-rose-600'
+                        : 'bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-600'
                     }`}
                   >
-                    <Heart className={`h-4.5 w-4.5 ${isFavorited ? 'fill-rose-500' : ''}`} />
-                  </button>
-                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition-colors hover:text-slate-600 hover:border-slate-300">
-                    <Share2 className="h-4.5 w-4.5" />
+                    <Heart className={`h-4.5 w-4.5 ${isFavorited ? 'fill-rose-500 text-rose-500' : ''}`} />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* About */}
-            <div className="py-8 border-b border-slate-200">
-              <h2 className="text-[22px] font-semibold text-slate-900 mb-4">About This Turf</h2>
-              <p className="text-[16px] leading-[26px] text-slate-700">
-                {turf.description || 'A premium futsal turf with excellent facilities, perfect for your next game. Book your slot now and experience the best playing conditions in the area.'}
-              </p>
-            </div>
-
-            {/* Amenities */}
-            <div className="py-8 border-b border-slate-200">
-              <h2 className="text-[22px] font-semibold text-slate-900 mb-6">What this place offers</h2>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                {(turf.amenities || ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'First Aid', 'Drinking Water']).slice(0, 10).map((amenity) => {
-                  const Icon = amenityIconMap[amenity] || Check;
-                  return (
-                    <div
-                      key={amenity}
-                      className="flex items-center gap-4 py-2"
-                    >
-                      <Icon className="h-6 w-6 text-slate-800 shrink-0" strokeWidth={1.5} />
-                      <span className="text-[16px] text-slate-700">{amenity}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-8">
-                <button className="px-6 py-3.5 rounded-xl border border-slate-900 bg-white text-slate-900 font-semibold text-[16px] hover:bg-slate-50 transition-colors cursor-pointer active:scale-[0.98]">
-                  Show all {(turf.amenities || [1,2,3,4,5,6]).length} amenities
-                </button>
-              </div>
-            </div>
-
-            {/* Available courts */}
-            {turf.courts && turf.courts.length > 0 && (
+            {/* ── OVERVIEW & QUICK HIGHLIGHTS ── */}
+            <section id="overview" className="space-y-3">
               <div>
-                <h2 className="text-lg font-extrabold text-slate-900">Available Courts</h2>
-                <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-                <div className="mt-4 space-y-3">
-                  {turf.courts.map((court, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-5 py-4 transition-colors hover:border-lime-200"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-100 text-lime-600 font-bold text-sm">
-                          {i + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{court.name}</p>
-                          <p className="text-xs font-medium text-slate-400">
-                            {court.type} • {court.size}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-bold text-lime-600">{court.price}</span>
-                    </div>
-                  ))}
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-3">About The Arena</h2>
+                <div className="text-[16px] leading-[28px] font-medium text-slate-800 text-justify">
+                  {showFullAbout ? (
+                    <>
+                      <span>
+                        {turf.description ||
+                          `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`}
+                      </span>
+                      {' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowFullAbout(false)}
+                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
+                      >
+                        Show less
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {(turf.description || `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`).slice(0, 220).trim()}...
+                      </span>
+                      {' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowFullAbout(true)}
+                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
+                      >
+                        Show more
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
-            )}
+            </section>
 
-            {/* Location */}
-            <div className="py-6 border-b border-slate-200">
-              <h2 className="text-[22px] font-semibold text-slate-900 mb-4">Where you'll be</h2>
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                {/* Map iframe */}
-                <div className="h-96 bg-slate-100 flex items-center justify-center relative">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    allowFullScreen
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(turf.address || turf.location || 'Kathmandu')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                    title="Google Maps Preview"
-                  ></iframe>
+            {/* ── SECTION: VENUE OWNER / CONTACT INFO (BORDERLESS GRAY CARD) ── */}
+            <div className="rounded-2xl bg-slate-100/80 p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative shrink-0">
+                    <img
+                      src={
+                        turf.managerAvatar ||
+                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
+                      }
+                      alt="Venue Owner"
+                      className="h-12 w-12 sm:h-13 sm:w-13 rounded-full object-cover ring-2 ring-white shadow-xs"
+                    />
+                    <BadgeCheck
+                      className="absolute -bottom-0.5 -right-0.5 h-5 w-5 fill-lime-500 text-white stroke-[2.2] drop-shadow-xs"
+                      title="Verified Host"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                      Owner: {turf.managerName || turf.ownerName || 'Bikash Maharjan'}
+                    </h3>
+                    <p className="text-xs font-medium text-slate-500 mt-0.5">
+                      Verified Venue Owner • Responds within 5 mins
+                    </p>
+                  </div>
                 </div>
-                <div className="px-5 py-4 bg-white">
-                  <p className="text-[16px] font-semibold text-slate-900">
-                    {turf.address || turf.location}
-                  </p>
+
+                {/* Contact Actions (Borderless, Pill Rounded) */}
+                <div className="flex flex-wrap items-center gap-2">
                   <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(turf.address || turf.location)}`}
+                    href={`https://wa.me/${(turf.phone || '9779841234567').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                      `Hi, I'm inquiring about booking at ${turf.title} via Turfio.`
+                    )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-[15px] font-semibold text-slate-900 underline hover:text-slate-600 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-950 px-4 py-2 text-xs font-black transition-all active:scale-95 shadow-xs"
                   >
-                    Get Directions <ArrowRight className="h-3.5 w-3.5" />
+                    <MessageCircle className="h-4 w-4 text-slate-950 fill-slate-950/20" />
+                    <span>WhatsApp</span>
+                  </a>
+
+                  <a
+                    href={`tel:${turf.phone || '+977 9841234567'}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-white hover:bg-slate-200/90 text-slate-800 px-4 py-2 text-xs font-bold transition-all active:scale-95 shadow-2xs"
+                  >
+                    <Phone className="h-3.5 w-3.5 text-slate-600" />
+                    <span>{turf.phone || '+977 9841-234567'}</span>
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Reviews & Ratings */}
-            <div className="py-12 border-b border-slate-200">
-              <div className="flex flex-col items-center justify-center text-center mb-10">
-                <div className="flex items-center justify-center gap-6 mb-2">
-                  <img src="/grain_left.png" alt="left laurel" className="h-20 w-auto object-contain" />
-                  <span className="text-[80px] font-bold text-slate-900 leading-none tracking-tight">
-                    {turf.rating}
-                  </span>
-                  <img src="/grain_right.png" alt="right laurel" className="h-20 w-auto object-contain" />
-                </div>
-                <h3 className="text-[22px] font-semibold text-slate-900 mt-2">Players favorite</h3>
-                <p className="mt-2 text-[16px] text-slate-500 max-w-sm mx-auto">
-                  One of the most loved turfs on Turfio based on ratings, reviews, and reliability
-                </p>
-                <div className="mt-3 font-semibold text-[14px] text-slate-900 underline cursor-pointer">
-                  {turf.reviews} reviews
-                </div>
+            {/* ── SECTION: AMENITIES & FACILITIES (NO BORDERS) ── */}
+            <section id="amenities" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  What this place offers
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAmenitiesModal(true)}
+                  className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  View all ({amenities.length})
+                </button>
               </div>
 
-              {/* Sub ratings */}
-              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
+                {amenities.slice(0, 9).map((amenity) => {
+                  const Icon = amenityIconMap[amenity] || Check;
+                  return (
+                    <div key={amenity} className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime-400/25 text-lime-950">
+                        <Icon className="h-5 w-5 text-lime-900" strokeWidth={2} />
+                      </div>
+                      <span className="text-sm font-bold text-slate-800">{amenity}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
-              {/* Individual reviews */}
+            {/* ── SECTION: LOCATION & DIRECTIONS ── */}
+            <section id="location" className="space-y-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Where you'll be</h2>
+              </div>
+              <div className="h-96 w-full rounded-3xl overflow-hidden bg-slate-100 relative shadow-[0_2px_18px_rgba(0,0,0,0.06)]">
+                <TurfSingleLocationMap
+                  turf={currentTurfWithCoords}
+                  onNavigateRoute={onNavigateRoute}
+                />
+              </div>
+              <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[16px] font-semibold text-slate-900">
+                  {turf.address || turf.location}
+                </p>
+                {onNavigateRoute ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateRoute(turf)}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors group cursor-pointer"
+                  >
+                    <span>Get Turn-by-Turn Directions</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                ) : (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(turf.address || turf.location)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors group cursor-pointer"
+                  >
+                    <span>Get Directions</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </a>
+                )}
+              </div>
+            </section>
+
+            {/* ── SECTION: REVIEWS & RATINGS ── */}
+            <section id="reviews" className="space-y-6 pt-2">
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="flex items-center justify-center gap-6 mb-2">
+                  <img src="/grain_left.png" alt="left laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                  <span className="text-[80px] font-extrabold text-slate-900 leading-none tracking-tight">
+                    {turf.rating}
+                  </span>
+                  <img src="/grain_right.png" alt="right laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight mt-2">Players' favorite</h3>
+                <p className="mt-2 text-[16px] leading-[26px] font-medium text-slate-800 max-w-sm mx-auto">
+                  One of the most loved turfs on Turfio based on ratings, reviews, and reliability
+                </p>
+                <button
+                  type="button"
+                  className="mt-3 text-sm font-bold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  {turf.reviews} reviews
+                </button>
+              </div>
+
+              {/* Individual reviews (Clean Airbnb Review Architecture) */}
               {turf.reviewsList && turf.reviewsList.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-10 border-t border-slate-200 pt-8">
+                <div className="pt-2">
                   {turf.reviewsList.map((review, i) => (
-                    <div key={i} className="flex flex-col">
-                      <div className="flex items-center gap-4 mb-3">
-                        <img
-                          src={review.avatar}
-                          alt={review.name}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                        <div>
-                          <div className="text-[16px] font-semibold text-slate-900">{review.name}</div>
-                          <div className="text-[14px] text-slate-500">2 years on Turfio</div>
+                    <div key={i}>
+                      {i > 0 && <div className="my-8 border-t border-slate-100" />}
+                      <div className="flex flex-col space-y-3.5">
+                        {/* Reviewer Header */}
+                        <div className="flex items-center gap-3.5">
+                          <img
+                            src={review.avatar}
+                            alt={review.name}
+                            className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-100 shrink-0 shadow-2xs"
+                          />
+                          <div>
+                            <h4 className="text-[16px] font-bold text-slate-900 leading-snug">
+                              {review.name}
+                            </h4>
+                            <p className="text-[13px] font-medium text-slate-500">
+                              2 years on Turfio
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Rating Stars & Timestamp (Inline Row) */}
+                        <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
+                          <StarRating rating={review.rating} size="h-3.5 w-3.5" />
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-500 font-medium">{review.date}</span>
+                        </div>
+
+                        {/* Review Body */}
+                        <p className="text-[16px] leading-[28px] font-medium text-slate-800 antialiased">
+                          {review.comment}
+                        </p>
+
+                        {/* User-attached Review Photos */}
+                        {review.images && review.images.length > 0 && (
+                          <div className="pt-1 flex flex-wrap gap-3">
+                            {review.images.map((imgUrl, imgIdx) => (
+                              <button
+                                key={imgIdx}
+                                type="button"
+                                onClick={() => setPreviewReviewImage(imgUrl)}
+                                className="group relative h-22 w-22 sm:h-24 sm:w-24 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200/80 transition-all hover:ring-2 hover:ring-lime-400 cursor-pointer shadow-xs"
+                              >
+                                <img
+                                  src={imgUrl}
+                                  alt={`Review photo by ${review.name}`}
+                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Review Feedback Actions (Helpful & Report) */}
+                        <div className="pt-1 flex items-center gap-5 text-[13px] font-medium text-slate-500">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleHelpful(i)}
+                            className={`inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                              helpfulReviews[i]
+                                ? 'text-lime-700 font-bold'
+                                : 'hover:text-slate-900 text-slate-500'
+                            }`}
+                          >
+                            <ThumbsUp className={`h-3.5 w-3.5 ${helpfulReviews[i] ? 'fill-lime-600 text-lime-700 stroke-[2]' : 'text-slate-400'}`} />
+                            <span>Helpful {helpfulReviews[i] ? '(1)' : ''}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleReportReview(i)}
+                            className={`inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                              reportedReviews[i]
+                                ? 'text-rose-600 font-bold'
+                                : 'hover:text-slate-700 text-slate-400'
+                            }`}
+                          >
+                            <Flag className="h-3.5 w-3.5" />
+                            <span>{reportedReviews[i] ? 'Reported' : 'Report'}</span>
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 mb-2">
-                        <StarRating rating={review.rating} size="h-3 w-3" />
-                        <span className="text-[12px] font-semibold text-slate-900 ml-1">·</span>
-                        <span className="text-[14px] font-medium text-slate-900">{review.date}</span>
-                      </div>
-                      <p className="text-[16px] leading-relaxed text-slate-800 line-clamp-4">
-                        {review.comment}
-                      </p>
-                      <button className="mt-2 text-left text-[15px] font-semibold text-slate-900 underline self-start hover:text-slate-600 transition-colors">Show more</button>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Policies */}
-            {turf.policies && turf.policies.length > 0 && (
-              <div>
-                <h2 className="text-lg font-extrabold text-slate-900">Turf Policies</h2>
-                <div className="mt-1 h-1 w-10 rounded-full bg-lime-400" />
-                <div className="mt-4 space-y-3">
-                  {turf.policies.map((policy, i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl border border-slate-100 bg-white px-5 py-4"
-                    >
-                      <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                        <Shield className="h-4 w-4 text-lime-500" />
-                        {policy.title}
-                      </h3>
-                      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-                        {policy.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            </section>
           </div>
 
-          {/* ── RIGHT COLUMN (STICKY SIDEBAR) ── */}
-          <div className="lg:col-span-5 xl:col-span-4">
-            <div className="lg:sticky lg:top-36 space-y-5">
-              {/* Booking card */}
-              <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.06)]">
-                {/* Price */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-slate-900">{turf.price}</span>
-                  <span className="text-sm font-medium text-slate-400">per hour</span>
-                </div>
-
-                <div className="mt-1 flex items-center gap-1.5">
-                  <StarRating rating={turf.rating} size="h-3.5 w-3.5" />
-                  <span className="text-xs font-semibold text-slate-600">
-                    {turf.rating} ({turf.reviews})
-                  </span>
-                </div>
-
-                {/* Date, Time & Duration Picker (Airbnb Style) */}
-                <div className="rounded-lg border border-slate-400 overflow-visible mb-4 bg-white relative">
-                  {/* Date picker */}
-                  <label className="flex flex-col border-b border-slate-400 px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative group">
-                    <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Date</span>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full border-0 bg-transparent p-0 pt-0.5 text-[14px] font-medium text-slate-900 outline-none cursor-pointer"
-                    />
-                  </label>
-
-                  <div className="flex divide-x divide-slate-400">
-                    {/* Custom Time slot picker */}
-                    <div 
-                      className="flex-1 flex flex-col px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative"
-                      onClick={() => setShowTimePicker(!showTimePicker)}
-                    >
-                      <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Time</span>
-                      <div className="w-full text-[14px] font-medium text-slate-900 pt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {`${selectedTimeObj.hour}:00 ${selectedTimeObj.period} - ${getEndTimeStr()}`}
-                      </div>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 pointer-events-none" />
-                      
-                      {showTimePicker && (
-                        <CustomTimePickerDropdown 
-                          timeObj={selectedTimeObj} 
-                          duration={duration}
-                          onChange={setSelectedTimeObj} 
-                          isTimeSlotAvailable={isTimeSlotAvailable}
-                        />
-                      )}
+          {/* ══════════════════════════════════════
+              RIGHT STICKY SIDEBAR (EXACT WIDTH)
+             ══════════════════════════════════════ */}
+          <div>
+            <div className="lg:sticky lg:top-28 space-y-5 w-full">
+              {/* ── HIGH-CONVERSION BOOKING CARD (AIRBNB FLOATING ELEVATION) ── */}
+              <div className="w-full rounded-2xl bg-white p-6 sm:p-7 shadow-[0_0_25px_rgba(0,0,0,0.04)] space-y-5">
+                {/* Header Price Banner */}
+                <div className="flex items-baseline justify-between pb-1">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-3xl font-black text-slate-900 tracking-tight">
+                        NPR {baseRateNumeric.toLocaleString()}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">/ hour</span>
                     </div>
-
-                    {/* Duration picker */}
-                    <label className="flex-1 flex flex-col px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors relative group">
-                      <span className="text-[10px] font-bold uppercase text-slate-800 tracking-wider">Duration</span>
-                      <select
-                        value={duration}
-                        onChange={(e) => setDuration(Number(e.target.value))}
-                        className="w-full border-0 bg-transparent p-0 pt-0.5 text-[14px] font-medium text-slate-900 outline-none cursor-pointer appearance-none"
-                      >
-                        {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((d) => (
-                          <option key={d} value={d}>{d} {d === 1 ? 'hour' : 'hours'}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 pointer-events-none" />
-                    </label>
                   </div>
                 </div>
 
-                {/* Book now CTA */}
-                <button
-                  type="button"
-                  onClick={() => onBookNow?.({ ...turf, selectedDate, selectedTime: `${selectedTimeObj.hour}:00 ${selectedTimeObj.period}`, duration })}
-                  className="w-full inline-flex items-center justify-center rounded-xl bg-lime-400 hover:bg-lime-500 px-6 py-3.5 text-[16px] font-bold text-slate-900 transition-all active:scale-[0.98] focus:outline-none"
-                >
-                  Book Now
-                </button>
+                {/* ── COMPOUND SEGMENTED BOOKING INPUTS (AIRBNB STYLE) ── */}
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-visible divide-y divide-slate-200 shadow-2xs">
+                  {/* Top Row: Match Date (Full Width) */}
+                  <div>
+                    <CustomDatePicker
+                      label="MATCH DATE"
+                      value={selectedDate}
+                      onChange={setSelectedDate}
+                      minDate={new Date().toISOString().split('T')[0]}
+                      variant="cell"
+                      buttonClassName="rounded-t-2xl"
+                    />
+                  </div>
 
-                <p className="mt-3 text-center text-[14px] text-slate-500">
-                  You won't be charged yet
-                </p>
+                  {/* Bottom Row: 2 Columns for Start Time & Duration */}
+                  <div className="grid grid-cols-2 divide-x divide-slate-200">
+                    <CustomDropdown
+                      label="START TIME"
+                      options={TIME_SLOT_OPTIONS}
+                      value={selectedTimeSlot}
+                      onChange={setSelectedTimeSlot}
+                      variant="cell"
+                      buttonClassName="rounded-bl-2xl"
+                    />
+                    <CustomDropdown
+                      label="DURATION"
+                      options={DURATION_OPTIONS}
+                      value={duration}
+                      onChange={setDuration}
+                      variant="cell"
+                      buttonClassName="rounded-br-2xl"
+                    />
+                  </div>
+                </div>
 
-                {/* Price Breakdown Preview */}
-                {selectedDate && (
-                  <div className="mt-5 space-y-3 text-[15px] text-slate-700">
-                    <div className="flex justify-between">
-                      <span className="underline">
-                        NPR {turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0} x {duration} {duration === 1 ? 'hour' : 'hours'}
-                      </span>
-                      <span>
-                        NPR {((turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0) * duration).toLocaleString()}
-                      </span>
+                {/* Promo Code Input Form (Appears above price breakdown when active) */}
+                {(showPromoInput || appliedDiscount > 0) && (
+                  <div className="pt-1">
+                    <form onSubmit={handleApplyPromo} className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          placeholder="Coupon (e.g. TURF10)"
+                          className="w-full h-[52px] rounded-xl bg-white border border-slate-200 px-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 transition-all"
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="h-[52px] min-w-[105px] px-6 rounded-xl bg-lime-400 hover:bg-lime-500 text-sm font-extrabold text-slate-950 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center shadow-xs"
+                      >
+                        Apply
+                      </button>
+                    </form>
+                    {promoError && (
+                      <p className="text-[11px] font-semibold text-rose-500 mt-1.5">{promoError}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Price Breakdown */}
+                <div className="space-y-3 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
+                  <div className="flex justify-between">
+                    <span>
+                      NPR {baseRateNumeric.toLocaleString()} × {duration} {duration === 1 ? 'hr' : 'hrs'}
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      NPR {subtotal.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {appliedDiscount > 0 && (
+                    <div className="flex justify-between text-lime-600 font-bold">
+                      <span>Promo Discount ({appliedDiscount * 100}%)</span>
+                      <span>- NPR {discountAmount.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="underline">Service fee</span>
-                      <span>NPR 0</span>
-                    </div>
-                    <div className="pt-4 mt-4 border-t border-slate-200 flex justify-between font-semibold text-slate-900 text-[16px]">
-                      <span>Total</span>
-                      <span>
-                        NPR {((turf.price.match(/(\d+,?\d*)/) ? parseInt(turf.price.match(/(\d+,?\d*)/)[1].replace(/,/g, ''), 10) : 0) * duration).toLocaleString()}
-                      </span>
+                  )}
+
+                  <div className="flex justify-between">
+                    <span>Platform Booking Fee</span>
+                    <span className="font-bold text-lime-600">FREE</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-base font-black text-slate-900">
+                    <span>Total Amount</span>
+                    <span className="text-xl text-slate-900 font-black">
+                      NPR {totalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Book Now Button CTA */}
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onBookNow?.({
+                        ...turf,
+                        selectedDate,
+                        selectedTime: selectedTimeSlot,
+                        duration,
+                        totalAmount,
+                      })
+                    }
+                    className="w-full rounded-full bg-lime-400 hover:bg-lime-500 py-3.5 text-base font-black text-slate-950 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <span>Book This Slot</span>
+                    <ArrowRight className="h-5 w-5" />
+                  </button>
+                  <p className="text-center text-xs font-medium text-slate-400">
+                    You won't be charged yet
+                  </p>
+                </div>
+
+                {/* Promo Code Trigger (Below Book CTA when not active) */}
+                {!showPromoInput && appliedDiscount === 0 && (
+                  <div className="pt-2">
+                    <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-600 py-1 text-center">
+                      <span>Have a promo code?</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPromoInput(true)}
+                        className="font-bold text-lime-600 underline decoration-lime-500 underline-offset-4 hover:text-lime-700 transition-colors cursor-pointer ml-0.5"
+                      >
+                        Apply
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Contact info */}
-              <div className="rounded-[24px] border border-slate-100 bg-white p-5">
-                <h3 className="text-sm font-extrabold text-slate-900">Contact Information</h3>
-                <div className="mt-3 space-y-3">
-                  {turf.phone && (
-                    <a
-                      href={`tel:${turf.phone}`}
-                      className="flex items-center gap-3 text-sm font-medium text-slate-600 hover:text-lime-600 transition-colors"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime-100/80 text-lime-600">
-                        <Phone className="h-3.5 w-3.5" />
-                      </span>
-                      {turf.phone}
-                    </a>
-                  )}
-                  {turf.email && (
-                    <a
-                      href={`mailto:${turf.email}`}
-                      className="flex items-center gap-3 text-sm font-medium text-slate-600 hover:text-lime-600 transition-colors"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime-100/80 text-lime-600">
-                        <Mail className="h-3.5 w-3.5" />
-                      </span>
-                      {turf.email}
-                    </a>
-                  )}
-                </div>
+              {/* Match Window preview badge outside card below */}
+              <div className="rounded-2xl bg-slate-100/90 py-3 px-4 text-center text-xs font-medium text-slate-600">
+                Match Window: <span className="font-bold text-slate-900">{selectedTimeSlot}</span> →{' '}
+                <span className="font-bold text-lime-700">{endTimeStr}</span> ({duration}h)
               </div>
-
-              {/* Operating hours */}
-              {turf.operatingHours && (
-                <div className="rounded-[24px] border border-slate-100 bg-white p-5">
-                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                    <Clock className="h-4 w-4 text-lime-500" />
-                    Operating Hours
-                  </h3>
-                  <div className="mt-3 space-y-2.5">
-                    {turf.operatingHours.map((schedule, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-600">{schedule.day}</span>
-                        <span className="font-bold text-slate-900">{schedule.hours}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
-      {/* ─── SIMILAR TURFS ─── */}
+      {/* ─── SIMILAR TURFS NEARBY ─── */}
       {similarTurfs.length > 0 && (
-        <section className="border-t border-slate-100 bg-slate-50/40 py-10 lg:py-14">
+        <section className="bg-white py-12 md:py-16">
           <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
-            <div className="text-center">
-              <span className="text-sm font-semibold text-lime-500">Explore more</span>
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                Similar Turfs Near You
-              </h2>
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <span className="text-sm font-semibold text-lime-500">
+                  Explore More Venues
+                </span>
+                <h2 className="mt-1 text-2xl font-black text-slate-900 sm:text-3xl">
+                  Similar Turfs Nearby
+                </h2>
+                <p className="mt-1.5 text-sm font-medium text-slate-500 sm:text-base">
+                  Other top-rated pitches and arenas around this area.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onFindTurfs}
+                className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                View all turfs
+              </button>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {similarTurfs.map((t) => (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {displayedSimilarTurfs.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => onViewTurfDetails?.(t)}
-                  className="group cursor-pointer rounded-[24px] border border-slate-100 bg-white overflow-hidden transition-shadow hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)]"
+                  className="group flex flex-col justify-between bg-white cursor-pointer"
                 >
-                  <div className="aspect-[16/10] overflow-hidden bg-slate-100">
-                    <img
-                      src={t.image}
-                      alt={t.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => { e.target.onerror = null; e.target.src = '/image.png'; }}
-                    />
+                  <div className="w-full">
+                    {/* Card Image with rounded corners matching landing page */}
+                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[20px] bg-slate-100">
+                      <img
+                        src={t.image}
+                        alt={t.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/image.png';
+                        }}
+                      />
+                    </div>
+
+                    {/* Text details flush with left edge */}
+                    <div className="pt-3 px-0 pb-0">
+                      {/* Badges / Features line */}
+                      <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Compass className="h-3.5 w-3.5 text-slate-400" />
+                          {t.type || 'Indoor'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5 text-slate-400" />
+                          {t.size || '7v7'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Car className="h-3.5 w-3.5 text-slate-400" />
+                          {t.parking || 'Parking'}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors">
+                        {t.title}
+                      </h3>
+
+                      {/* Rating */}
+                      <div className="mt-1 flex items-center gap-1">
+                        <div className="flex text-lime-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className="h-4 w-4 fill-lime-400 text-lime-400"
+                            />
+                          ))}
+                        </div>
+                        <span className="ml-1 text-xs font-semibold text-slate-600">
+                          {t.rating} ({t.reviews})
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Compass className="h-3 w-3 text-slate-400" /> {t.type}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-slate-400" /> {t.size}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-slate-400" /> {t.location}
-                      </span>
-                    </div>
-                    <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors">
-                      {t.title}
-                    </h3>
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <StarRating rating={t.rating} size="h-3.5 w-3.5" />
-                      <span className="text-xs font-semibold text-slate-600">
-                        {t.rating} ({t.reviews})
-                      </span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-700">{t.price}</span>
-                      <span className="rounded-full bg-lime-400 px-4 py-1.5 text-xs font-bold text-slate-900 transition-colors group-hover:bg-lime-500">
-                        View Details
-                      </span>
-                    </div>
+
+                  {/* Footer: Price & CTA flush with left edge */}
+                  <div className="pt-3 px-0 pb-1 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-600">
+                      {t.price}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewTurfDetails?.(t);
+                      }}
+                      className="rounded-full bg-lime-400 px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
               ))}
@@ -931,43 +1301,43 @@ export default function TurfDetailsPage({
         </section>
       )}
 
-      {/* ─── CTA BANNER ─── */}
-      <section className="bg-white py-6 lg:py-8">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
-          <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-lime-200/50 via-lime-50/70 to-lime-100/60 p-5 sm:p-6 lg:p-7">
-            <img
-              src="/football.png"
-              alt="Football"
-              className="absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 h-[160%] max-h-[160px] w-auto object-contain pointer-events-none z-0"
-            />
-            <div className="relative z-10 flex flex-col items-center justify-between gap-5 md:flex-row md:gap-8 pl-28 sm:pl-40 md:pl-48 lg:pl-52">
-              <div className="text-center md:text-left">
-                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
-                  Ready for your next match?
-                </h2>
-                <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                  Book your turf in under 30 seconds.
-                </p>
-              </div>
-              <div className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onBookNow?.(turf)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-lime-400 px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-lime-500 active:scale-95"
-                >
-                  Book a Turf Now
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
+      {/* ─── MOBILE STICKY FLOATING BOTTOM BAR (NO BORDER) ─── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 p-4 backdrop-blur-md lg:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-4">
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-slate-900">
+                NPR {totalAmount.toLocaleString()}
+              </span>
+              <span className="text-xs font-semibold text-slate-400">total ({duration}h)</span>
             </div>
+            <p className="text-[11px] font-bold text-emerald-600">
+              {selectedTimeSlot} • {selectedDate}
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              onBookNow?.({
+                ...turf,
+                selectedDate,
+                selectedTime: selectedTimeSlot,
+                duration,
+                totalAmount,
+              })
+            }
+            className="rounded-full bg-lime-400 hover:bg-lime-500 px-6 py-3 text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer"
+          >
+            Book Now
+          </button>
         </div>
-      </section>
+      </div>
 
       <Footer />
       <BackToTopButton />
 
-      {/* Lightbox */}
+      {/* ─── LIGHTBOX MODAL ─── */}
       {lightboxOpen && (
         <ImageLightbox
           images={gallery}
@@ -975,7 +1345,42 @@ export default function TurfDetailsPage({
           onClose={() => setLightboxOpen(false)}
           onPrev={handlePrevImage}
           onNext={handleNextImage}
+          onSelect={setLightboxIndex}
         />
+      )}
+
+      {/* ─── AMENITIES MODAL ─── */}
+      <AmenitiesModal
+        isOpen={showAmenitiesModal}
+        onClose={() => setShowAmenitiesModal(false)}
+        amenities={amenities}
+      />
+
+      {/* ─── ENLARGED REVIEW PHOTO MODAL ─── */}
+      {previewReviewImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPreviewReviewImage(null)}
+        >
+          <div
+            className="relative max-h-[85vh] max-w-3xl overflow-hidden rounded-2xl bg-black p-1 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewReviewImage(null)}
+              className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/90 transition-all cursor-pointer"
+              aria-label="Close photo preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={previewReviewImage}
+              alt="Review attachment"
+              className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

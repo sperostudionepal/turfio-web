@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 export default function CtaBannerSection({ onBookNow }) {
   return (
     <section className="bg-white py-6 lg:py-8">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
         <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-lime-200/50 via-lime-50/70 to-lime-100/60 p-5 sm:p-6 lg:p-7">
           {/* Football Graphic in Original Crisp Colors */}
           <img

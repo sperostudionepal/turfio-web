@@ -3,7 +3,7 @@ import { Send } from 'lucide-react';
 export default function Footer() {
   return (
     <footer className="bg-white border-t border-slate-100 text-slate-600">
-      <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
+      <div className="mx-auto max-w-[1440px] px-6 py-12 md:px-14 lg:px-20 lg:py-16">
         {/* Main Grid with Vertical Dividers on Desktop */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-12 lg:gap-6 lg:divide-x lg:divide-slate-100">
           {/* Column 1: Brand Logo, Tagline, Social Icons (3 cols) */}
