@@ -67,11 +67,17 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
-          <img
-            src="/image.png"
-            alt="Hero Background"
-            className="h-full w-full object-cover object-center grayscale"
-          />
+          <picture>
+            <source srcSet="/image.webp" type="image/webp" />
+            <img
+              src="/image.png"
+              alt="Hero Background"
+              className="h-full w-full object-cover object-center grayscale"
+              loading="eager"
+              fetchPriority="low"
+              decoding="async"
+            />
+          </picture>
         </div>
 
         <div className="relative mx-auto max-w-[1440px] px-6 pt-12 pb-10 md:px-14 md:pt-16 md:pb-12 lg:px-20 lg:pt-20 lg:pb-16">
@@ -183,11 +189,19 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
               </div>
 
               {/* Hero Mockup Image with CSS mask fade to seamlessly reveal background pattern */}
-              <img
-                src="/hero-mockup.png"
-                alt="Hero Mockup"
-                className="h-full w-full object-contain [mask-image:linear-gradient(to_bottom,black_65%,transparent_98%)] [-webkit-mask-image:linear-gradient(to_bottom,black_65%,transparent_98%)]"
-              />
+              <picture>
+                <source srcSet="/hero-mockup.webp" type="image/webp" />
+                <img
+                  src="/hero-mockup.png"
+                  alt="Hero Mockup"
+                  className="h-full w-full object-contain [mask-image:linear-gradient(to_bottom,black_65%,transparent_98%)] [-webkit-mask-image:linear-gradient(to_bottom,black_65%,transparent_98%)]"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  width="460"
+                  height="600"
+                />
+              </picture>
             </div>
           </div>
 
