@@ -12,7 +12,16 @@ function getDisplayName(user) {
   return f || user.username || 'Player';
 }
 
-export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, onFindTurfs, onDashboard }) {
+export default function Navbar({
+  onLogin,
+  user,
+  onLogout,
+  onListTurf,
+  onHome,
+  onFindTurfs,
+  onDashboard,
+  isInitializing = false,
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -165,7 +174,24 @@ export default function Navbar({ onLogin, user, onLogout, onListTurf, onHome, on
 
         {/* Desktop Action Buttons & Profile / Notifications */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {user ? (
+          {isInitializing ? (
+            <div className="flex items-center gap-3 sm:gap-4 animate-pulse select-none">
+              {/* Notifications Bell Skeleton - exact 32x32 circle */}
+              <div className="h-8 w-8 rounded-full bg-slate-200/80 shrink-0" />
+
+              {/* Profile Button Skeleton - exact wrapper with gap-2.5 and p-1 */}
+              <div className="flex items-center gap-2.5 p-1 rounded-full">
+                {/* Avatar Skeleton - exact 36x36 (w-9 h-9) */}
+                <div className="w-9 h-9 rounded-full bg-slate-200/80 shrink-0" />
+
+                {/* Display Name Skeleton - exact text-xs/text-sm line height & width */}
+                <div className="hidden sm:block h-3.5 w-24 rounded-full bg-slate-200/80 my-0.5" />
+
+                {/* Chevron icon placeholder - 14x14 */}
+                <div className="hidden sm:block h-3.5 w-3.5 rounded-full bg-slate-200/70" />
+              </div>
+            </div>
+          ) : user ? (
             <>
               {/* Mock Notifications Bell Button */}
               <div className="relative" ref={notificationsRef}>

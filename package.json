@@ -16,6 +16,8 @@
     "date-fns": "^4.4.0",
     "framer-motion": "^13.1.0",
     "leaflet": "^1.9.4",
+    "lottie-react": "^3.1.1",
+    "lottie-web": "^5.13.0",
     "lucide-react": "^1.31.0",
     "maplibre-gl": "^6.6.0",
     "react": "^19.2.8",

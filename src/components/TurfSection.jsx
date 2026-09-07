@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { ArrowRight, Star, Compass, Users, Car } from 'lucide-react';
+import turfService from '../services/turfService';
 
+/*
 const turfs = [
   {
     id: 1,
@@ -44,9 +47,34 @@ const turfs = [
       { title: 'Refund Policy', description: 'Full refund issued within 1-3 business days for eligible cancellations. Rain-outs are fully refunded.' },
     ],
     reviewsList: [
-      { name: 'Saugat Shahi', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80', rating: 5, date: '2 weeks ago', comment: 'Excellent turf quality and the staff is very helpful. Booking through Turfio was super smooth!' },
-      { name: 'Rohan Tamang', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80', rating: 5, date: '1 month ago', comment: 'Best futsal arena in Lalitpur hands down. The floodlights are great for evening games.' },
-      { name: 'Anish Karki', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80', rating: 4, date: '3 weeks ago', comment: 'Great facilities, decent parking. Would love if they extended hours on weekdays.' },
+      {
+        name: 'Saugat Shahi',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: 'Excellent turf quality and the staff is very helpful. Booking through Turfio was super smooth! Pitch looks fantastic under lights.',
+        images: [
+          'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
+        ],
+      },
+      {
+        name: 'Rohan Tamang',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: 'Best futsal arena in Lalitpur hands down. The floodlights are great for evening games.',
+        images: [
+          'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=600&q=80',
+        ],
+      },
+      {
+        name: 'Anish Karki',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+        rating: 4,
+        date: '3 weeks ago',
+        comment: 'Great facilities, decent parking. Would love if they extended hours on weekdays.',
+      },
     ],
   },
   {
@@ -143,11 +171,37 @@ const turfs = [
     ],
   },
 ];
+*/
 
-export default function TurfSection({ onBookNow, onViewDetails }) {
+export default function TurfSection({ onBookNow, onViewDetails, isLoading: propLoading = false, turfsData = null }) {
+  const [fetchedTurfs, setFetchedTurfs] = useState([]);
+  const [loadingRealTurfs, setLoadingRealTurfs] = useState(!turfsData);
+
+  useEffect(() => {
+    if (!turfsData) {
+      let isMounted = true;
+      turfService.getTurfs()
+        .then((data) => {
+          if (isMounted) {
+            setFetchedTurfs(data || []);
+            setLoadingRealTurfs(false);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load turfs for landing section:', err);
+          if (isMounted) setLoadingRealTurfs(false);
+        });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [turfsData]);
+
+  const activeTurfs = turfsData || fetchedTurfs;
+  const isLoading = propLoading || (loadingRealTurfs && activeTurfs.length === 0);
   return (
-    <section className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+    <section id="features" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-8">
           {/* Left Column: Heading & Info */}
           <div className="flex flex-col justify-center lg:col-span-3 lg:pt-2">
@@ -173,84 +227,142 @@ export default function TurfSection({ onBookNow, onViewDetails }) {
 
           {/* Right Column: Turf Cards Grid */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-9 lg:grid-cols-3">
-            {turfs.map((turf) => (
-              <div
-                key={turf.id}
-                onClick={() => onViewDetails?.(turf)}
-                className="group flex flex-col justify-between bg-white cursor-pointer"
-              >
-                <div className="w-full">
-                  {/* Card Image with rounded corners */}
-                  <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[20px] bg-slate-100">
-                    <img
-                      src={turf.image}
-                      alt={turf.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/image.png';
-                      }}
-                    />
-                  </div>
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`turf-skeleton-${index}`}
+                  className="flex flex-col justify-between bg-white animate-pulse select-none"
+                >
+                  <div className="w-full">
+                    {/* Card Image Skeleton - 16:9 ratio */}
+                    <div className="relative aspect-[16/9] w-full rounded-[20px] bg-slate-200/80" />
 
-                  {/* Text details flush with left edge */}
-                  <div className="pt-3 px-0 pb-0">
-                    {/* Badges / Features line */}
-                    <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Compass className="h-3.5 w-3.5 text-slate-400" />
-                        {turf.type}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5 text-slate-400" />
-                        {turf.size}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Car className="h-3.5 w-3.5 text-slate-400" />
-                        {turf.parking}
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors">
-                      {turf.title}
-                    </h3>
-
-                    {/* Rating */}
-                    <div className="mt-1 flex items-center gap-1">
-                      <div className="flex text-lime-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className="h-4 w-4 fill-lime-400 text-lime-400"
-                          />
-                        ))}
+                    {/* Text Details Skeleton - matching pt-3 px-0 pb-0 */}
+                    <div className="pt-3 px-0 pb-0">
+                      {/* Pill Badges placeholder - matching gap-3 text-xs */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 rounded-full bg-slate-200/80" />
+                          <div className="h-3 w-10 bg-slate-200/80 rounded-full" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 rounded-full bg-slate-200/80" />
+                          <div className="h-3 w-8 bg-slate-200/80 rounded-full" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 rounded-full bg-slate-200/80" />
+                          <div className="h-3 w-12 bg-slate-200/80 rounded-full" />
+                        </div>
                       </div>
-                      <span className="ml-1 text-xs font-semibold text-slate-600">
-                        {turf.rating} ({turf.reviews})
-                      </span>
+
+                      {/* Title placeholder - mt-2 text-base */}
+                      <div className="mt-2 h-4 w-4/5 bg-slate-200/80 rounded-md" />
+
+                      {/* Rating placeholder - mt-1 */}
+                      <div className="mt-1 flex items-center gap-1">
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className="h-4 w-4 rounded-sm bg-slate-200/80" />
+                          ))}
+                        </div>
+                        <div className="ml-1 h-3 w-16 bg-slate-200/70 rounded-full" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Footer: Price & CTA flush with left edge */}
-                <div className="pt-3 px-0 pb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-600">
-                    {turf.price}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewDetails?.(turf);
-                    }}
-                    className="rounded-full bg-lime-400 px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95"
-                  >
-                    View Details
-                  </button>
+                  {/* Footer Price & Button placeholder - pt-3 px-0 pb-1 */}
+                  <div className="pt-3 px-0 pb-1 flex items-center justify-between">
+                    <div className="h-3.5 w-20 bg-slate-200/80 rounded-md" />
+                    <div className="h-[32px] w-[100px] bg-slate-200/90 rounded-full" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              activeTurfs.map((turf) => (
+                <div
+                  key={turf.id}
+                  onClick={() => onViewDetails?.(turf)}
+                  className="group flex flex-col justify-between bg-white cursor-pointer"
+                >
+                  <div className="w-full">
+                    {/* Card Image with rounded corners */}
+                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[20px] bg-slate-100">
+                      <img
+                        src={turf.image}
+                        alt={turf.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/image.png';
+                        }}
+                      />
+                    </div>
+
+                    {/* Text details flush with left edge */}
+                    <div className="pt-3 px-0 pb-0">
+                      {/* Badges / Features line */}
+                      <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+                        {turf.type && (
+                          <span className="flex items-center gap-1">
+                            <Compass className="h-3.5 w-3.5 text-slate-400" />
+                            {turf.type}
+                          </span>
+                        )}
+                        {turf.size && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5 text-slate-400" />
+                            {turf.size}
+                          </span>
+                        )}
+                        {turf.parking && (
+                          <span className="flex items-center gap-1">
+                            <Car className="h-3.5 w-3.5 text-slate-400" />
+                            {turf.parking}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors">
+                        {turf.title}
+                      </h3>
+
+                      {/* Rating */}
+                      <div className="mt-1 flex items-center gap-1">
+                        <div className="flex text-lime-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className="h-4 w-4 fill-lime-400 text-lime-400"
+                            />
+                          ))}
+                        </div>
+                        <span className="ml-1 text-xs font-semibold text-slate-600">
+                          {turf.rating} ({turf.reviews})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer: Price & CTA flush with left edge */}
+                  <div className="pt-3 px-0 pb-1 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-600">
+                      {turf.price}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewDetails?.(turf);
+                      }}
+                      className="rounded-full bg-lime-400 px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

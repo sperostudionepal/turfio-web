@@ -34,11 +34,35 @@ export const authService = {
   },
 
   /**
-   * Login user
+   * Login player/customer (Role: user)
    * @param {{ email, password }} data
    */
   async login(data) {
     const response = await apiClient.post('/auth/login', {
+      email: data.email,
+      password: data.password,
+    });
+    return response; // { success: true, message, data: { user, token } }
+  },
+
+  /**
+   * Login arena owner (Role: admin)
+   * @param {{ email, password }} data
+   */
+  async loginAdmin(data) {
+    const response = await apiClient.post('/admin/auth/login', {
+      email: data.email,
+      password: data.password,
+    });
+    return response; // { success: true, message, data: { user, token } }
+  },
+
+  /**
+   * Login platform staff (Role: superadmin)
+   * @param {{ email, password }} data
+   */
+  async loginSuperadmin(data) {
+    const response = await apiClient.post('/superadmin/auth/login', {
       email: data.email,
       password: data.password,
     });

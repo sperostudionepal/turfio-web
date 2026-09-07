@@ -47,13 +47,71 @@ export const useAuthStore = create((set) => ({
   },
 
   /**
-   * Login Action
+   * Player / Customer Login Action (Role: user)
    */
   login: async ({ email, password }) => {
     try {
       set({ isLoading: true, error: null });
       
       const response = await authService.login({ email, password });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Arena Owner Login Action (Role: admin)
+   */
+  loginAdmin: async ({ email, password }) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await authService.loginAdmin({ email, password });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Platform Staff Superadmin Login Action (Role: superadmin)
+   */
+  loginSuperadmin: async ({ email, password }) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await authService.loginSuperadmin({ email, password });
       const { user, token } = response.data || {};
 
       if (token) {

@@ -13,7 +13,7 @@ import {
   Loader2,
   ExternalLink,
 } from 'lucide-react';
-import ownerRequestService from '../../../services/ownerRequestService';
+import ownerApplicationService from '../../../services/ownerApplicationService';
 import { useToast } from '../../../components/common/Toast';
 
 const STATUS_TABS = [
@@ -93,7 +93,7 @@ function SuperadminVenuesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await ownerRequestService.list({
+      const res = await ownerApplicationService.list({
         status: statusFilter,
         q: debouncedQuery,
         limit: 50,
@@ -125,7 +125,7 @@ function SuperadminVenuesPage() {
     }
     setActionBusy(true);
     try {
-      await ownerRequestService.decide(
+      await ownerApplicationService.decide(
         selected._id,
         decision,
         decision === 'reject' ? rejectNote.trim() : undefined,
