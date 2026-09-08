@@ -21,7 +21,6 @@ import ReviewsSection from './ReviewsSection';
 import AboutUsSection from './AboutUsSection';
 import CtaBannerSection from './CtaBannerSection';
 import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
 
 const initialForm = {
   location: 'Hattiban, Lalitpur',
@@ -236,7 +235,7 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-bold text-slate-900">Date</span>
-                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400">
+                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400 whitespace-nowrap">
                       {formatDate(form.date)}
                     </span>
                     <input
@@ -314,7 +313,6 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
       <AboutUsSection />
       <CtaBannerSection onBookNow={user ? onFindTurfs : onLogin} />
       <Footer />
-      <BackToTopButton />
     </div>
   );
 }

@@ -2,9 +2,12 @@ import { useState } from 'react';
 import {
   Activity,
   Search,
+  Sliders,
 } from 'lucide-react';
+import useAccessibilityStore from '../../../store/useAccessibilityStore';
 
 function SuperadminAuditHealthPage() {
+  const { toggleOpen: toggleAccessibility, fontTheme, fontSize } = useAccessibilityStore();
   const [searchLogQuery, setSearchLogQuery] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [instantPayoutsEnabled, setInstantPayoutsEnabled] = useState(true);
@@ -203,6 +206,21 @@ function SuperadminAuditHealthPage() {
                   maintenanceMode ? 'right-0.5' : 'left-0.5'
                 }`}
               />
+            </button>
+          </div>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+            <div>
+              <span className="font-extrabold text-xs text-slate-900 block">Typography & Font Size</span>
+              <span className="text-[11px] text-slate-400 font-medium capitalize">
+                Font: {fontTheme} • Size: {fontSize}
+              </span>
+            </div>
+            <button
+              onClick={toggleAccessibility}
+              className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-[11px] font-extrabold hover:bg-lime-400 hover:text-slate-900 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <Sliders size={12} />
+              <span>Customize</span>
             </button>
           </div>
         </div>

@@ -126,24 +126,29 @@ export default function CustomDropdown({
           {options.map((option) => {
             const optValue = typeof option === 'object' ? option.value : option;
             const optLabel = typeof option === 'object' ? option.label : option;
+            const isDisabled = typeof option === 'object' ? Boolean(option.disabled) : false;
             const isSelected = optValue === value;
 
             return (
               <button
                 key={optValue}
                 type="button"
+                disabled={isDisabled}
                 onClick={() => {
+                  if (isDisabled) return;
                   onChange(optValue);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-lime-400 text-slate-950 shadow-xs'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
+                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
+                  isDisabled
+                    ? 'opacity-40 cursor-not-allowed bg-slate-50 text-slate-400'
+                    : isSelected
+                    ? 'bg-lime-400 text-slate-950 shadow-xs cursor-pointer'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950 cursor-pointer'
                 }`}
               >
                 <span>{optLabel}</span>
-                {isSelected && <Check className="h-4 w-4 text-slate-950 shrink-0 stroke-[2.5]" />}
+                {isSelected && !isDisabled && <Check className="h-4 w-4 text-slate-950 shrink-0 stroke-[2.5]" />}
               </button>
             );
           })}

@@ -426,80 +426,8 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
       {/* Top Navbar */}
       <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} />
 
-      {/* 1. Hero Section */}
-      <section className="relative isolate overflow-hidden bg-white pt-16 md:pt-24 lg:pt-28 pb-8 md:pb-12">
-        {/* Background Image */}
-        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
-          <img
-            src="/hero-image.png"
-            alt="Hero Background"
-            className="h-full w-full object-cover object-center grayscale"
-          />
-        </div>
-
-        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Left Hero Content */}
-            <div className="lg:col-span-7 -mt-10 lg:-mt-16">
-              <span className="inline-flex items-center gap-2 rounded-full bg-lime-100 px-4 py-1.5 text-xs font-extrabold text-slate-800 mb-6">
-                <Building2 className="h-4 w-4 text-lime-600" />
-                Grow Your Futsal Business
-              </span>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-slate-900 leading-[1.12]">
-                List Your Turf
-              </h1>
-              <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-lime-500 mb-5 leading-[1.12]">
-                On Turfio Today
-              </h2>
-
-              <p className="max-w-md text-base leading-relaxed text-slate-500">
-                Join 500+ successful arena owners across Nepal.
-                <span className="block">Fill empty slot hours, automate bookings & scale revenue.</span>
-              </p>
-
-              <div className="mt-10 grid w-full grid-cols-1 gap-10 sm:grid-cols-2 max-w-xl">
-                {[
-                  { icon: MapPin, title: 'Reach More Players', text: 'Connect with thousands' },
-                  { icon: Clock, title: 'Increase Bookings', text: 'Boost your revenue' },
-                  { icon: Building2, title: 'Easy Management', text: 'Simple dashboard' },
-                ].map((item, idx) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.title} className={`flex min-w-0 items-start gap-3 max-w-[200px] ${idx === 2 ? 'sm:col-span-2 sm:w-1/2' : 'pr-0'}`}>
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lime-400/10 text-lime-500">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="whitespace-nowrap text-[14px] font-semibold text-slate-900">{item.title}</p>
-                        <p className="whitespace-nowrap text-[13px] leading-tight text-slate-400">{item.text}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right Tablet Mockup */}
-            <div className="lg:col-span-5 flex justify-center lg:justify-end h-full items-start pt-12">
-              <div className="relative w-full h-full" style={{ transform: 'translateY(44px) translateX(0px)' }}>
-                <img
-                  src="/tablet-mockup.png"
-                  alt="Turfio Arena Owner Dashboard Mockup"
-                  className="w-full h-full object-cover drop-shadow-xl lg:scale-175 rounded-lg"
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-
-
-      {/* 3. Main Registration Form & How It Works Column */}
-      <section className="py-16 md:py-24">
+      {/* 1. Main Registration Form & How It Works Column */}
+      <section className="pt-6 md:pt-10 pb-16 md:pb-24">
         <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
             
@@ -1155,6 +1083,76 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                 </div>
               </div>
 
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Hero Section */}
+      <section className="relative isolate overflow-hidden bg-white pt-16 md:pt-24 lg:pt-28 pb-8 md:pb-12">
+        {/* Background Image */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
+          <img
+            src="/hero-image.png"
+            alt="Hero Background"
+            className="h-full w-full object-cover object-center grayscale"
+          />
+        </div>
+
+        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left Hero Content */}
+            <div className="lg:col-span-7 -mt-10 lg:-mt-16">
+              <span className="inline-flex items-center gap-2 rounded-full bg-lime-100 px-4 py-1.5 text-xs font-extrabold text-slate-800 mb-6">
+                <Building2 className="h-4 w-4 text-lime-600" />
+                Grow Your Futsal Business
+              </span>
+
+              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-slate-900 leading-[1.12]">
+                List Your Turf
+              </h1>
+              <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-lime-500 mb-5 leading-[1.12]">
+                On Turfio Today
+              </h2>
+
+              <p className="max-w-md text-base leading-relaxed text-slate-500">
+                Join 500+ successful arena owners across Nepal.
+                <span className="block">Fill empty slot hours, automate bookings & scale revenue.</span>
+              </p>
+
+              <div className="mt-10 grid w-full grid-cols-1 gap-10 sm:grid-cols-2 max-w-xl">
+                {[
+                  { icon: MapPin, title: 'Reach More Players', text: 'Connect with thousands' },
+                  { icon: Clock, title: 'Increase Bookings', text: 'Boost your revenue' },
+                  { icon: Building2, title: 'Easy Management', text: 'Simple dashboard' },
+                ].map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.title} className={`flex min-w-0 items-start gap-3 max-w-[200px] ${idx === 2 ? 'sm:col-span-2 sm:w-1/2' : 'pr-0'}`}>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lime-400/10 text-lime-500">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="whitespace-nowrap text-[14px] font-semibold text-slate-900">{item.title}</p>
+                        <p className="whitespace-nowrap text-[13px] leading-tight text-slate-400">{item.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Tablet Mockup */}
+            <div className="lg:col-span-5 flex justify-center lg:justify-end h-full items-start pt-12">
+              <div className="relative w-full h-full" style={{ transform: 'translateY(44px) translateX(0px)' }}>
+                <img
+                  src="/tablet-mockup.png"
+                  alt="Turfio Arena Owner Dashboard Mockup"
+                  className="w-full h-full object-cover drop-shadow-xl lg:scale-175 rounded-lg"
+                />
+              </div>
             </div>
 
           </div>

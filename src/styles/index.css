@@ -1,12 +1,15 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-app-family, 'Manrope', system-ui, -apple-system, sans-serif);
   --font-bebas: 'Bebas Neue', system-ui, sans-serif;
 }
 
 :root {
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-app-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  --app-font-size: 16px;
+
+  font-family: var(--font-app-family);
   line-height: 1.5;
   font-weight: 400;
   color: #0f172a;
@@ -27,7 +30,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #f8fafc;
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-app-family, 'Manrope', system-ui, -apple-system, sans-serif);
 }
 
 * {

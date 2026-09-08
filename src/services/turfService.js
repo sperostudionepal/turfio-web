@@ -131,6 +131,145 @@ export const turfService = {
       throw err;
     }
   },
+
+  /**
+   * Fetch dynamic availability for a turf on a given date (opening window, bookable slots, booked/held ranges)
+   */
+  async getTurfAvailability(id, date) {
+    try {
+      const response = await apiClient.get(`/turfs/${id}/availability`, {
+        params: { date },
+      });
+      return response?.data || response;
+    } catch (err) {
+      console.warn(`Failed to fetch availability for turf ${id}:`, err.message);
+      throw err;
+    }
+  },
+
+  /**
+   * Validate a specific time slot range against operating hours and conflicts
+   */
+  async validateSlot(id, { date, startTime, duration, holdToken }) {
+    const response = await apiClient.post(`/turfs/${id}/slots/validate`, {
+      date,
+      startTime,
+      duration,
+      holdToken,
+    });
+    return response?.data || response;
+  },
+
+  /**
+   * Create an atomic 10-minute hold on a slot range
+   */
+  async createSlotHold(id, { date, startTime, duration }) {
+    const response = await apiClient.post(`/turfs/${id}/holds`, {
+      date,
+      startTime,
+      duration,
+    });
+    return response?.data || response;
+  },
+
+  /**
+   * Release a previously held slot range
+   */
+  async releaseSlotHold(id, holdToken) {
+    try {
+      const response = await apiClient.delete(`/turfs/${id}/holds`, {
+        data: { holdToken },
+      });
+      return response?.data || response;
+    } catch (err) {
+      console.warn(`Failed to release hold:`, err.message);
+      return null;
+    }
+  },
+
+  /**
+   * Create a booking record on the backend
+   */
+  async createBooking(bookingData) {
+    const response = await apiClient.post('/bookings', bookingData);
+    return response?.data || response;
+  },
+
+  /**
+   * Initiate eSewa payment for a booking or active hold
+   */
+  async initiateEsewaPayment(bookingId, amount, extraOptions = {}) {
+    const response = await apiClient.post('/payments/initiate', {
+      bookingId,
+      amount,
+      ...extraOptions,
+    });
+    return response;
+  },
+
+  /**
+   * Convert an existing booking (e.g. venue) to split payment
+   */
+  async convertToSplitPayment(bookingId, splitCount = 2) {
+    const response = await apiClient.post('/payments/convert-to-split', {
+      bookingId,
+      splitCount,
+    });
+    return response?.data || response;
+  },
+
+  /**
+   * Fetch public split payment details for teammates
+   */
+  async getSplitPaymentDetails(identifier) {
+    const response = await apiClient.get(`/payments/split/${identifier}`);
+    return response?.booking || response;
+  },
+
+  /**
+   * Initiate public split payment share
+   */
+  async initiateSplitSharePayment(bookingId, amount, extraOptions = {}) {
+    const response = await apiClient.post('/payments/initiate-share', {
+      bookingId,
+      amount,
+      ...extraOptions,
+    });
+    return response;
+  },
+
+  /**
+   * Verify eSewa callback payment data
+   */
+  async verifyEsewaPayment(encodedData, bookingPayload = null) {
+    const response = await apiClient.post('/payments/verify', {
+      data: encodedData,
+      bookingPayload,
+    });
+    return response;
+  },
+
+  /**
+   * Submit eSewa form programmatically
+   */
+  submitEsewaForm(paymentUrl, formData) {
+    const form = document.createElement('form');
+    form.setAttribute('method', 'POST');
+    form.setAttribute('action', paymentUrl);
+    form.style.display = 'none';
+
+    Object.entries(formData).forEach(([key, value]) => {
+      const input = document.createElement('input');
+      input.setAttribute('type', 'hidden');
+      input.setAttribute('name', key);
+      input.setAttribute('value', value);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  },
 };
 
 export default turfService;
+
