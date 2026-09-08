@@ -626,7 +626,7 @@ export default function TurfListingPage({
                 <div className="hidden h-7 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
                 {/* Date */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-[1.2] min-w-[155px]">
                   <CustomDatePicker
                     variant="searchPill"
                     label="Date"

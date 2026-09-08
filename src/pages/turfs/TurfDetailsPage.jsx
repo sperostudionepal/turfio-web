@@ -43,7 +43,6 @@ import {
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import BackToTopButton from '../../components/BackToTopButton';
 import CustomDropdown from '../../components/common/CustomDropdown';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
@@ -334,19 +333,124 @@ export default function TurfDetailsPage({
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('07:00 PM');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [duration, setDuration] = useState(1);
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0);
-  const [showPromoInput, setShowPromoInput] = useState(false);
-  const [promoError, setPromoError] = useState('');
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [isHoldingSlot, setIsHoldingSlot] = useState(false);
+
+  // Dynamic slot engine state
+  const [availabilityData, setAvailabilityData] = useState(null);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
   // Scroll to top on load
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImageIndex(0);
   }, [turf?.id]);
+
+  // Fetch dynamic slot availability from backend
+  useEffect(() => {
+    const turfId = turf?.id || turf?._id;
+    if (!turfId) return;
+
+    let isMounted = true;
+    setIsLoadingAvailability(true);
+
+    turfService
+      .getTurfAvailability(turfId, selectedDate)
+      .then((data) => {
+        if (!isMounted) return;
+        setAvailabilityData(data);
+      })
+      .catch((err) => {
+        console.warn('Failed to load dynamic slot availability:', err.message);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingAvailability(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [turf?.id, turf?._id, selectedDate]);
+
+  // Effective available days for this venue
+  const effectiveAvailableDays = useMemo(() => {
+    if (availabilityData?.availableDays && availabilityData.availableDays.length > 0) {
+      return availabilityData.availableDays;
+    }
+    if (turf?.availableDays && turf.availableDays.length > 0) {
+      return turf.availableDays;
+    }
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  }, [availabilityData?.availableDays, turf?.availableDays]);
+
+  // Check if current selected date is a holiday/closed day
+  const isSelectedDateHoliday = useMemo(() => {
+    if (!selectedDate) return false;
+    const parts = selectedDate.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dayCodes = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayCode = dayCodes[d.getDay()];
+    return effectiveAvailableDays.length > 0 && !effectiveAvailableDays.includes(dayCode);
+  }, [selectedDate, effectiveAvailableDays]);
+
+  // Derive dynamic slot options from admin opening hours and availability
+  const timeSlotOptions = useMemo(() => {
+    if (isSelectedDateHoliday || availabilityData?.isClosed) {
+      return [{ value: 'CLOSED', label: 'Closed (Holiday)', disabled: true }];
+    }
+
+    if (availabilityData?.slots && availabilityData.slots.length > 0) {
+      return availabilityData.slots.map((s) => ({
+        value: s.time,
+        label: s.isAvailable ? s.time : `${s.time} (Taken)`,
+        disabled: !s.isAvailable,
+      }));
+    }
+
+    // Fallback if network is delayed: compute from turf openingHours
+    const openStr = turf?.openingHours?.start || '06:00';
+    const closeStr = turf?.openingHours?.end || '22:00';
+
+    const parseToMin = (t) => {
+      const parts = t.split(':');
+      return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    };
+
+    const to12 = (min) => {
+      const h24 = Math.floor(min / 60);
+      const minVal = min % 60;
+      const p = h24 >= 12 ? 'PM' : 'AM';
+      let h12 = h24 % 12;
+      if (h12 === 0) h12 = 12;
+      return `${String(h12).padStart(2, '0')}:${String(minVal).padStart(2, '0')} ${p}`;
+    };
+
+    const openMin = parseToMin(openStr);
+    const closeMin = parseToMin(closeStr);
+    const generated = [];
+    for (let m = openMin; m < closeMin; m += 60) {
+      const formatted = to12(m);
+      generated.push({ value: formatted, label: formatted, disabled: false });
+    }
+    return generated.length > 0 ? generated : TIME_SLOT_OPTIONS;
+  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours]);
+
+  // Keep selectedTimeSlot in sync with available slots
+  useEffect(() => {
+    if (isSelectedDateHoliday) {
+      setSelectedTimeSlot('');
+      return;
+    }
+    if (timeSlotOptions.length > 0) {
+      const firstAvailable = timeSlotOptions.find((opt) => !opt.disabled);
+      const currentOpt = timeSlotOptions.find((opt) => opt.value === selectedTimeSlot);
+      if (!currentOpt || currentOpt.disabled) {
+        setSelectedTimeSlot(firstAvailable ? firstAvailable.value : '');
+      }
+    }
+  }, [timeSlotOptions, isSelectedDateHoliday]);
 
   // Gallery Fallback
   const gallery = useMemo(() => {
@@ -363,8 +467,7 @@ export default function TurfDetailsPage({
   }, [turf]);
 
   const subtotal = baseRateNumeric * duration;
-  const discountAmount = Math.round(subtotal * appliedDiscount);
-  const totalAmount = Math.max(0, subtotal - discountAmount);
+  const totalAmount = subtotal;
 
   // Calculate End Time
   const endTimeStr = useMemo(() => {
@@ -384,40 +487,64 @@ export default function TurfDetailsPage({
     return `${String(endHour12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
   }, [selectedTimeSlot, duration]);
 
-  // Quick Date Helpers
-  const handleSetQuickDate = (type) => {
-    const date = new Date();
-    if (type === 'tomorrow') {
-      date.setDate(date.getDate() + 1);
-    } else if (type === 'saturday') {
-      const day = date.getDay();
-      const diff = (6 - day + 7) % 7 || 7;
-      date.setDate(date.getDate() + diff);
-    }
-    setSelectedDate(date.toISOString().split('T')[0]);
-  };
-
-  // Promo Code Handler
-  const handleApplyPromo = (e) => {
-    e.preventDefault();
-    setPromoError('');
-    if (!promoCode.trim()) return;
-
-    if (promoCode.trim().toUpperCase() === 'TURF10' || promoCode.trim().toUpperCase() === 'KICKOFF') {
-      setAppliedDiscount(0.1);
-      triggerToast('🎉 10% discount promo applied successfully!');
-    } else if (promoCode.trim().toUpperCase() === 'TURF20') {
-      setAppliedDiscount(0.2);
-      triggerToast('🔥 20% discount promo applied successfully!');
-    } else {
-      setPromoError('Invalid coupon code. Try TURF10');
-    }
-  };
-
   // Toast Notification helper
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // Atomic Slot Hold creation before navigating to booking checkout
+  const handleBookSlot = async () => {
+    if (isHoldingSlot) return;
+
+    if (!selectedTimeSlot) {
+      triggerToast('Please choose an available start time');
+      return;
+    }
+
+    const turfId = turf?.id || turf?._id;
+    if (!turfId) {
+      triggerToast('Turf details not found');
+      return;
+    }
+
+    try {
+      setIsHoldingSlot(true);
+
+      // Attempt atomic hold creation
+      const holdRes = await turfService.createSlotHold(turfId, {
+        date: selectedDate,
+        startTime: selectedTimeSlot,
+        duration,
+      });
+
+      const holdData = holdRes?.data || holdRes;
+
+      // Proceed to checkout with real hold data
+      onBookNow?.({
+        ...turf,
+        selectedDate,
+        selectedTime: selectedTimeSlot,
+        duration,
+        totalAmount,
+        holdId: holdData?.holdId,
+        holdToken: holdData?.holdToken,
+        holdExpiresAt: holdData?.expiresAt,
+        ttlSeconds: holdData?.ttlSeconds || 600,
+      });
+    } catch (err) {
+      console.warn('Hold creation rejected:', err.message);
+      const conflictMsg =
+        err.response?.data?.error ||
+        err.message ||
+        'This slot was just taken by another player. Please pick another time.';
+      triggerToast(conflictMsg);
+
+      // Refresh dynamic availability immediately
+      turfService.getTurfAvailability(turfId, selectedDate).then(setAvailabilityData).catch(() => {});
+    } finally {
+      setIsHoldingSlot(false);
+    }
   };
 
   // Review Feedback Handlers
@@ -1054,10 +1181,11 @@ export default function TurfDetailsPage({
                   {/* Top Row: Match Date (Full Width) */}
                   <div>
                     <CustomDatePicker
-                      label="MATCH DATE"
+                      label="Match Date"
                       value={selectedDate}
                       onChange={setSelectedDate}
                       minDate={new Date().toISOString().split('T')[0]}
+                      availableDays={effectiveAvailableDays}
                       variant="cell"
                       buttonClassName="rounded-t-2xl"
                     />
@@ -1066,15 +1194,15 @@ export default function TurfDetailsPage({
                   {/* Bottom Row: 2 Columns for Start Time & Duration */}
                   <div className="grid grid-cols-2 divide-x divide-slate-200">
                     <CustomDropdown
-                      label="START TIME"
-                      options={TIME_SLOT_OPTIONS}
+                      label="Start Time"
+                      options={timeSlotOptions}
                       value={selectedTimeSlot}
                       onChange={setSelectedTimeSlot}
                       variant="cell"
                       buttonClassName="rounded-bl-2xl"
                     />
                     <CustomDropdown
-                      label="DURATION"
+                      label="Duration"
                       options={DURATION_OPTIONS}
                       value={duration}
                       onChange={setDuration}
@@ -1084,30 +1212,10 @@ export default function TurfDetailsPage({
                   </div>
                 </div>
 
-                {/* Promo Code Input Form (Appears above price breakdown when active) */}
-                {(showPromoInput || appliedDiscount > 0) && (
-                  <div className="pt-1">
-                    <form onSubmit={handleApplyPromo} className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value)}
-                          placeholder="Coupon (e.g. TURF10)"
-                          className="w-full h-[52px] rounded-xl bg-white border border-slate-200 px-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 transition-all"
-                          autoFocus
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="h-[52px] min-w-[105px] px-6 rounded-xl bg-lime-400 hover:bg-lime-500 text-sm font-extrabold text-slate-950 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center shadow-xs"
-                      >
-                        Apply
-                      </button>
-                    </form>
-                    {promoError && (
-                      <p className="text-[11px] font-semibold text-rose-500 mt-1.5">{promoError}</p>
-                    )}
+                {/* Holiday Warning Notice if selected date is closed */}
+                {isSelectedDateHoliday && (
+                  <div className="rounded-xl bg-rose-50 border border-rose-200/80 p-3.5 text-center text-xs font-semibold text-rose-700">
+                    ⛔ Venue is closed on this day (Holiday). Please select an open date.
                   </div>
                 )}
 
@@ -1122,16 +1230,26 @@ export default function TurfDetailsPage({
                     </span>
                   </div>
 
-                  {appliedDiscount > 0 && (
-                    <div className="flex justify-between text-lime-600 font-bold">
-                      <span>Promo Discount ({appliedDiscount * 100}%)</span>
-                      <span>- NPR {discountAmount.toLocaleString()}</span>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <span>Platform Booking Fee</span>
+                      <div className="relative group flex items-center">
+                        <button
+                          type="button"
+                          aria-label="Platform fee info"
+                          className="text-slate-400 hover:text-slate-600 focus:outline-none transition-colors cursor-pointer"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-medium text-white opacity-0 shadow-xl transition-all group-hover:opacity-100 group-focus-within:opacity-100 z-50 text-center leading-snug">
+                          Turfio charges NPR 0 booking fee for all players. Enjoy 100% free reservations!
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+                        </div>
+                      </div>
                     </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span>Platform Booking Fee</span>
-                    <span className="font-bold text-lime-600">FREE</span>
+                    <span className="font-bold text-lime-700 bg-lime-100/80 px-2.5 py-0.5 rounded-full text-xs">
+                      FREE
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-base font-black text-slate-900">
@@ -1146,40 +1264,17 @@ export default function TurfDetailsPage({
                 <div className="space-y-2 pt-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      onBookNow?.({
-                        ...turf,
-                        selectedDate,
-                        selectedTime: selectedTimeSlot,
-                        duration,
-                        totalAmount,
-                      })
-                    }
-                    className="w-full rounded-full bg-lime-400 hover:bg-lime-500 py-3.5 text-base font-black text-slate-950 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                    disabled={isHoldingSlot || isSelectedDateHoliday}
+                    onClick={handleBookSlot}
+                    className="w-full rounded-full bg-lime-400 hover:bg-lime-500 py-3.5 text-base font-black text-slate-950 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>Book This Slot</span>
+                    <span>{isSelectedDateHoliday ? 'Venue Closed on this Date' : isHoldingSlot ? 'Reserving...' : 'Book This Slot'}</span>
                     <ArrowRight className="h-5 w-5" />
                   </button>
                   <p className="text-center text-xs font-medium text-slate-400">
                     You won't be charged yet
                   </p>
                 </div>
-
-                {/* Promo Code Trigger (Below Book CTA when not active) */}
-                {!showPromoInput && appliedDiscount === 0 && (
-                  <div className="pt-2">
-                    <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-600 py-1 text-center">
-                      <span>Have a promo code?</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowPromoInput(true)}
-                        className="font-bold text-lime-600 underline decoration-lime-500 underline-offset-4 hover:text-lime-700 transition-colors cursor-pointer ml-0.5"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Match Window preview badge outside card below */}
@@ -1318,24 +1413,16 @@ export default function TurfDetailsPage({
 
           <button
             type="button"
-            onClick={() =>
-              onBookNow?.({
-                ...turf,
-                selectedDate,
-                selectedTime: selectedTimeSlot,
-                duration,
-                totalAmount,
-              })
-            }
-            className="rounded-full bg-lime-400 hover:bg-lime-500 px-6 py-3 text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer"
+            disabled={isHoldingSlot || isSelectedDateHoliday}
+            onClick={handleBookSlot}
+            className="rounded-full bg-lime-400 hover:bg-lime-500 px-6 py-3 text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Book Now
+            {isSelectedDateHoliday ? 'Venue Closed' : isHoldingSlot ? 'Reserving...' : 'Book Now'}
           </button>
         </div>
       </div>
 
       <Footer />
-      <BackToTopButton />
 
       {/* ─── LIGHTBOX MODAL ─── */}
       {lightboxOpen && (

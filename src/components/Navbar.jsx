@@ -67,7 +67,7 @@ export default function Navbar({
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white">
+    <header className="sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)]">
       {/* Top Info Bar — always visible, sticky */}
       <div
         className="border-b border-lime-100/40 bg-lime-50"
@@ -375,13 +375,6 @@ export default function Navbar({
               className="py-1 transition-colors hover:text-lime-600"
             >
               Pricing
-            </a>
-            <a
-              href="#"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 transition-colors hover:text-lime-600"
-            >
-              About Us
             </a>
 
             {/* Log In & Sign Up / Logout Buttons inside Mobile Popup */}

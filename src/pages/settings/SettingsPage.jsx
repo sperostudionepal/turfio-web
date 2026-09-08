@@ -3,27 +3,24 @@ import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import {
   Settings as SettingsIcon,
-  User,
   Bell,
   CreditCard,
   Calendar,
   Shield,
   Save,
-  RotateCcw,
   QrCode,
   MapPin,
   Building2,
   CheckCircle2,
   Lock,
-  Globe,
-  Smartphone,
-  Mail,
-  Clock,
-  Key,
-  Database,
   Sliders,
-  DollarSign
+  Type,
+  ZoomIn,
 } from 'lucide-react';
+import useAccessibilityStore, {
+  FONT_OPTIONS,
+  FONT_SIZES,
+} from '../../store/useAccessibilityStore';
 
 function SettingsPage({ activeTab, setActiveTab }) {
   const [activeSection, setActiveSection] = useState('General');
@@ -74,6 +71,14 @@ function SettingsPage({ activeTab, setActiveTab }) {
   const [managerPin, setManagerPin] = useState('4412');
   const [twoFactor, setTwoFactor] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState('30 Minutes');
+  const {
+    fontTheme: activeFontTheme,
+    fontSize: activeFontSize,
+    applySettings,
+  } = useAccessibilityStore();
+
+  const [draftFontTheme, setDraftFontTheme] = useState(activeFontTheme);
+  const [draftFontSize, setDraftFontSize] = useState(activeFontSize);
 
   const navigationItems = [
     { id: 'General', label: 'Venue Profile', description: 'Turf details, PAN & location', icon: Building2 },
@@ -81,9 +86,11 @@ function SettingsPage({ activeTab, setActiveTab }) {
     { id: 'Notifications', label: 'SMS & Alerts', description: 'Sparrow SMS & email reports', icon: Bell },
     { id: 'Booking', label: 'Slot Rules', description: 'Operating hours & buffer rules', icon: Calendar },
     { id: 'Security', label: 'Security & PIN', description: 'Counter PIN & manager access', icon: Shield },
+    { id: 'Accessibility', label: 'Typography & Size', description: 'Font family & text size scaling', icon: Sliders },
   ];
 
   const handleSave = () => {
+    applySettings(draftFontTheme, draftFontSize);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
@@ -699,6 +706,85 @@ function SettingsPage({ activeTab, setActiveTab }) {
                             <option>Never (Counter Standalone Mode)</option>
                           </select>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Accessibility & Theme Customization Tab */}
+                {activeSection === 'Accessibility' && (
+                  <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-6 space-y-6 shadow-xs">
+                    <div className="border-b border-slate-100/80 pb-3.5">
+                      <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                        <Sliders size={20} className="text-emerald-600" />
+                        <span>Typography & Display Scaling</span>
+                      </h2>
+                      <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">
+                        Personalize font family and text size scaling for comfortable reading across your device.
+                      </p>
+                    </div>
+
+                    {/* Font Theme */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Type size={16} className="text-slate-600" />
+                        <label className="text-xs font-bold text-slate-700">
+                          Font Theme (Typography)
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {FONT_OPTIONS.map((f) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setDraftFontTheme(f.id)}
+                            style={{ fontFamily: f.fontFamily }}
+                            className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                              draftFontTheme === f.id
+                                ? 'border-lime-500 bg-lime-50/60 text-slate-950'
+                                : 'border-slate-200/80 hover:bg-white/80'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-black text-slate-900">{f.name}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                                {f.category}
+                              </span>
+                            </div>
+                            <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                              {f.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Font Size Stepper */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-2">
+                        <ZoomIn size={16} className="text-slate-600" />
+                        <label className="text-xs font-bold text-slate-700">
+                          Font Size Scaling
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-5 gap-2 max-w-lg">
+                        {FONT_SIZES.map((s, idx) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setDraftFontSize(s.id)}
+                            className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl font-bold transition-all cursor-pointer ${
+                              draftFontSize === s.id
+                                ? 'bg-lime-400 text-slate-950 shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="text-xs font-black" style={{ fontSize: `calc(12px + ${idx * 2}px)` }}>
+                              A
+                            </span>
+                            <span className="text-[10px] mt-0.5 opacity-80">{s.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>

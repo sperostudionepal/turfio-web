@@ -11,6 +11,7 @@ export default function CustomDatePicker({
   value,
   onChange,
   minDate,
+  availableDays, // e.g. ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   label,
   variant = 'default',
   buttonClassName = '',
@@ -147,7 +148,7 @@ export default function CustomDatePicker({
             <span className="block text-[13px] font-bold text-slate-900 leading-tight">
               {label || 'Date'}
             </span>
-            <span className="mt-0.5 block text-[14px] font-medium text-slate-400 truncate">
+            <span className="mt-0.5 block text-[14px] font-medium text-slate-400 whitespace-nowrap">
               {displayValue}
             </span>
           </span>
@@ -250,6 +251,14 @@ export default function CustomDatePicker({
               currentDayDate.setHours(0, 0, 0, 0);
 
               const isPast = currentDayDate < minDateObj;
+
+              // Check if turf owner closed shop on this day of week (Holiday)
+              const dayCodes = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              const currentDayCode = dayCodes[currentDayDate.getDay()];
+              const isClosedDay = Array.isArray(availableDays) && availableDays.length > 0 && !availableDays.includes(currentDayCode);
+
+              const isDisabled = isPast || isClosedDay;
+
               const isSelected =
                 selectedDateObj.getFullYear() === viewYear &&
                 selectedDateObj.getMonth() === viewMonth &&
@@ -264,16 +273,19 @@ export default function CustomDatePicker({
                 <div key={day} className="flex items-center justify-center">
                   <button
                     type="button"
-                    disabled={isPast}
+                    disabled={isDisabled}
                     onClick={() => handleSelectDay(day)}
-                    className={`h-8 w-8 rounded-full text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                    title={isClosedDay ? 'Closed (Holiday)' : undefined}
+                    className={`h-8 w-8 rounded-full text-xs font-bold transition-all flex items-center justify-center ${
                       isSelected
-                        ? 'bg-lime-400 text-slate-950 font-black shadow-sm ring-2 ring-lime-400/40'
-                        : isPast
-                          ? 'text-slate-300 line-through cursor-not-allowed pointer-events-none'
-                          : isCurrentToday
-                            ? 'text-slate-900 border border-slate-300 hover:bg-slate-100'
-                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 active:scale-95'
+                        ? 'bg-lime-400 text-slate-950 font-black shadow-sm ring-2 ring-lime-400/40 cursor-pointer'
+                        : isClosedDay
+                          ? 'text-rose-400/80 bg-rose-50/50 line-through cursor-not-allowed border border-rose-100/60'
+                          : isPast
+                            ? 'text-slate-300 line-through cursor-not-allowed pointer-events-none'
+                            : isCurrentToday
+                              ? 'text-slate-900 border border-slate-300 hover:bg-slate-100 cursor-pointer'
+                              : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 active:scale-95 cursor-pointer'
                     }`}
                   >
                     {day}
