@@ -25,6 +25,7 @@ import turfService from './services/turfService';
 import ApplicationStatusPage from './pages/owner/ApplicationStatusPage';
 import SetupDashboardPage from './pages/owner/SetupDashboardPage';
 import ApplicationSubmittedPage from './pages/owner/ApplicationSubmittedPage';
+import ProfilePage from './pages/profile/ProfilePage';
 import AccessibilityModal from './components/common/AccessibilityModal';
 import AccessibilityTrigger from './components/common/AccessibilityTrigger';
 import useAccessibilityStore from './store/useAccessibilityStore';
@@ -234,6 +235,8 @@ function App() {
       setCurrentPage('applicationStatus');
     } else if (pathname.includes('/setup-dashboard') || searchParams.get('page') === 'setup-dashboard') {
       setCurrentPage('setupDashboard');
+    } else if (pathname === '/profile' || searchParams.get('page') === 'profile') {
+      setCurrentPage('profile');
     } else if (pathname === '/' || pathname === '') {
       setCurrentPage('home');
     }
@@ -301,6 +304,10 @@ function App() {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
         setCurrentPage('applicationStatus');
+      } else if (path === '/profile' || params.get('page') === 'profile') {
+        setSelectedTurf(null);
+        setSelectedTurfForBooking(null);
+        setCurrentPage('profile');
       } else if (path === '/' || path === '') {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
@@ -828,6 +835,45 @@ function App() {
       );
     }
 
+    if (currentPage === 'profile') {
+      return (
+        <>
+          <div
+            id="gsi_prompt_container"
+            className="fixed top-16 right-6 z-[9999]"
+          />
+
+          <ProfilePage
+            onHome={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPage('home');
+            }}
+            onFindTurfs={() => {
+              window.history.pushState({}, '', '/turfs');
+              setCurrentPage('turfListing');
+            }}
+            onListTurf={() => {
+              window.history.pushState({}, '', '/list-turf');
+              setCurrentPage('listTurf');
+            }}
+            onLogin={handleOpenLogin}
+            onLogout={handleLogout}
+            onDashboard={() => setCurrentPage('dashboard')}
+          />
+
+          {showOnboardingModal && (
+            <OnboardingPage
+              userData={user || {}}
+              onComplete={handleOnboardingComplete}
+              onClose={() =>
+                setShowOnboardingModal(false)
+              }
+            />
+          )}
+        </>
+      );
+    }
+
     // Dashboard Setup Page (Accessible by approved owner with setup token)
     if (currentPage === 'setupDashboard') {
       return (
@@ -1158,6 +1204,10 @@ function App() {
             setCurrentPage('turfListing');
           }}
           onDashboard={() => setCurrentPage('dashboard')}
+          onProfile={() => {
+            window.history.pushState({}, '', '/profile');
+            setCurrentPage('profile');
+          }}
         />
 
         {showOnboardingModal && (
