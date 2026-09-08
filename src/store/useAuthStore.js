@@ -54,7 +54,12 @@ export const useAuthStore = create((set) => ({
       set({ isLoading: true, error: null });
       
       const response = await authService.login({ email, password });
-      const { user, token } = response.data || {};
+      const { user, token, mfaRequired, tempToken } = response.data || {};
+
+      if (mfaRequired) {
+        set({ isLoading: false, error: null });
+        return { success: true, mfaRequired: true, tempToken };
+      }
 
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -266,6 +271,114 @@ export const useAuthStore = create((set) => ({
       return { success: true };
     } catch (err) {
       set({ error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Upload Profile Photo Action
+   */
+  uploadAvatar: async (file) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.uploadAvatar(file);
+      const updatedUser = response.data?.user || response.data;
+      set({
+        user: updatedUser,
+        isLoading: false,
+        error: null,
+      });
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Change / Create Password Action
+   */
+  changePassword: async (data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.changePassword(data);
+      const updatedUser = response.data?.user || response.user;
+      if (updatedUser) {
+        set({ user: updatedUser, isLoading: false, error: null });
+      } else {
+        set({ isLoading: false, error: null });
+      }
+      return { success: true, message: response.message };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Update Preferences Action
+   */
+  updatePreferences: async (preferences) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.updatePreferences(preferences);
+      const updatedUser = response.data?.user || response.data;
+      set({
+        user: updatedUser,
+        isLoading: false,
+        error: null,
+      });
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Toggle 2FA Action
+   */
+  toggleTwoFactor: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.toggleTwoFactor();
+      const updatedUser = response.data?.user || response.data;
+      set({
+        user: updatedUser,
+        isLoading: false,
+        error: null,
+      });
+      return { success: true, twoFactorEnabled: updatedUser?.twoFactorEnabled };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Verify 2FA Login with TOTP code or backup code
+   */
+  verifyMfaLogin: async ({ tempToken, code }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.verifyMfaLogin({ tempToken, code });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
       return { success: false, error: err.message };
     }
   },

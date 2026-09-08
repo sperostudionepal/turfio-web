@@ -20,6 +20,7 @@ export default function Navbar({
   onHome,
   onFindTurfs,
   onDashboard,
+  onProfile,
   isInitializing = false,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -277,6 +278,23 @@ export default function Navbar({
                         {user.email || 'player@turfio.app'}
                       </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        if (onProfile) {
+                          onProfile();
+                        } else {
+                          window.history.pushState({}, '', '/profile');
+                          window.dispatchEvent(new Event('popstate'));
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                    >
+                      <UserIcon size={14} className="text-slate-500" />
+                      <span>My Profile</span>
+                    </button>
 
                     {user.role === 'owner' && onDashboard && (
                       <button

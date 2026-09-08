@@ -43,7 +43,7 @@ function formatTime(t) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard, isInitializing = false }) {
+export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard, onProfile, isInitializing = false }) {
   const [form, setForm] = useState(initialForm);
 
   const updateField = (field, value) => {
@@ -62,6 +62,7 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
         onHome={onHome}
         onFindTurfs={onFindTurfs}
         onDashboard={onDashboard}
+        onProfile={onProfile}
       />
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}

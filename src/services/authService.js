@@ -104,6 +104,9 @@ export const authService = {
       : parseInt(String(rawTravel || '').replace(/[^0-9]/g, ''), 10) || 5;
 
     const payload = {
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      phone: profileData.phone,
       username: profileData.username,
       dateOfBirth: profileData.dob || profileData.dateOfBirth,
       gender: profileData.gender,
@@ -124,6 +127,101 @@ export const authService = {
 
     const response = await apiClient.put('/auth/profile', payload);
     return response; // { success: true, message, data: { user } }
+  },
+
+  /**
+   * Upload profile avatar image
+   * @param {File} file
+   */
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await apiClient.post('/auth/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
+  },
+
+  /**
+   * Change user password
+   * @param {{ currentPassword, newPassword }} data
+   */
+  async changePassword({ currentPassword, newPassword }) {
+    const response = await apiClient.put('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return response;
+  },
+
+  /**
+   * Update user preferences
+   * @param {{ notifications, preferredLocation, theme, language }} preferences
+   */
+  async updatePreferences(preferences) {
+    const response = await apiClient.put('/auth/preferences', preferences);
+    return response;
+  },
+
+  /**
+   * Get list of active sessions for current user
+   */
+  async getSessions() {
+    const response = await apiClient.get('/auth/sessions');
+    return response;
+  },
+
+  /**
+   * Terminate all other sessions
+   */
+  async logoutOtherSessions() {
+    const response = await apiClient.post('/auth/sessions/logout-others');
+    return response;
+  },
+
+  /**
+   * Toggle 2FA setting
+   */
+  async toggleTwoFactor() {
+    const response = await apiClient.post('/auth/2fa/toggle');
+    return response;
+  },
+
+  /**
+   * Generate temporary TOTP secret and QR code for MFA setup
+   */
+  async generateMfaSecret() {
+    const response = await apiClient.post('/auth/mfa/generate');
+    return response;
+  },
+
+  /**
+   * Verify initial 6-digit TOTP code and enable 2FA
+   * @param {string} code
+   */
+  async verifyMfaSetup(code) {
+    const response = await apiClient.post('/auth/mfa/verify', { code });
+    return response;
+  },
+
+  /**
+   * Disable 2FA with password or TOTP re-authentication
+   * @param {{ password, code }} data
+   */
+  async disableMfa(data) {
+    const response = await apiClient.post('/auth/mfa/disable', data);
+    return response;
+  },
+
+  /**
+   * Verify TOTP code or backup code during login flow
+   * @param {{ tempToken, code }} data
+   */
+  async verifyMfaLogin({ tempToken, code }) {
+    const response = await apiClient.post('/auth/mfa/verify-login', { tempToken, code });
+    return response;
   },
 };
 
