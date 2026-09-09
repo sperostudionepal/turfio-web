@@ -8,6 +8,7 @@ import PreferencesForm from './PreferencesForm';
 import SecuritySettings from './SecuritySettings';
 import DangerZone from './DangerZone';
 import useAuthStore from '../../store/useAuthStore';
+import turfService from '../../services/turfService';
 import {
   User,
   Users,
@@ -52,11 +53,23 @@ export default function ProfilePage({
   } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState('profile');
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
 
   // Fetch current user data on mount
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    if (activeTab !== 'bookings' || !user) return;
+    setBookingsLoading(true);
+    turfService
+      .getMyBookings()
+      .then(setBookings)
+      .catch(() => setBookings([]))
+      .finally(() => setBookingsLoading(false));
+  }, [activeTab, user]);
 
   const tabs = [
     { id: 'profile', label: 'Personal Info', icon: User },
@@ -369,7 +382,32 @@ export default function ProfilePage({
                   />
                 )}
 
-                {(activeTab === 'gameStats' || activeTab === 'bookings' || activeTab === 'savedTurfs') && (
+                {activeTab === 'bookings' && (
+                  <div className="bg-white rounded-3xl p-6 shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+                    <h3 className="text-lg font-black text-slate-900 mb-4">My Bookings</h3>
+                    {bookingsLoading ? (
+                      <p className="text-sm text-slate-500">Loading bookings...</p>
+                    ) : bookings.length === 0 ? (
+                      <p className="text-sm text-slate-500">No bookings yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookings.map((booking) => (
+                          <div key={booking._id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                            <div>
+                              <p className="font-bold text-slate-900">{booking.turf?.name || 'Turf booking'}</p>
+                              <p className="text-xs text-slate-500">{booking.dateStr} · {booking.timeSlot}</p>
+                            </div>
+                            <span className="text-sm font-black text-slate-900">
+                              NPR {Number(booking.totalAmount || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(activeTab === 'gameStats' || activeTab === 'savedTurfs') && (
                   <div className="bg-white rounded-3xl p-8 sm:p-12 text-center shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
                     <div className="w-14 h-14 rounded-2xl bg-lime-100 text-lime-700 flex items-center justify-center mx-auto mb-3 font-bold">
                       <Trophy className="h-7 w-7" />

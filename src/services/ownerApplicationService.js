@@ -69,6 +69,13 @@ export const ownerApplicationService = {
   async decide(id, decision, note) {
     return apiClient.patch(`/owner-applications/${id}/decision`, { decision, note });
   },
+
+  /**
+   * Resend the single-use dashboard setup link for an approved application
+   */
+  async resendSetup(id) {
+    return apiClient.post(`/owner-applications/${id}/resend-setup`);
+  },
 };
 
 export default ownerApplicationService;

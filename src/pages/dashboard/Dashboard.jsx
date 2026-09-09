@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import StatCards from '../../components/dashboard/StatCards';
@@ -12,7 +12,6 @@ import BookingsPage from '../bookings/BookingsPage';
 import CustomersPage from '../customers/CustomersPage';
 import PaymentsPage from '../payments/PaymentsPage';
 import InvoicesPage from '../invoices/InvoicesPage';
-import SchedulePage from '../schedule/SchedulePage';
 import PricingPage from '../pricing/PricingPage';
 import StaffPage from '../staff/StaffPage';
 import MembershipsPage from '../memberships/MembershipsPage';
@@ -24,16 +23,35 @@ import ActivityLogsPage from '../activity/ActivityLogsPage';
 import SettingsPage from '../settings/SettingsPage';
 import SupportPage from '../support/SupportPage';
 import { Calendar, ChevronDown, Download } from 'lucide-react';
+import turfService from '../../services/turfService';
+import { getTodayNepalString, formatDateDisplay } from '../../utils/dateTime';
 
-function Dashboard({ onLogout }) {
+function Dashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [venue, setVenue] = useState(null);
+  const [ownerBookings, setOwnerBookings] = useState([]);
 
-  if (activeTab === 'Courts') return <CourtsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
-  if (activeTab === 'Bookings') return <BookingsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
-  if (activeTab === 'Customers') return <CustomersPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
+  useEffect(() => {
+    const userId = user?._id || user?.id;
+    if (!userId) return;
+
+    turfService
+      .getTurfs({ owner: userId, limit: 1 })
+      .then((turfs) => setVenue(turfs[0] || null))
+      .catch(() => setVenue(null));
+  }, [user?._id, user?.id]);
+
+  useEffect(() => {
+    const userId = user?._id || user?.id;
+    if (!userId) return;
+    turfService.getOwnerBookings().then(setOwnerBookings).catch(() => setOwnerBookings([]));
+  }, [user?._id, user?.id]);
+
+  if (activeTab === 'Courts') return <CourtsPage user={user} venue={venue} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
+  if (activeTab === 'Bookings') return <BookingsPage user={user} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} ownerBookings={ownerBookings} />;
+  if (activeTab === 'Customers') return <CustomersPage user={user} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
   if (activeTab === 'Payments') return <PaymentsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
-  if (activeTab === 'Invoices') return <InvoicesPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
-  if (activeTab === 'Schedule') return <SchedulePage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
+  if (activeTab === 'Invoices') return <InvoicesPage user={user} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
   if (activeTab === 'Pricing') return <PricingPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
   if (activeTab === 'Staff') return <StaffPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
   if (activeTab === 'Memberships') return <MembershipsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
@@ -45,10 +63,12 @@ function Dashboard({ onLogout }) {
   if (activeTab === 'Settings') return <SettingsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
   if (activeTab === 'Help & Support') return <SupportPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />;
 
+  const todayLabel = formatDateDisplay(getTodayNepalString()) || 'Today';
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans antialiased overflow-hidden select-none relative">
       {/* Top Header Bar across full window width */}
-      <TopBar onLogout={onLogout} />
+      <TopBar user={user} venue={venue} onLogout={onLogout} />
 
       {/* Main Body Section: Left Sidebar + Right Content Area */}
       <div className="flex flex-1 min-h-0 relative">
@@ -63,7 +83,7 @@ function Dashboard({ onLogout }) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                  Welcome back, Admin! 👋
+                  Welcome back, {user?.firstName || 'Admin'}! 👋
                 </h1>
                 <p className="text-sm font-medium text-slate-500 mt-1">
                   Here's what's happening with your futsal arena today.
@@ -74,7 +94,7 @@ function Dashboard({ onLogout }) {
                 {/* Date Filter */}
                 <button className="flex items-center gap-2 px-4 py-3 rounded-full bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] cursor-pointer">
                   <Calendar size={14} className="text-slate-400" />
-                  <span>Sun, 12 June 2026</span>
+                  <span>{todayLabel}</span>
                   <ChevronDown size={13} className="text-slate-400" />
                 </button>
 
@@ -87,19 +107,19 @@ function Dashboard({ onLogout }) {
             </div>
 
             {/* Top Row: 4 Metric Cards */}
-            <StatCards />
+            <StatCards bookings={ownerBookings} venue={venue} />
 
             {/* Middle Row: Today's Schedule, Bookings Overview Bar Chart, Revenue Summary Donut */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <ScheduleCard />
-              <RevenueChart />
-              <RevenueSummaryDonut />
+              <ScheduleCard bookings={ownerBookings} venue={venue} />
+              <RevenueChart bookings={ownerBookings} />
+              <RevenueSummaryDonut bookings={ownerBookings} />
             </div>
 
             {/* Bottom Row: Recent Bookings & Recent Payments */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <RecentBookingsTable />
-              <RecentPaymentsTable />
+              <RecentBookingsTable bookings={ownerBookings} />
+              <RecentPaymentsTable bookings={ownerBookings} />
             </div>
           </div>
         </div>

@@ -338,6 +338,10 @@ export default function TurfDetailsPage({
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [isHoldingSlot, setIsHoldingSlot] = useState(false);
 
+  // Courts State & Selection
+  const [courts, setCourts] = useState(() => (Array.isArray(turf?.courts) && turf.courts.length > 0 ? turf.courts : []));
+  const [selectedCourt, setSelectedCourt] = useState(() => (Array.isArray(turf?.courts) && turf.courts.length > 0 ? turf.courts[0] : null));
+
   // Dynamic slot engine state
   const [availabilityData, setAvailabilityData] = useState(null);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
@@ -348,7 +352,39 @@ export default function TurfDetailsPage({
     setActiveImageIndex(0);
   }, [turf?.id]);
 
-  // Fetch dynamic slot availability from backend
+  // Load courts for this turf
+  useEffect(() => {
+    const turfId = turf?.id || turf?._id;
+    if (!turfId) return;
+
+    turfService
+      .getCourts(turfId)
+      .then((data) => {
+        const courtList = Array.isArray(data) ? data : (data?.data || []);
+        if (courtList.length > 0) {
+          setCourts(courtList);
+          setSelectedCourt((prev) => {
+            if (prev) {
+              const matched = courtList.find((c) => (c._id || c.id) === (prev._id || prev.id));
+              if (matched) return matched;
+            }
+            return courtList.find((c) => c.status === 'Available') || courtList[0];
+          });
+        } else if (Array.isArray(turf?.courts) && turf.courts.length > 0) {
+          setCourts(turf.courts);
+          setSelectedCourt((prev) => prev || turf.courts.find((c) => c.status === 'Available') || turf.courts[0]);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load courts for turf:', err.message);
+        if (Array.isArray(turf?.courts) && turf.courts.length > 0) {
+          setCourts(turf.courts);
+          setSelectedCourt((prev) => prev || turf.courts[0]);
+        }
+      });
+  }, [turf?.id, turf?._id]);
+
+  // Fetch dynamic slot availability from backend (filtered by selectedCourt)
   useEffect(() => {
     const turfId = turf?.id || turf?._id;
     if (!turfId) return;
@@ -357,7 +393,7 @@ export default function TurfDetailsPage({
     setIsLoadingAvailability(true);
 
     turfService
-      .getTurfAvailability(turfId, selectedDate)
+      .getTurfAvailability(turfId, selectedDate, selectedCourt?._id || selectedCourt?.id)
       .then((data) => {
         if (!isMounted) return;
         setAvailabilityData(data);
@@ -372,7 +408,7 @@ export default function TurfDetailsPage({
     return () => {
       isMounted = false;
     };
-  }, [turf?.id, turf?._id, selectedDate]);
+  }, [turf?.id, turf?._id, selectedDate, selectedCourt?._id, selectedCourt?.id]);
 
   // Effective available days for this venue
   const effectiveAvailableDays = useMemo(() => {
@@ -430,12 +466,16 @@ export default function TurfDetailsPage({
     const openMin = parseToMin(openStr);
     const closeMin = parseToMin(closeStr);
     const generated = [];
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const currentMinutes = today.getHours() * 60 + today.getMinutes();
     for (let m = openMin; m < closeMin; m += 60) {
       const formatted = to12(m);
-      generated.push({ value: formatted, label: formatted, disabled: false });
+      const disabled = selectedDate < todayStr || (selectedDate === todayStr && m + 60 <= currentMinutes);
+      generated.push({ value: formatted, label: disabled ? `${formatted} (Past)` : formatted, disabled });
     }
     return generated.length > 0 ? generated : TIME_SLOT_OPTIONS;
-  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours]);
+  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours, selectedDate]);
 
   // Keep selectedTimeSlot in sync with available slots
   useEffect(() => {
@@ -461,10 +501,13 @@ export default function TurfDetailsPage({
 
   // Price calculation
   const baseRateNumeric = useMemo(() => {
+    if (selectedCourt?.hourlyRate && Number(selectedCourt.hourlyRate) > 0) {
+      return Number(selectedCourt.hourlyRate);
+    }
     const priceStr = turf?.price || '1000';
     const match = priceStr.match(/(\d+,?\d*)/);
     return match ? parseInt(match[1].replace(/,/g, ''), 10) : 1000;
-  }, [turf]);
+  }, [selectedCourt?.hourlyRate, turf]);
 
   const subtotal = baseRateNumeric * duration;
   const totalAmount = subtotal;
@@ -502,6 +545,17 @@ export default function TurfDetailsPage({
       return;
     }
 
+    const selectedDateTime = new Date(`${selectedDate}T00:00:00`);
+    const [time, period] = selectedTimeSlot.split(' ');
+    let [hour, minute] = time.split(':').map(Number);
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    selectedDateTime.setHours(hour, minute, 0, 0);
+    if (selectedDateTime <= new Date()) {
+      triggerToast('This time has already passed. Please choose a future slot.');
+      return;
+    }
+
     const turfId = turf?.id || turf?._id;
     if (!turfId) {
       triggerToast('Turf details not found');
@@ -516,13 +570,24 @@ export default function TurfDetailsPage({
         date: selectedDate,
         startTime: selectedTimeSlot,
         duration,
+        courtId: selectedCourt?._id || selectedCourt?.id,
+        courtName: selectedCourt?.name || 'Court 1',
       });
 
       const holdData = holdRes?.data || holdRes;
 
-      // Proceed to checkout with real hold data
+      // Proceed to checkout with real hold data and selected court
       onBookNow?.({
         ...turf,
+        selectedCourt,
+        court: selectedCourt,
+        courtName: selectedCourt?.name || 'Court 1',
+        courtNumber: selectedCourt?.courtNumber || 1,
+        courtDimension: selectedCourt?.dimension || '25m x 15m (Standard 5v5)',
+        courtSurface: selectedCourt?.surface || 'FIFA Quality Synthetic Turf',
+        courtHourlyRate: baseRateNumeric,
+        priceVal: baseRateNumeric,
+        pricePerHour: baseRateNumeric,
         selectedDate,
         selectedTime: selectedTimeSlot,
         duration,
@@ -922,6 +987,121 @@ export default function TurfDetailsPage({
               </div>
             </section>
 
+            {/* ── SECTION: AVAILABLE PITCHES & COURTS (PITCH SELECTOR) ── */}
+            <section id="courts" className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Available Pitches & Courts</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-lime-100 text-lime-800">
+                      {courts.length} {courts.length === 1 ? 'Pitch' : 'Pitches'}
+                    </span>
+                  </h2>
+                  <p className="text-sm font-medium text-slate-500 mt-1">
+                    Select a court to book. Dimensions, playing surfaces, and pricing vary per pitch.
+                  </p>
+                </div>
+              </div>
+
+              {courts.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm font-medium text-slate-500">
+                  Standard pitch available for booking with default venue dimensions.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {courts.map((court, index) => {
+                    const isSelected =
+                      (selectedCourt?._id && selectedCourt._id === court._id) ||
+                      (selectedCourt?.id && selectedCourt.id === court.id) ||
+                      selectedCourt?.name === court.name;
+                    const isMaintenance = court.status === 'Maintenance';
+                    const courtRate = Number(court.hourlyRate) || baseRateNumeric;
+                    const courtImg =
+                      court.image ||
+                      (court.images && court.images[0]) ||
+                      (gallery && gallery[index % gallery.length]) ||
+                      '/image.png';
+
+                    return (
+                      <div
+                        key={court._id || court.id || index}
+                        onClick={() => {
+                          if (!isMaintenance) {
+                            setSelectedCourt(court);
+                            triggerToast(`Selected ${court.name} (NPR ${courtRate.toLocaleString()}/hr)`);
+                          }
+                        }}
+                        className={`group relative rounded-2xl p-4 transition-all border cursor-pointer ${
+                          isSelected
+                            ? 'border-lime-500 bg-lime-50/40 ring-2 ring-lime-400/80 shadow-md'
+                            : isMaintenance
+                            ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                            : 'border-slate-200 bg-white hover:border-lime-300 hover:shadow-xs'
+                        }`}
+                      >
+                        <div className="flex gap-3.5">
+                          {/* Court Photo Thumbnail */}
+                          <div className="relative h-24 w-28 shrink-0 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
+                            <img
+                              src={courtImg}
+                              alt={court.name}
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <span className="absolute top-1.5 left-1.5 rounded-md bg-black/75 backdrop-blur-xs px-1.5 py-0.5 text-[10px] font-black text-white tracking-wider">
+                              #{court.courtNumber || index + 1}
+                            </span>
+                          </div>
+
+                          {/* Court Pitch Specs */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-1">
+                              <h3 className="font-extrabold text-slate-900 text-base tracking-tight truncate">
+                                {court.name}
+                              </h3>
+                              {isSelected && (
+                                <span className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-lime-500 text-white shadow-xs">
+                                  <Check className="h-3 w-3 stroke-[3]" />
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
+                                <Maximize2 className="h-3 w-3 text-slate-500" />
+                                {court.dimension || '25m x 15m (5v5)'}
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
+                                <Layers className="h-3 w-3 text-emerald-600" />
+                                {court.surface || 'FIFA Synthetic'}
+                              </span>
+                            </div>
+
+                            <div className="mt-2.5 flex items-baseline justify-between">
+                              <div className="text-sm font-black text-slate-900">
+                                NPR {courtRate.toLocaleString()}{' '}
+                                <span className="text-[11px] font-normal text-slate-500">/hr</span>
+                              </div>
+                              <span
+                                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                  isMaintenance
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : isSelected
+                                    ? 'bg-lime-200 text-lime-900'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {isMaintenance ? 'Maintenance' : isSelected ? 'Selected' : 'Select'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
             {/* ── SECTION: VENUE OWNER / CONTACT INFO (BORDERLESS GRAY CARD) ── */}
             <div className="rounded-2xl bg-slate-100/80 p-4 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1176,6 +1356,33 @@ export default function TurfDetailsPage({
                   </div>
                 </div>
 
+                {/* Selected Pitch Info Pill */}
+                {selectedCourt && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-xl bg-lime-400 text-slate-950 font-black flex items-center justify-center text-xs shrink-0 shadow-xs">
+                        #{selectedCourt.courtNumber || 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-extrabold text-slate-900 text-xs tracking-tight truncate">
+                          {selectedCourt.name}
+                        </p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">
+                          {selectedCourt.dimension || 'Standard 5v5'} • {selectedCourt.surface || 'Synthetic Turf'}
+                        </p>
+                      </div>
+                    </div>
+                    {courts.length > 1 && (
+                      <a
+                        href="#courts"
+                        className="text-[11px] font-bold text-lime-700 hover:text-lime-800 bg-lime-100 hover:bg-lime-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors"
+                      >
+                        Change
+                      </a>
+                    )}
+                  </div>
+                )}
+
                 {/* ── COMPOUND SEGMENTED BOOKING INPUTS (AIRBNB STYLE) ── */}
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-visible divide-y divide-slate-200 shadow-2xs">
                   {/* Top Row: Match Date (Full Width) */}
@@ -1223,7 +1430,7 @@ export default function TurfDetailsPage({
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
                   <div className="flex justify-between">
                     <span>
-                      NPR {baseRateNumeric.toLocaleString()} × {duration} {duration === 1 ? 'hr' : 'hrs'}
+                      {selectedCourt?.name || 'Pitch'} (NPR {baseRateNumeric.toLocaleString()}) × {duration} {duration === 1 ? 'hr' : 'hrs'}
                     </span>
                     <span className="font-bold text-slate-900">
                       NPR {subtotal.toLocaleString()}
@@ -1268,7 +1475,13 @@ export default function TurfDetailsPage({
                     onClick={handleBookSlot}
                     className="w-full rounded-full bg-lime-400 hover:bg-lime-500 py-3.5 text-base font-black text-slate-950 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>{isSelectedDateHoliday ? 'Venue Closed on this Date' : isHoldingSlot ? 'Reserving...' : 'Book This Slot'}</span>
+                    <span>
+                      {isSelectedDateHoliday
+                        ? 'Venue Closed on this Date'
+                        : isHoldingSlot
+                        ? 'Reserving Pitch...'
+                        : `Book ${selectedCourt?.name || 'This Slot'}`}
+                    </span>
                     <ArrowRight className="h-5 w-5" />
                   </button>
                   <p className="text-center text-xs font-medium text-slate-400">
