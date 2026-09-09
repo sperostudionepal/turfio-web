@@ -99,6 +99,7 @@ export function transformTurf(turf) {
     phone: ownerPhone,
     managerAvatar: ownerAvatar,
     reviewsList: turf.reviewsList || [],
+    courts: Array.isArray(turf.courts) ? turf.courts : [],
     raw: turf,
   };
 }
@@ -135,10 +136,12 @@ export const turfService = {
   /**
    * Fetch dynamic availability for a turf on a given date (opening window, bookable slots, booked/held ranges)
    */
-  async getTurfAvailability(id, date) {
+  async getTurfAvailability(id, date, courtId = null) {
     try {
+      const params = { date };
+      if (courtId) params.courtId = courtId;
       const response = await apiClient.get(`/turfs/${id}/availability`, {
-        params: { date },
+        params,
       });
       return response?.data || response;
     } catch (err) {
@@ -150,12 +153,13 @@ export const turfService = {
   /**
    * Validate a specific time slot range against operating hours and conflicts
    */
-  async validateSlot(id, { date, startTime, duration, holdToken }) {
+  async validateSlot(id, { date, startTime, duration, holdToken, courtId }) {
     const response = await apiClient.post(`/turfs/${id}/slots/validate`, {
       date,
       startTime,
       duration,
       holdToken,
+      courtId,
     });
     return response?.data || response;
   },
@@ -163,11 +167,13 @@ export const turfService = {
   /**
    * Create an atomic 10-minute hold on a slot range
    */
-  async createSlotHold(id, { date, startTime, duration }) {
+  async createSlotHold(id, { date, startTime, duration, courtId, courtName }) {
     const response = await apiClient.post(`/turfs/${id}/holds`, {
       date,
       startTime,
       duration,
+      courtId,
+      courtName,
     });
     return response?.data || response;
   },
@@ -192,6 +198,21 @@ export const turfService = {
    */
   async createBooking(bookingData) {
     const response = await apiClient.post('/bookings', bookingData);
+    return response?.data || response;
+  },
+
+  async getMyBookings() {
+    const response = await apiClient.get('/bookings');
+    return response?.data || response;
+  },
+
+  async getOwnerBookings() {
+    const response = await apiClient.get('/bookings/owner');
+    return response?.data || response;
+  },
+
+  async createManualBooking(bookingData) {
+    const response = await apiClient.post('/bookings/manual', bookingData);
     return response?.data || response;
   },
 
@@ -268,6 +289,53 @@ export const turfService = {
 
     document.body.appendChild(form);
     form.submit();
+  },
+
+  /**
+   * Get all courts for a turf
+   */
+  async getCourts(turfId) {
+    const response = await apiClient.get(`/turfs/${turfId}/courts`);
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.courts)) return response.courts;
+    return [];
+  },
+
+  /**
+   * Add a new court to a turf
+   */
+  async addCourt(turfId, courtData) {
+    const response = await apiClient.post(`/turfs/${turfId}/courts`, courtData);
+    return response?.data || response;
+  },
+
+  /**
+   * Update court details
+   */
+  async updateCourt(turfId, courtId, courtData) {
+    const response = await apiClient.put(`/turfs/${turfId}/courts/${courtId}`, courtData);
+    return response?.data || response;
+  },
+
+  /**
+   * Delete a court
+   */
+  async deleteCourt(turfId, courtId) {
+    const response = await apiClient.delete(`/turfs/${turfId}/courts/${courtId}`);
+    return response?.data || response;
+  },
+
+  /**
+   * Upload an image for a court
+   */
+  async uploadCourtImage(turfId, courtId, file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await apiClient.post(`/turfs/${turfId}/courts/${courtId}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response?.data || response;
   },
 };
 

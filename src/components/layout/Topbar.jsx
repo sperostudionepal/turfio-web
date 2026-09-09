@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, HelpCircle, ChevronDown, Plus, Settings, LogOut } from 'lucide-react';
 
-function TopBar({ onLogout }) {
+function TopBar({ user, venue, onLogout }) {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -174,10 +174,10 @@ function TopBar({ onLogout }) {
               <div className="absolute right-0 mt-2.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50">
                 <div className="px-4 py-2.5 border-b border-slate-100">
                   <p className="text-xs font-bold text-slate-900 truncate">
-                    Kathmandu Futsal Arena
+                    {venue?.name || 'Your Arena'}
                   </p>
                   <p className="text-[11px] font-medium text-slate-400 truncate">
-                    admin@turfio.app
+                    {user?.email || 'Owner account'}
                   </p>
                 </div>
 

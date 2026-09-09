@@ -50,6 +50,7 @@ function StatusBadge({ status }) {
     pending: { cls: 'bg-amber-50 text-amber-700 border-amber-200/60', Icon: Clock, text: 'Pending review' },
     needs_changes: { cls: 'bg-amber-50 text-amber-700 border-amber-200/60', Icon: Clock, text: 'Needs changes' },
     approved: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200/60', Icon: CheckCircle2, text: 'Approved' },
+    completed: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200/60', Icon: CheckCircle2, text: 'Approved' },
     rejected: { cls: 'bg-rose-50 text-rose-700 border-rose-200/60', Icon: Ban, text: 'Rejected' },
     withdrawn: { cls: 'bg-slate-50 text-slate-600 border-slate-200/60', Icon: Ban, text: 'Withdrawn' },
   };
@@ -139,6 +140,19 @@ function SuperadminVenuesPage() {
       load();
     } catch (err) {
       showToast(err.message || 'Action failed. Please try again.', 'error');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const resendSetup = async () => {
+    if (!selected) return;
+    setActionBusy(true);
+    try {
+      await ownerApplicationService.resendSetup(selected._id);
+      showToast('A fresh dashboard setup link was sent.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not resend the setup link.', 'error');
     } finally {
       setActionBusy(false);
     }
@@ -403,9 +417,19 @@ function SuperadminVenuesPage() {
                 </div>
               )}
 
-              {selected.status === 'approved' && (
-                <div className="pt-2 border-t border-slate-100 text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                  <CheckCircle2 size={14} /> Approved — turf published and applicant granted owner access.
+              {['approved', 'completed'].includes(selected.status) && (
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                    <CheckCircle2 size={14} /> Approved — turf published and applicant granted owner access.
+                  </div>
+                  <button
+                    type="button"
+                    disabled={actionBusy}
+                    onClick={resendSetup}
+                    className="w-full py-2.5 rounded-full border border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {actionBusy ? 'Sending…' : 'Resend dashboard setup link'}
+                  </button>
                 </div>
               )}
             </div>

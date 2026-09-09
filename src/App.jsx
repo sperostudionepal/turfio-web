@@ -143,39 +143,13 @@ function App() {
           })
           .catch((err) => {
             console.error('Payment verification failed:', err);
-            // Even if verification had an error, try to restore step 4 if pending booking exists
-            let pending = {};
-            try {
-              const raw = sessionStorage.getItem('turfio_pending_booking');
-              if (raw) pending = JSON.parse(raw);
-            } catch (e) {
-              console.error(e);
-            }
-            if (pending?.turf) {
-              const turfId = pending.turf.id || pending.turf._id || 'venue';
-              setSelectedTurfForBooking(pending.turf);
-              setSelectedTurf(null);
-              window.history.replaceState({}, '', `/turfs/${turfId}/book?step=4`);
-            } else {
-              setCurrentPage('home');
-            }
+            sessionStorage.removeItem('turfio_pending_booking');
+            setCurrentPage('home');
           });
       } else {
-        // Direct arrival without data
-        let pending = {};
-        try {
-          const raw = sessionStorage.getItem('turfio_pending_booking');
-          if (raw) pending = JSON.parse(raw);
-        } catch (e) {
-          console.error(e);
-        }
-        if (pending?.turf) {
-          setSelectedTurfForBooking(pending.turf);
-          setSelectedTurf(null);
-          window.history.replaceState({}, '', `/turfs/${pending.turf.id || 'booking'}/book?step=4`);
-        } else {
-          setCurrentPage('home');
-        }
+        // A success page without eSewa callback data is not a verified payment.
+        sessionStorage.removeItem('turfio_pending_booking');
+        setCurrentPage('home');
       }
     } else if (isPaymentFailure) {
       const failedTurfId = searchParams.get('bookingId');
@@ -898,7 +872,7 @@ function App() {
             className="fixed top-16 right-6 z-[9999]"
           />
 
-          <Dashboard onLogout={handleLogout} />
+          <Dashboard user={user} onLogout={handleLogout} />
 
           {showOnboardingModal && (
             <OnboardingPage

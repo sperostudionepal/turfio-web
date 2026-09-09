@@ -21,6 +21,8 @@ import {
   Dumbbell,
   ChevronUp,
   FileText,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -66,7 +68,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
     latitude: null,
     longitude: null,
     placeName: '',
-    courtsCount: '2',
+    courtsCount: '1',
     priceRange: '1000-1500',
     turfDescription: '',
     legalBusinessName: '',
@@ -610,14 +612,54 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
                       Number of Courts <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 2"
-                      value={formData.courtsCount}
-                      onChange={(e) => handleInputChange('courtsCount', e.target.value)}
-                      className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
-                      required
-                    />
+                    <div className="flex items-center rounded-2xl bg-slate-50 border border-slate-200/80 p-1 focus-within:border-lime-400 focus-within:ring-2 focus-within:ring-lime-400/20 transition-all">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(formData.courtsCount, 10) || 1;
+                          handleInputChange('courtsCount', Math.max(1, current - 1).toString());
+                        }}
+                        className="h-11 w-11 flex items-center justify-center rounded-xl bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        disabled={(parseInt(formData.courtsCount, 10) || 1) <= 1}
+                        aria-label="Decrease court count"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        placeholder="1"
+                        value={formData.courtsCount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            handleInputChange('courtsCount', '');
+                          } else {
+                            const parsed = parseInt(val, 10);
+                            handleInputChange('courtsCount', Math.max(1, isNaN(parsed) ? 1 : parsed).toString());
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.courtsCount || parseInt(formData.courtsCount, 10) < 1) {
+                            handleInputChange('courtsCount', '1');
+                          }
+                        }}
+                        className="w-full text-center bg-transparent text-slate-900 text-base font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(formData.courtsCount, 10) || 1;
+                          handleInputChange('courtsCount', Math.min(30, current + 1).toString());
+                        }}
+                        className="h-11 w-11 flex items-center justify-center rounded-xl bg-lime-400 text-slate-950 hover:bg-lime-500 active:scale-95 transition-all shadow-xs cursor-pointer font-bold"
+                        aria-label="Increase court count"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">

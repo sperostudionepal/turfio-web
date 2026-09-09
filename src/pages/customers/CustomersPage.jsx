@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import {
@@ -22,14 +22,44 @@ import {
   MoreHorizontal,
   MessageSquare
 } from 'lucide-react';
+import turfService from '../../services/turfService';
 
-function CustomersPage({ activeTab, setActiveTab }) {
+function CustomersPage({ user, activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState('All');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    turfService.getOwnerBookings().then((bookings) => {
+      const grouped = new Map();
+      bookings.forEach((booking) => {
+        const customer = booking.user;
+        if (!customer?._id) return;
+        const existing = grouped.get(customer._id) || {
+          id: `CUS-${customer._id.slice(-6).toUpperCase()}`,
+          name: [customer.firstName, customer.lastName].filter(Boolean).join(' ') || 'Customer',
+          phone: customer.phone || '—',
+          email: customer.email || '—',
+          avatar: customer.profilePicture || '/logo.png',
+          membership: 'Registered Player',
+          tierBg: 'bg-emerald-50 text-emerald-700',
+          totalBookings: 0,
+          totalSpend: 0,
+          lastActive: booking.dateStr || '—',
+          status: 'Active',
+        };
+        existing.totalBookings += 1;
+        existing.totalSpend += Number(booking.totalPaidAmount || 0);
+        existing.lastActive = booking.dateStr || existing.lastActive;
+        grouped.set(customer._id, existing);
+      });
+      setCustomers([...grouped.values()]);
+    }).catch(() => setCustomers([]));
+  }, [user?.id]);
 
   // Top Stat Cards Data (matching Dashboard StatCards format)
   const stats = [
@@ -67,8 +97,9 @@ function CustomersPage({ activeTab, setActiveTab }) {
     },
   ];
 
-  // Mock Customers Data
-  const [customers, setCustomers] = useState([
+  // Real customers are loaded from bookings; keep the old fixture out of the rendered state.
+  const [customers, setCustomers] = useState([]);
+  const demoCustomers = [
     {
       id: 'CUS-101',
       name: 'Rohan Shrestha',
@@ -134,7 +165,7 @@ function CustomersPage({ activeTab, setActiveTab }) {
       lastActive: '09 Jun 2026',
       status: 'Active',
     },
-  ]);
+  ];
 
   const filteredCustomers = customers.filter((c) => {
     const matchesSearch =
@@ -199,6 +230,13 @@ function CustomersPage({ activeTab, setActiveTab }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat) => {
                   const Icon = stat.icon;
+                  const liveValue = stat.title === 'Total Registered Players'
+                    ? customers.length.toLocaleString()
+                    : stat.title === 'Active Recurrent Players'
+                    ? customers.filter((customer) => customer.totalBookings > 1).length.toLocaleString()
+                    : stat.title === 'Avg Customer Spend'
+                    ? `NRs. ${customers.length ? Math.round(customers.reduce((sum, customer) => sum + customer.totalSpend, 0) / customers.length).toLocaleString('en-NP') : '0'}`
+                    : customers.filter((customer) => customer.membership.includes('Platinum')).length.toLocaleString();
                   return (
                     <div
                       key={stat.title}
@@ -215,7 +253,7 @@ function CustomersPage({ activeTab, setActiveTab }) {
                               {stat.title}
                             </span>
                             <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
-                              {stat.value}
+                              {liveValue}
                             </h3>
                           </div>
                         </div>
@@ -315,7 +353,7 @@ function CustomersPage({ activeTab, setActiveTab }) {
                             </span>
                           </td>
                           <td className="py-3.5 pr-4 font-bold text-slate-900 text-sm whitespace-nowrap">{c.totalBookings} matches</td>
-                          <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {(c.totalSpend * 132).toLocaleString('en-NP')}</td>
+                          <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(c.totalSpend || 0).toLocaleString('en-NP')}</td>
                           <td className="py-3.5 pr-4 font-medium text-slate-500 text-xs whitespace-nowrap">{c.lastActive}</td>
                           <td className="py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
@@ -485,7 +523,7 @@ function CustomersPage({ activeTab, setActiveTab }) {
                 <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm">
                   <span className="font-extrabold text-slate-900">Lifetime Spend</span>
                   <span className="font-black text-emerald-600 text-base">
-                    NRs. {(selectedCustomer.totalSpend * 132).toLocaleString('en-NP')}
+                    NRs. {Number(selectedCustomer.totalSpend || 0).toLocaleString('en-NP')}
                   </span>
                 </div>
               </div>

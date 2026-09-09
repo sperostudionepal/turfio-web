@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { jsPDF } from 'jspdf';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import {
@@ -18,16 +19,22 @@ import {
   Send,
   ArrowUpRight,
   MoreHorizontal,
-  Eye
+  Eye,
+  Building2,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
+import turfService from '../../services/turfService';
 
-function InvoicesPage({ activeTab, setActiveTab }) {
+function InvoicesPage({ user, activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [venue, setVenue] = useState(null);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   // Top Stat Cards Data (matching Dashboard StatCards format)
   const stats = [
@@ -65,8 +72,9 @@ function InvoicesPage({ activeTab, setActiveTab }) {
     },
   ];
 
-  // Mock Invoices Dataset
-  const [invoices] = useState([
+  // Invoices are generated from real owner bookings.
+  const [invoices, setInvoices] = useState([]);
+  const demoInvoices = [
     {
       invoiceId: 'INV-2026-001',
       bookingId: 'BK-1082',
@@ -147,7 +155,278 @@ function InvoicesPage({ activeTab, setActiveTab }) {
       totalAmount: 100.0,
       status: 'Overdue',
     },
-  ]);
+  ];
+
+  useEffect(() => {
+    if (!user?.id) return;
+    turfService
+      .getTurfs({ owner: user.id, limit: 1 })
+      .then((turfs) => setVenue(turfs[0] || null))
+      .catch(() => setVenue(null));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    turfService.getOwnerBookings().then((bookings) => {
+      setInvoices(bookings.map((booking) => {
+        const venueName = booking.turf?.name || venue?.name || 'Ekantakuna Footsall';
+        const venueCity = booking.turf?.address?.city || venue?.address?.city || 'Lalitpur';
+        const venueArea = booking.turf?.address?.area || venue?.address?.area || 'Ekantakuna';
+        const venueAddress = `${venueArea}, ${venueCity}, Nepal`;
+        const companyName = venueName;
+        const panNumber = '609842113';
+
+        return {
+          invoiceId: `INV-${String(booking.bookingId || booking._id).slice(-10)}`,
+          bookingId: booking.bookingId || booking._id,
+          companyName,
+          venueAddress,
+          venuePhone: user?.phone || '+977 9801234567',
+          venueEmail: user?.email || 'billing@turfio.com',
+          panNumber,
+          customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
+          customerPhone: booking.user?.phone || '—',
+          customerEmail: booking.user?.email || '—',
+          avatar: booking.user?.profilePicture || '/logo.png',
+          issueDate: new Date(booking.createdAt).toLocaleDateString(),
+          dueDate: booking.dateStr || new Date(booking.date).toLocaleDateString(),
+          court: booking.turf?.name || 'Main Pro Pitch',
+          slot: booking.timeSlot || '—',
+          duration: '1 Hour',
+          subtotal: Number(booking.totalAmount || 0),
+          vat: 0,
+          totalAmount: Number(booking.totalAmount || 0),
+          paymentMethod: booking.paymentMethod || 'eSewa',
+          paymentStatus: booking.paymentStatus || 'Paid',
+          status: booking.paymentStatus === 'Paid' ? 'Paid' : booking.status === 'Cancelled' ? 'Cancelled' : 'Unpaid',
+        };
+      }));
+    }).catch(() => setInvoices([]));
+  }, [user?.id, venue?.name]);
+
+  const downloadInvoice = (invoice) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const emerald = [16, 185, 129];
+      const dark = [15, 23, 42];
+      const slate = [71, 85, 105];
+      const lightGray = [148, 163, 184];
+      const lightBg = [248, 250, 252];
+      const borderGray = [226, 232, 240];
+
+      const companyName = invoice.companyName || invoice.court || 'Ekantakuna Footsall';
+      const venueAddress = invoice.venueAddress || 'Ekantakuna, Lalitpur, Nepal';
+      const venuePhone = invoice.venuePhone || user?.phone || '+977 9801234567';
+      const venueEmail = invoice.venueEmail || user?.email || 'billing@turfio.com';
+      const panNumber = invoice.panNumber || '609842113';
+
+      // Company Brand Banner Accent
+      doc.setFillColor(...emerald);
+      doc.rect(14, 14, 4, 21, 'F');
+
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      doc.text(companyName.toUpperCase(), 22, 22);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text(venueAddress, 22, 28);
+      doc.text(`Phone: ${venuePhone}  |  Email: ${venueEmail}`, 22, 33);
+      doc.text(`PAN / VAT Reg No: ${panNumber}  |  Verified Turfio Sports Facility`, 22, 38);
+
+      // Top-Right Tax Invoice Title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...emerald);
+      doc.text('TAX INVOICE & RECEIPT', 196, 22, { align: 'right' });
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text(`Invoice No: ${invoice.invoiceId}`, 196, 28, { align: 'right' });
+      doc.text(`Booking Ref: ${invoice.bookingId}`, 196, 33, { align: 'right' });
+      doc.text(`Issue Date: ${invoice.issueDate}`, 196, 38, { align: 'right' });
+
+      // Divider Line
+      doc.setDrawColor(...emerald);
+      doc.setLineWidth(0.8);
+      doc.line(14, 43, 196, 43);
+
+      // Customer & Payment Info Boxes
+      doc.setFillColor(...lightBg);
+      doc.setDrawColor(...borderGray);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(14, 48, 88, 32, 2, 2, 'FD');
+      doc.roundedRect(108, 48, 88, 32, 2, 2, 'FD');
+
+      // Customer Box
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...emerald);
+      doc.text('BILLED TO (CUSTOMER)', 18, 55);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      doc.text(invoice.customerName || 'Customer', 18, 62);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text(`Phone: ${invoice.customerPhone || '—'}`, 18, 68);
+      doc.text(`Email: ${invoice.customerEmail || '—'}`, 18, 73);
+
+      // Payment Box
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...emerald);
+      doc.text('BOOKING & PAYMENT DETAILS', 112, 55);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text(`Match Date: ${invoice.dueDate || '—'}`, 112, 62);
+      doc.text(`Payment Method: ${invoice.paymentMethod || 'eSewa'}`, 112, 68);
+
+      const isPaid = invoice.status === 'Paid';
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(isPaid ? 16 : 217, isPaid ? 185 : 119, isPaid ? 129 : 6);
+      doc.text(`Payment Status: ${invoice.status || 'Paid'}`, 112, 73);
+
+      // Table Header
+      const tableY = 88;
+      doc.setFillColor(...emerald);
+      doc.rect(14, tableY, 182, 9, 'F');
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('SN', 18, tableY + 6);
+      doc.text('DESCRIPTION / SERVICE', 30, tableY + 6);
+      doc.text('TIME SLOT', 105, tableY + 6);
+      doc.text('DURATION', 140, tableY + 6);
+      doc.text('AMOUNT (NPR)', 192, tableY + 6, { align: 'right' });
+
+      // Table Row
+      const rowY = tableY + 9;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(14, rowY, 182, 14, 'F');
+      doc.setDrawColor(...borderGray);
+      doc.line(14, rowY + 14, 196, rowY + 14);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...dark);
+      doc.text('1', 18, rowY + 9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(invoice.court || 'Court Ground', 30, rowY + 6);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...lightGray);
+      doc.text('Futsal pitch reservation', 30, rowY + 11);
+
+      doc.setFontSize(9);
+      doc.setTextColor(...slate);
+      doc.text(invoice.slot || '—', 105, rowY + 9);
+      doc.text(invoice.duration || '1 Hour', 140, rowY + 9);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      const amountStr = `NRs. ${Number(invoice.totalAmount || 0).toLocaleString('en-NP')}`;
+      doc.text(amountStr, 192, rowY + 9, { align: 'right' });
+
+      // Summary section
+      const summaryY = rowY + 22;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text('Subtotal:', 135, summaryY);
+      doc.setTextColor(...dark);
+      doc.text(amountStr, 192, summaryY, { align: 'right' });
+
+      doc.setTextColor(...slate);
+      doc.text('Tax / VAT (0%):', 135, summaryY + 6);
+      doc.setTextColor(...dark);
+      doc.text('NRs. 0', 192, summaryY + 6, { align: 'right' });
+
+      doc.setDrawColor(...borderGray);
+      doc.setLineWidth(0.4);
+      doc.line(130, summaryY + 10, 196, summaryY + 10);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...emerald);
+      doc.text('Total Amount Due:', 135, summaryY + 18);
+      doc.text(amountStr, 192, summaryY + 18, { align: 'right' });
+
+      // Verification stamp / seal box
+      doc.setDrawColor(...borderGray);
+      doc.setFillColor(...lightBg);
+      doc.roundedRect(14, summaryY, 95, 26, 2, 2, 'FD');
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      doc.text('Payment Verification & Guarantee', 18, summaryY + 7);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text(`Payment received via ${invoice.paymentMethod || 'eSewa'} on ${invoice.issueDate}.`, 18, summaryY + 13);
+      doc.text('Verified official electronic tax receipt.', 18, summaryY + 18);
+
+      // Footer & Terms
+      const footerY = 236;
+      doc.setDrawColor(...borderGray);
+      doc.setLineWidth(0.4);
+      doc.line(14, footerY, 196, footerY);
+
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      doc.text('Terms & Conditions:', 14, footerY + 6);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate);
+      doc.text('1. Ground bookings are subject to venue rules and fair play guidelines.', 14, footerY + 11);
+      doc.text('2. Please arrive at least 10 minutes prior to kickoff time.', 14, footerY + 16);
+      doc.text('3. This is a computer-generated tax invoice verified by Turfio platform. No physical signature is required.', 14, footerY + 21);
+      doc.text('4. For inquiries or cancellation requests, contact venue management or visit turfio.com.', 14, footerY + 26);
+
+      // Signatory Stamp
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...dark);
+      doc.text('Authorized Signatory', 196, footerY + 15, { align: 'right' });
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...emerald);
+      doc.text(companyName, 196, footerY + 21, { align: 'right' });
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightGray);
+      doc.text('Official Stamp & Seal', 196, footerY + 26, { align: 'right' });
+
+      doc.save(`${invoice.invoiceId}.pdf`);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    } catch (err) {
+      console.error('PDF Generation Error:', err);
+    }
+  };
+
+  const printInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    window.setTimeout(() => {
+      window.print();
+    }, 150);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -355,20 +634,20 @@ function InvoicesPage({ activeTab, setActiveTab }) {
                           </td>
                           <td className="py-3.5 pr-4 font-medium text-slate-600 text-sm whitespace-nowrap">{inv.issueDate}</td>
                           <td className="py-3.5 pr-4 font-medium text-slate-600 text-sm whitespace-nowrap">{inv.dueDate}</td>
-                          <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {(inv.totalAmount * 132).toLocaleString('en-NP')}</td>
+                          <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(inv.totalAmount || 0).toLocaleString('en-NP')}</td>
                           <td className="py-3.5 pr-4 whitespace-nowrap">{getStatusBadge(inv.status)}</td>
                           <td className="py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 title={`Print Invoice ${inv.invoiceId}`}
-                                onClick={() => alert(`Printing Invoice ${inv.invoiceId}...`)}
+                                onClick={() => printInvoice(inv)}
                                 className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all shadow-2xs"
                               >
                                 <Printer size={14} />
                               </button>
                               <button
                                 title={`Download PDF Invoice ${inv.invoiceId}`}
-                                onClick={() => alert(`Downloading PDF for Invoice ${inv.invoiceId}...`)}
+                                onClick={() => downloadInvoice(inv)}
                                 className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-2xs"
                               >
                                 <Download size={14} />
@@ -453,110 +732,208 @@ function InvoicesPage({ activeTab, setActiveTab }) {
         </div>
       </div>
 
-      {/* View Invoice Modal */}
+      {/* Print CSS Styles */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          html, body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #invoice-print-area, #invoice-print-area * {
+            visibility: visible;
+          }
+          #invoice-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 16px !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            display: block !important;
+          }
+          .print-hide {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      {/* View Invoice Modal / Professional Printable Bill */}
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl border border-white/80 w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="p-5 pb-4 border-b border-slate-100/80 flex items-center justify-between bg-white/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                  <FileText size={20} />
-                </div>
+        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 print:static print:bg-white print:p-0 print:block">
+          <div
+            id="invoice-print-area"
+            className="bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/80 w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 print:border-none print:shadow-none print:rounded-none print:max-w-none print:w-full print:p-6 print:bg-white"
+          >
+            {/* Modal Header / Company Branding Banner */}
+            <div className="p-6 pb-4 border-b border-slate-100 flex items-start justify-between bg-white/60">
+              <div className="flex items-start gap-3.5">
+                <div className="w-1.5 h-16 bg-emerald-500 rounded-full shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-black text-lg text-slate-900 tracking-tight">{selectedInvoice.invoiceId}</h3>
-                  <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Ref: {selectedInvoice.bookingId}</p>
+                  <div className="flex items-center gap-2">
+                    <Building2 size={18} className="text-emerald-600" />
+                    <h3 className="font-black text-xl text-slate-900 tracking-tight uppercase">
+                      {selectedInvoice.companyName || selectedInvoice.court || 'Ekantakuna Footsall'}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    {selectedInvoice.venueAddress || 'Ekantakuna, Lalitpur, Nepal'}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Phone: {selectedInvoice.venuePhone || '+977 9801234567'} | Email: {selectedInvoice.venueEmail || 'billing@turfio.com'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      PAN No: {selectedInvoice.panNumber || '609842113'}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">Verified Turfio Partner</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {getStatusBadge(selectedInvoice.status)}
-                <button
-                  onClick={() => setSelectedInvoice(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors ml-1"
-                >
-                  <X size={18} />
-                </button>
+
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2 print-hide">
+                  {getStatusBadge(selectedInvoice.status)}
+                  <button
+                    onClick={() => setSelectedInvoice(null)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors ml-1"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest block">TAX INVOICE & RECEIPT</span>
+                  <span className="font-black text-sm text-slate-900 block">{selectedInvoice.invoiceId}</span>
+                  <span className="text-[11px] text-slate-400 font-semibold block">Ref: {selectedInvoice.bookingId}</span>
+                  <span className="text-[11px] text-slate-400 font-medium block">Issued: {selectedInvoice.issueDate}</span>
+                </div>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-5 space-y-4 text-xs">
-              {/* Arena Info & Bill To */}
-              <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50/80 border border-slate-100">
-                <div>
-                  <h4 className="font-black text-xs text-emerald-950 uppercase tracking-wider">TURFIO ARENA</h4>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1">Kathmandu, Nepal</p>
-                  <p className="text-[11px] text-slate-500 font-medium">+977 1-4200000</p>
+            <div className="p-6 space-y-4 text-xs">
+              {/* Credentials & Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50/80 border border-slate-100 print:bg-slate-50/50">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider block">BILLED TO (CUSTOMER)</span>
+                  <h4 className="font-black text-sm text-slate-900 leading-tight">{selectedInvoice.customerName}</h4>
+                  <p className="text-xs text-slate-600 font-medium">{selectedInvoice.customerPhone}</p>
+                  <p className="text-xs text-slate-500 font-medium">{selectedInvoice.customerEmail}</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Billed To</span>
-                  <h5 className="font-extrabold text-slate-900 text-sm mt-0.5">{selectedInvoice.customerName}</h5>
-                  <p className="text-[11px] text-slate-500 font-medium">{selectedInvoice.customerPhone}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{selectedInvoice.customerEmail}</p>
+                <div className="space-y-1 sm:text-right">
+                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider block">BOOKING & PAYMENT DETAILS</span>
+                  <p className="text-xs text-slate-700 font-bold">Match Date: <span className="font-normal text-slate-600">{selectedInvoice.dueDate || selectedInvoice.issueDate}</span></p>
+                  <p className="text-xs text-slate-700 font-bold">Payment Method: <span className="font-normal text-slate-600">{selectedInvoice.paymentMethod || 'eSewa'}</span></p>
+                  <p className="text-xs text-slate-700 font-bold">Payment Status: <span className="text-emerald-600 font-extrabold">{selectedInvoice.status}</span></p>
                 </div>
               </div>
 
               {/* Line Items Table */}
-              <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs print:border-slate-300">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50/80 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100">
+                  <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
                     <tr>
-                      <th className="py-2.5 px-3.5">Description</th>
-                      <th className="py-2.5 px-3.5">Slot</th>
+                      <th className="py-2.5 px-3.5">SN</th>
+                      <th className="py-2.5 px-3.5">Description / Service</th>
+                      <th className="py-2.5 px-3.5">Time Slot</th>
+                      <th className="py-2.5 px-3.5">Duration</th>
                       <th className="py-2.5 px-3.5 text-right">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100/60 text-xs">
+                  <tbody className="divide-y divide-slate-100 text-xs">
                     <tr>
-                      <td className="py-3 px-3.5 font-bold text-slate-900">{selectedInvoice.court}</td>
-                      <td className="py-3 px-3.5 text-slate-500 font-medium">{selectedInvoice.slot}</td>
+                      <td className="py-3 px-3.5 text-slate-500 font-bold">1</td>
+                      <td className="py-3 px-3.5">
+                        <span className="font-bold text-slate-900 block">{selectedInvoice.court}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">Standard pitch court reservation</span>
+                      </td>
+                      <td className="py-3 px-3.5 text-slate-600 font-medium">{selectedInvoice.slot}</td>
+                      <td className="py-3 px-3.5 text-slate-600 font-medium">{selectedInvoice.duration || '1 Hour'}</td>
                       <td className="py-3 px-3.5 text-right font-black text-slate-900">
-                        NRs. {(selectedInvoice.subtotal * 132).toLocaleString('en-NP')}
+                        NRs. {Number(selectedInvoice.totalAmount || 0).toLocaleString('en-NP')}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Invoice Totals */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-100 space-y-2 shadow-2xs">
-                <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span className="font-semibold">Subtotal</span>
-                  <span className="font-bold text-slate-900">NRs. {(selectedInvoice.subtotal * 132).toLocaleString('en-NP')}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span className="font-semibold">VAT (0%)</span>
-                  <span className="font-bold text-slate-900">NRs. 0</span>
-                </div>
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-extrabold text-slate-900">
-                  <span>Total Amount Due</span>
-                  <span className="font-black text-emerald-600 text-base">
-                    NRs. {(selectedInvoice.totalAmount * 132).toLocaleString('en-NP')}
+              {/* Invoice Totals & Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-100/60 text-[11px] text-slate-600 space-y-1">
+                  <span className="font-bold text-emerald-800 block flex items-center gap-1">
+                    <ShieldCheck size={14} className="text-emerald-600" /> Payment Guarantee & Verification
                   </span>
+                  <p className="text-slate-500 leading-relaxed">
+                    Electronic receipt verified through Turfio Booking Engine. Thank you for your reservation!
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-100 space-y-2 shadow-2xs print:border-slate-300">
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span className="font-semibold">Subtotal</span>
+                    <span className="font-bold text-slate-900">NRs. {Number(selectedInvoice.subtotal || selectedInvoice.totalAmount || 0).toLocaleString('en-NP')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span className="font-semibold">VAT (0% / Exempt)</span>
+                    <span className="font-bold text-slate-900">NRs. 0</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-extrabold text-slate-900">
+                    <span>Total Amount Paid</span>
+                    <span className="font-black text-emerald-600 text-base">
+                      NRs. {Number(selectedInvoice.totalAmount || 0).toLocaleString('en-NP')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-1 flex items-center justify-between gap-2">
+              {/* Signatory & Terms (Shown on print and screen) */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-slate-600">Terms & Conditions:</p>
+                  <p>1. Please arrive 10 minutes prior to match schedule.</p>
+                  <p>2. Computer-generated invoice. Verified by Turfio Platform.</p>
+                </div>
+                <div className="text-right space-y-1">
+                  <span className="text-xs font-bold text-slate-700 block">Authorized Signatory</span>
+                  <span className="text-xs font-black text-emerald-600 uppercase block">{selectedInvoice.companyName || selectedInvoice.court || 'Ekantakuna Footsall'}</span>
+                  <span className="text-[10px] text-slate-400 font-medium block">Official Digital Stamp</span>
+                </div>
+              </div>
+
+              {/* Modal Action Buttons (Hidden when printed) */}
+              <div className="pt-2 flex items-center justify-between gap-2 print-hide">
                 <button
-                  onClick={() => alert(`Printing Invoice ${selectedInvoice.invoiceId}...`)}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all text-xs"
+                  onClick={() => printInvoice(selectedInvoice)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all text-xs"
                 >
-                  <Printer size={14} />
-                  <span>Print</span>
+                  <Printer size={15} />
+                  <span>Print Bill</span>
                 </button>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => alert(`Invoice sent to ${selectedInvoice.customerEmail}`)}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all text-xs"
+                    onClick={() => downloadInvoice(selectedInvoice)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-xs text-xs"
                   >
-                    <Send size={14} />
-                    <span>Send PDF</span>
+                    {downloadSuccess ? <Check size={15} /> : <Download size={15} />}
+                    <span>{downloadSuccess ? 'Downloaded PDF' : 'Download PDF'}</span>
                   </button>
                   <button
                     onClick={() => setSelectedInvoice(null)}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-xs text-xs"
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold transition-all text-xs"
                   >
                     Close
                   </button>

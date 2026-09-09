@@ -1,24 +1,38 @@
 import { ChevronDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-function RevenueChart() {
-  // Height values matching reference image (Mon: 16, Tue: 23, Wed: 28, Thu: 27, Fri: 39, Sat: 28, Sun: 16)
-  const data = [
-    { day: 'Mon', bookings: 16 },
-    { day: 'Tue', bookings: 23 },
-    { day: 'Wed', bookings: 28 },
-    { day: 'Thu', bookings: 27 },
-    { day: 'Fri', bookings: 39 },
-    { day: 'Sat', bookings: 28 },
-    { day: 'Sun', bookings: 16 },
-  ];
+function RevenueChart({ bookings = [] }) {
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayCounts = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+
+  bookings.forEach((b) => {
+    const rawDate = b.dateStr || b.date;
+    if (!rawDate) return;
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return;
+    const map = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const code = map[d.getDay()];
+    if (dayCounts[code] !== undefined) {
+      dayCounts[code] += 1;
+    }
+  });
+
+  const todayCode = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()];
+
+  const data = daysOfWeek.map((day) => ({
+    day,
+    bookings: dayCounts[day],
+  }));
+
+  const maxBookings = Math.max(5, ...data.map((d) => d.bookings));
+  const yAxisMax = Math.ceil(maxBookings / 5) * 5 + 5;
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
         <div className="flex flex-col items-center -translate-y-2 animate-in fade-in zoom-in-95 duration-100">
           <div className="bg-[#1e293b] text-white px-3.5 py-2 rounded-xl border border-slate-700/60 shadow-2xl text-center">
-            <p className="text-[10px] font-medium text-slate-300">Fri, 10 Jun</p>
+            <p className="text-[10px] font-medium text-slate-300">{payload[0].payload.day}</p>
             <p className="text-xs font-black text-white mt-0.5">
               Bookings: {payload[0].value}
             </p>
@@ -35,7 +49,7 @@ function RevenueChart() {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-500">
+          <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-600">
             <BarChart3 size={16} />
           </div>
           <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Bookings Overview</h3>
@@ -74,15 +88,15 @@ function RevenueChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600, dx: -14 }}
-              ticks={[0, 10, 20, 30, 40, 50]}
-              domain={[0, 50]}
+              domain={[0, yAxisMax]}
+              allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
             <Bar dataKey="bookings" barSize={22} radius={[12, 12, 12, 12]}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.day === 'Fri' ? 'url(#activeBarGrad)' : 'url(#normalBarGrad)'}
+                  fill={entry.day === todayCode ? 'url(#activeBarGrad)' : 'url(#normalBarGrad)'}
                 />
               ))}
             </Bar>

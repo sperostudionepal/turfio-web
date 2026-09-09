@@ -122,17 +122,6 @@ export default function BookingCheckoutPage({
     const stepParam = parseInt(searchParams.get('step'), 10);
     if (stepParam && stepParam >= 2 && stepParam <= 4) return stepParam;
 
-    try {
-      const saved = sessionStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.currentStep && parsed.currentStep >= 2 && parsed.currentStep <= 4) {
-          return parsed.currentStep;
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
     return 2;
   });
 
@@ -158,17 +147,6 @@ export default function BookingCheckoutPage({
       termsAgreed: true,
     };
 
-    try {
-      const saved = sessionStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.formData) {
-          return { ...defaultData, ...parsed.formData };
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
     return defaultData;
   });
 
@@ -331,6 +309,11 @@ export default function BookingCheckoutPage({
     turf?.image ||
     (turf?.gallery && turf.gallery[0]) ||
     'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80';
+
+  const courtName = turf?.courtName || turf?.selectedCourt?.name || turf?.court?.name || 'Court 1';
+  const courtDimension = turf?.courtDimension || turf?.selectedCourt?.dimension || turf?.court?.dimension || '25m x 15m (Standard 5v5)';
+  const courtSurface = turf?.courtSurface || turf?.selectedCourt?.surface || turf?.court?.surface || 'FIFA Quality Synthetic Turf';
+  const courtNumber = turf?.courtNumber || turf?.selectedCourt?.courtNumber || 1;
 
   const selectedDateStr = useMemo(() => {
     if (turf?.selectedDate) {
@@ -573,6 +556,14 @@ export default function BookingCheckoutPage({
             paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
+            court: {
+              id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
+              name: courtName,
+              courtNumber,
+              dimension: courtDimension,
+              surface: courtSurface,
+              hourlyRate: Number(turf?.courtHourlyRate || turf?.pricePerHour) || 1200,
+            },
           };
 
           // Save active booking details in session for confirmation screen return
@@ -661,18 +652,22 @@ export default function BookingCheckoutPage({
           paymentStatus: 'Pending',
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
+          court: {
+            id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
+            name: courtName,
+            courtNumber,
+            dimension: courtDimension,
+            surface: courtSurface,
+            hourlyRate: Number(turf?.courtHourlyRate || turf?.pricePerHour) || 1200,
+          },
         };
 
-        try {
-          const res = await turfService.createBooking(bookingPayload);
-          setConfirmedBooking(res?.data || res);
-        } catch (e) {
-          console.warn('Booking recorded locally:', e.message);
-        }
+        const res = await turfService.createBooking(bookingPayload);
+        setConfirmedBooking(res?.data || res);
 
         updateStep(4);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        triggerToast('🎉 Booking Confirmed! Pitch locked in.');
+        triggerToast('🎉 Reservation confirmed. Payment is due at the venue.');
       } finally {
         setIsProcessingPayment(false);
       }
@@ -1285,6 +1280,17 @@ export default function BookingCheckoutPage({
                         Pitch & Arena
                       </label>
                       <p className="text-base font-extrabold text-slate-900">{venueTitle}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-xs font-black text-lime-950 bg-lime-300 px-2.5 py-0.5 rounded-md shadow-2xs">
+                          {courtName}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200/60">
+                          {courtDimension}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200/60">
+                          {courtSurface}
+                        </span>
+                      </div>
                       <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
                         <MapPin className="h-4 w-4 text-lime-600 shrink-0" />
                         <span>{venueLocation}</span>
@@ -1465,6 +1471,9 @@ export default function BookingCheckoutPage({
                         Official Match Pass
                       </p>
                       <h3 className="text-xl font-extrabold text-slate-900 mt-1">{venueTitle}</h3>
+                      <p className="text-xs font-bold text-lime-700 mt-0.5">
+                        {confirmedBooking?.court?.name || courtName} • {confirmedBooking?.court?.dimension || courtDimension}
+                      </p>
                       <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5 text-lime-600" />
                         {venueLocation}

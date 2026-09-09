@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   Calendar,
-  CalendarDays,
   Users,
   FileText,
   UserCheck,
@@ -18,7 +17,6 @@ function Sidebar({ activeTab = 'Dashboard', setActiveTab, onLogout }) {
   const mainItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '#' },
     { label: 'Bookings', icon: Calendar, badge: '24', href: '#' },
-    { label: 'Schedule', icon: CalendarDays, href: '#' },
     { label: 'Customers', icon: Users, href: '#' },
   ];
 

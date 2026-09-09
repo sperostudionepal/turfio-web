@@ -1,63 +1,21 @@
 import { MoreVertical } from 'lucide-react';
 
-function RecentBookingsTable() {
-  const bookings = [
-    {
-      initials: 'JS',
-      initialsBg: 'bg-rose-100 text-rose-600',
-      name: 'John Smith',
-      court: 'Main Turf',
-      date: '12 Jun 2026',
-      time: '08:00 AM',
-      amount: 'NRs. 1,600',
-      status: 'Completed',
-      statusStyle: 'bg-lime-50 text-lime-500',
-    },
-    {
-      initials: 'MT',
-      initialsBg: 'bg-blue-100 text-blue-600',
-      name: 'Michael Tan',
-      court: 'Main Turf',
-      date: '12 Jun 2026',
-      time: '09:00 AM',
-      amount: 'NRs. 2,000',
-      status: 'Ongoing',
-      statusStyle: 'bg-blue-50 text-blue-600',
-    },
-    {
-      initials: 'SR',
-      initialsBg: 'bg-amber-100 text-amber-600',
-      name: 'Sarah Rose',
-      court: 'Main Turf',
-      date: '12 Jun 2026',
-      time: '10:00 AM',
-      amount: 'NRs. 1,600',
-      status: 'Upcoming',
-      statusStyle: 'bg-amber-50 text-amber-600',
-    },
-    {
-      initials: 'DB',
-      initialsBg: 'bg-lime-100 text-lime-400',
-      name: 'David Brown',
-      court: 'Main Turf',
-      date: '12 Jun 2026',
-      time: '11:00 AM',
-      amount: 'NRs. 2,000',
-      status: 'Upcoming',
-      statusStyle: 'bg-amber-50 text-amber-600',
-    },
-    {
-      initials: 'LM',
-      initialsBg: 'bg-purple-100 text-purple-600',
-      name: 'Lisa Martinez',
-      court: 'Main Turf',
-      date: '12 Jun 2026',
-      time: '12:00 PM',
-      amount: 'NRs. 1,600',
-      status: 'Upcoming',
-      statusStyle: 'bg-amber-50 text-amber-600',
-    },
-  ];
+function RecentBookingsTable({ bookings = [] }) {
+  const rows = bookings.slice(0, 5).map((booking) => {
+    const customer = booking.user || {};
+    const name = [customer.firstName, customer.lastName].filter(Boolean).join(' ') || booking.customer?.name || 'Customer';
+    return {
+      initials: name.slice(0, 2).toUpperCase(),
+      initialsBg: 'bg-lime-100 text-lime-700',
+      name,
+      court: booking.court?.name || booking.courtName || 'Court 1',
+      date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
+      time: booking.timeSlot || '—',
+      amount: `NRs. ${Number(booking.totalAmount || 0).toLocaleString('en-NP')}`,
+      status: booking.paymentStatus === 'Paid' ? (booking.status || 'Confirmed') : 'Pending',
+      statusStyle: booking.paymentStatus === 'Paid' ? 'bg-lime-50 text-lime-600' : 'bg-amber-50 text-amber-600',
+    };
+  });
 
   return (
     <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
@@ -84,7 +42,7 @@ function RecentBookingsTable() {
 
           {/* Rows List */}
           <div className="divide-y divide-slate-50">
-            {bookings.map((booking, idx) => (
+            {rows.length === 0 ? <p className="py-8 text-center text-xs text-slate-400">No bookings yet.</p> : rows.map((booking, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-2 items-center py-3 text-xs hover:bg-slate-50/70 transition-colors rounded-xl px-1">
                 {/* Customer Column */}
                 <div className="col-span-3 flex items-center gap-2.5 min-w-0">

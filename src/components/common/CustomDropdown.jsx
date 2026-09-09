@@ -112,6 +112,20 @@ export default function CustomDropdown({
             <span className="text-sm font-bold text-slate-900 truncate">
               {displayLabel}
             </span>
+            {selectedOption && typeof selectedOption === 'object' && selectedOption.status && (
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                selectedOption.status === 'available'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : selectedOption.status === 'booked'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  selectedOption.status === 'available' ? 'bg-emerald-500' : selectedOption.status === 'booked' ? 'bg-rose-500' : 'bg-amber-500'
+                }`} />
+                {selectedOption.status === 'available' ? 'Available' : selectedOption.status === 'booked' ? 'Booked' : 'Held'}
+              </span>
+            )}
           </div>
           <ChevronDown
             className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 ${
@@ -122,36 +136,59 @@ export default function CustomDropdown({
       )}
 
       {isOpen && (
-        <div className={`absolute top-full left-0 min-w-[180px] mt-2 z-[9999] bg-white rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-2 py-2 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none ${popoverClassName}`}>
-          {options.map((option) => {
-            const optValue = typeof option === 'object' ? option.value : option;
-            const optLabel = typeof option === 'object' ? option.label : option;
-            const isDisabled = typeof option === 'object' ? Boolean(option.disabled) : false;
-            const isSelected = optValue === value;
+        <div className={`absolute top-full left-0 min-w-[180px] w-full mt-2 z-[9999] bg-white rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-2 py-2 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none ${popoverClassName}`}>
+          {options.length === 0 ? (
+            <div className="px-3 py-3 text-xs font-bold text-slate-400 text-center">
+              No options available
+            </div>
+          ) : (
+            options.map((option) => {
+              const optValue = typeof option === 'object' ? option.value : option;
+              const optLabel = typeof option === 'object' ? option.label : option;
+              const isDisabled = typeof option === 'object' ? Boolean(option.disabled) : false;
+              const optStatus = typeof option === 'object' ? option.status : null;
+              const isSelected = optValue === value;
 
-            return (
-              <button
-                key={optValue}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => {
-                  if (isDisabled) return;
-                  onChange(optValue);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
-                  isDisabled
-                    ? 'opacity-40 cursor-not-allowed bg-slate-50 text-slate-400'
-                    : isSelected
-                    ? 'bg-lime-400 text-slate-950 shadow-xs cursor-pointer'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950 cursor-pointer'
-                }`}
-              >
-                <span>{optLabel}</span>
-                {isSelected && !isDisabled && <Check className="h-4 w-4 text-slate-950 shrink-0 stroke-[2.5]" />}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={optValue}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    onChange(optValue);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                    isDisabled
+                      ? 'opacity-50 cursor-not-allowed bg-slate-50/70 text-slate-400'
+                      : isSelected
+                      ? 'bg-lime-400 text-slate-950 shadow-xs cursor-pointer'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950 cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate">{optLabel}</span>
+                    {optStatus && (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        optStatus === 'available'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : optStatus === 'booked'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          optStatus === 'available' ? 'bg-emerald-500' : optStatus === 'booked' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`} />
+                        {optStatus === 'available' ? 'Available' : optStatus === 'booked' ? 'Booked' : 'Held'}
+                      </span>
+                    )}
+                  </div>
+                  {isSelected && !isDisabled && <Check className="h-4 w-4 text-slate-950 shrink-0 stroke-[2.5]" />}
+                </button>
+              );
+            })
+          )}
         </div>
       )}
     </div>
