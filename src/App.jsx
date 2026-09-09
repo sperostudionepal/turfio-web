@@ -28,6 +28,7 @@ import ApplicationSubmittedPage from './pages/owner/ApplicationSubmittedPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import AccessibilityModal from './components/common/AccessibilityModal';
 import AccessibilityTrigger from './components/common/AccessibilityTrigger';
+import ChatWidget from './components/chat/ChatWidget';
 import useAccessibilityStore from './store/useAccessibilityStore';
 
 function App() {
@@ -1228,6 +1229,7 @@ function App() {
       {renderCurrentView()}
       <AccessibilityModal />
       <AccessibilityTrigger />
+      <ChatWidget />
     </>
   );
 }
