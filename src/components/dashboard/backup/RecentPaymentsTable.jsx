@@ -43,11 +43,11 @@ function RecentPaymentsTable({ bookings = [] }) {
   });
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden p-5 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
+    <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Recent Payments</h3>
-        <button className="text-xs font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer">
+        <button className="text-xs font-bold text-[#FE4A49] hover:text-[#e03e3d] transition-colors cursor-pointer">
           View All
         </button>
       </div>
@@ -93,7 +93,7 @@ function RecentPaymentsTable({ bookings = [] }) {
                       </div>
                     )}
                     {payment.methodType === 'eSewa' && (
-                      <span className="font-bold text-white bg-lime-500 px-2 py-0.5 rounded-full text-[10px]">
+                      <span className="font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-full text-[10px]">
                         eSewa
                       </span>
                     )}
@@ -108,7 +108,7 @@ function RecentPaymentsTable({ bookings = [] }) {
                       </span>
                     )}
                     {payment.methodType === 'Venue' && (
-                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] border border-emerald-100">
+                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[10px] border border-slate-200/60">
                         Pay at Venue
                       </span>
                     )}
@@ -125,7 +125,7 @@ function RecentPaymentsTable({ bookings = [] }) {
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block ${
                         payment.status === 'Paid'
-                          ? 'text-lime-600 bg-lime-50'
+                          ? 'text-emerald-600 bg-emerald-50'
                           : payment.status === 'Failed'
                           ? 'text-rose-600 bg-rose-50'
                           : 'text-amber-600 bg-amber-50'

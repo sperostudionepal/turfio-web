@@ -233,7 +233,7 @@ function SuperadminOverviewPage({ setActiveTab }) {
           return (
             <div
               key={stat.title}
-              className="bg-white rounded-[24px] p-5 relative flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 hover:-translate-y-0.5 transition-all duration-200"
+              className="bg-white rounded-xl overflow-hidden p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -267,7 +267,7 @@ function SuperadminOverviewPage({ setActiveTab }) {
       {/* Middle Section: Platform Revenue Velocity Chart & Geo Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Large 2-Col Area Chart */}
-        <div className="lg:col-span-2 bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -348,7 +348,7 @@ function SuperadminOverviewPage({ setActiveTab }) {
         </div>
 
         {/* 1-Col City & Regional Breakdown */}
-        <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 flex flex-col justify-between">
+        <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
@@ -403,7 +403,7 @@ function SuperadminOverviewPage({ setActiveTab }) {
       {/* Bottom Section: Top Venues Leaderboard + Live Event Stream */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Top Arenas Table (2 Cols) */}
-        <div className="lg:col-span-2 bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
+        <div className="lg:col-span-2 bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
@@ -484,7 +484,7 @@ function SuperadminOverviewPage({ setActiveTab }) {
         </div>
 
         {/* Real-time Event Stream (1 Col) */}
-        <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 flex flex-col justify-between">
+        <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-700">

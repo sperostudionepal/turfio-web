@@ -757,25 +757,25 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                             <div key={day} className="flex items-center gap-6">
                               <label className="flex items-center gap-2.5 cursor-pointer shrink-0">
                                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                                  dayData.isClosed 
-                                    ? 'bg-lime-400 border-lime-400 opacity-60' 
-                                    : 'bg-lime-400 border-lime-400'
+                                  !dayData.isClosed 
+                                    ? 'bg-lime-400 border-lime-400' 
+                                    : 'border-slate-300 bg-slate-100'
                                 }`}>
-                                  {dayData.isClosed ? (
-                                    <div className="w-2 h-0.5 bg-slate-900"></div>
-                                  ) : (
+                                  {!dayData.isClosed ? (
                                     <Check className="w-3 h-3 text-slate-900 stroke-[3]" />
+                                  ) : (
+                                    <div className="w-2 h-0.5 bg-slate-400"></div>
                                   )}
                                 </div>
                                 <input
                                   type="checkbox"
-                                  checked={dayData.isClosed}
+                                  checked={!dayData.isClosed}
                                   onChange={(e) =>
-                                    handleOperatingHoursChange(day, 'isClosed', e.target.checked)
+                                    handleOperatingHoursChange(day, 'isClosed', !e.target.checked)
                                   }
                                   className="hidden"
                                 />
-                                <span className="text-xs font-semibold text-slate-600">{dayData.isClosed ? 'Closed' : 'Opened'}</span>
+                                <span className="text-xs font-semibold text-slate-600">{!dayData.isClosed ? 'Open' : 'Closed'}</span>
                               </label>
 
                               <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between gap-3 flex-1">

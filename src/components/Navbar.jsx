@@ -296,7 +296,7 @@ export default function Navbar({
                       <span>My Profile</span>
                     </button>
 
-                    {user.role === 'owner' && onDashboard && (
+                    {(user.role === 'owner' || user.role === 'admin') && onDashboard && (
                       <button
                         type="button"
                         onClick={() => {

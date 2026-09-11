@@ -55,7 +55,7 @@ function StatCards({ bookings = [], venue = null }) {
       change: '+12.5%',
       period: 'from last month',
       icon: Wallet,
-      iconBg: 'bg-lime-50 text-lime-500',
+      iconBg: 'bg-rose-50 text-[#FE4A49]',
     },
     {
       title: 'Total Bookings',
@@ -87,37 +87,49 @@ function StatCards({ bookings = [], venue = null }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
           <div
             key={stat.title}
-            className="bg-white rounded-xl overflow-hidden p-3.5 sm:p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 hover:-translate-y-0.5 transition-transform duration-200"
+            className="bg-white rounded-[24px] p-5 relative flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 hover:-translate-y-0.5 transition-transform duration-200"
           >
-            {/* Top row: Icon on left, Title & Value on right */}
-            <div className="flex items-start justify-between mb-2 sm:mb-3">
-              <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
-                <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 ${stat.iconBg}`}>
-                  <Icon size={18} className="sm:w-5 sm:h-5" />
+            {/* Top row: Icon on left, Title & Value on right, Options menu top right */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start gap-3">
+                <div className={`p-3 rounded-2xl shrink-0 ${stat.iconBg}`}>
+                  <Icon size={20} />
                 </div>
-                <div className="min-w-0">
-                  <span className="text-[11px] sm:text-xs font-medium text-slate-400 block leading-tight truncate">
+                <div>
+                  <span className="text-xs font-medium text-slate-400 block leading-tight">
                     {stat.title}
                   </span>
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5 sm:mt-1 truncate">
+                  <h3 className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight mt-1">
                     {stat.value}
                   </h3>
+                  {stat.dueText ? (
+                    <p className="text-[11px] font-bold text-amber-600 mt-1">
+                      {stat.dueText}
+                    </p>
+                  ) : stat.subtext ? (
+                    <p className="text-[11px] font-medium text-slate-400 mt-1">
+                      {stat.subtext}
+                    </p>
+                  ) : null}
                 </div>
               </div>
+              <button className="text-slate-400 hover:text-slate-700 p-1 -mr-1 -mt-1 transition-colors cursor-pointer">
+                <MoreHorizontal size={16} />
+              </button>
             </div>
 
             {/* Bottom row: Percentage badge & period */}
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs pt-1 sm:pt-2">
-              <span className="text-lime-600 bg-lime-50 px-1.5 sm:px-2 py-0.5 rounded-full flex items-center gap-0.5 font-bold text-[10px] sm:text-[11px] shrink-0">
-                <ArrowUpRight size={11} /> {stat.change}
+            <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-slate-50">
+              <span className="text-lime-600 bg-lime-50 px-2 py-0.5 rounded-full flex items-center gap-0.5 font-bold text-[11px]">
+                <ArrowUpRight size={12} /> {stat.change}
               </span>
-              <span className="text-slate-400 font-medium text-[10px] sm:text-[11px] truncate">{stat.period}</span>
+              <span className="text-slate-400 font-medium text-[11px]">{stat.period}</span>
             </div>
           </div>
         );

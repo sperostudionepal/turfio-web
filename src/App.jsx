@@ -51,6 +51,7 @@ function App() {
   const [authMode, setAuthMode] = useState(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
+  const [isPlayerMode, setIsPlayerMode] = useState(false);
   const [selectedTurf, setSelectedTurf] = useState(null);
   const [routeTurf, setRouteTurf] = useState(null);
   const [selectedTurfForBooking, setSelectedTurfForBooking] = useState(null);
@@ -833,7 +834,10 @@ function App() {
             }}
             onLogin={handleOpenLogin}
             onLogout={handleLogout}
-            onDashboard={() => setCurrentPage('dashboard')}
+            onDashboard={() => {
+              setIsPlayerMode(false);
+              setCurrentPage('dashboard');
+            }}
           />
 
           {showOnboardingModal && (
@@ -865,7 +869,7 @@ function App() {
     }
 
     // Approved venue operator, or a user who explicitly opened the dashboard.
-    if (user && (user.role === 'owner' || user.role === 'admin' || currentPage === 'dashboard')) {
+    if (user && (user.role === 'owner' || user.role === 'admin' || currentPage === 'dashboard') && !isPlayerMode) {
       return (
         <>
           <div
@@ -873,7 +877,15 @@ function App() {
             className="fixed top-16 right-6 z-[9999]"
           />
 
-          <Dashboard user={user} onLogout={handleLogout} />
+          <Dashboard
+            user={user}
+            onLogout={handleLogout}
+            onSwitchToPlayer={() => {
+              setIsPlayerMode(true);
+              window.history.pushState({}, '', '/');
+              setCurrentPage('home');
+            }}
+          />
 
           {showOnboardingModal && (
             <OnboardingPage
@@ -1178,7 +1190,10 @@ function App() {
             window.history.pushState({}, '', '/turfs');
             setCurrentPage('turfListing');
           }}
-          onDashboard={() => setCurrentPage('dashboard')}
+          onDashboard={() => {
+            setIsPlayerMode(false);
+            setCurrentPage('dashboard');
+          }}
           onProfile={() => {
             window.history.pushState({}, '', '/profile');
             setCurrentPage('profile');

@@ -126,7 +126,7 @@ function SuperadminAuditHealthPage() {
         {services.map((svc) => (
           <div
             key={svc.name}
-            className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-3"
+            className="bg-white rounded-xl overflow-hidden p-5 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-3"
           >
             <div className="flex items-center justify-between">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
@@ -149,7 +149,7 @@ function SuperadminAuditHealthPage() {
       </div>
 
       {/* Platform Control & Feature Flags */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-4">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-4">
         <h3 className="font-black text-base text-slate-900">Platform Feature Flags & Security Toggles</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
@@ -227,7 +227,7 @@ function SuperadminAuditHealthPage() {
       </div>
 
       {/* Immutable Audit Log Trail */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-4">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
             <h3 className="font-black text-base text-slate-900 tracking-tight">

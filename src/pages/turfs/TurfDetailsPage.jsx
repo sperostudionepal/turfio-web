@@ -764,7 +764,7 @@ export default function TurfDetailsPage({
       {/* ─── SECTION 1: 5-IMAGE SHOWCASE GRID (NO BORDER) ─── */}
       <section className="mx-auto max-w-[1440px] px-6 pb-2 md:px-14 lg:px-20">
         {/* Desktop 5-Photo Mosaic Grid */}
-        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[380px] lg:h-[430px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
+        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[320px] lg:h-[370px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
           {/* Main Hero Shot */}
           <div
             onClick={() => openLightbox(0)}
@@ -775,45 +775,42 @@ export default function TurfDetailsPage({
               alt={`${turf.title} main pitch`}
               className="h-full w-full object-cover transition-opacity duration-300"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-              <span className="text-sm font-bold text-white flex items-center gap-1.5">
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/90 text-slate-950 font-bold px-4 py-2 text-xs shadow-md backdrop-blur-xs">
                 <Maximize2 className="h-4 w-4" /> View full resolution
               </span>
             </div>
           </div>
 
-          {/* Sub Images 1 to 4 */}
-          {[1, 2, 3, 4].map((index) => {
-            const imgSrc = gallery[index] || gallery[0];
-            return (
-              <div
-                key={index}
-                onClick={() => openLightbox(index)}
-                className="relative group overflow-hidden bg-slate-900 cursor-pointer"
-              >
-                <img
-                  src={imgSrc}
-                  alt={`${turf.title} view ${index + 1}`}
-                  className="h-full w-full object-cover transition-opacity duration-300"
-                />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            );
-          })}
+          {/* Secondary Grid Shots */}
+          {gallery.slice(1, 5).map((img, idx) => (
+            <div
+              key={idx}
+              onClick={() => openLightbox(idx + 1)}
+              className="relative group overflow-hidden bg-slate-900 cursor-pointer"
+            >
+              <img
+                src={img}
+                alt={`${turf.title} detail ${idx + 1}`}
+                className="h-full w-full object-cover transition-opacity duration-300"
+              />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          ))}
 
-          {/* "Show All Photos" Floating Trigger Badge */}
+          {/* Show All Photos Floating Badge */}
           <button
             type="button"
-            onClick={() => openLightbox(0)}
-            className="absolute bottom-5 right-5 flex items-center gap-2 rounded-lg bg-white/95 backdrop-blur-md px-3.5 py-2 text-xs font-semibold text-slate-900 shadow-md border border-slate-200/60 transition-all hover:bg-white active:scale-95 cursor-pointer z-10"
+            onClick={() => setIsLightboxOpen(true)}
+            className="absolute bottom-4 right-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 text-slate-900 text-xs font-extrabold px-4 py-2.5 shadow-md hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-sm border border-slate-200/60"
           >
             <Grip className="h-3.5 w-3.5 text-slate-900" />
-            <span>Show all {gallery.length} photos</span>
+            Show all {gallery.length} photos
           </button>
         </div>
 
         {/* Mobile Swipeable Carousel */}
-        <div className="md:hidden relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-slate-900 shadow-md">
+        <div className="md:hidden relative aspect-[16/8.5] w-full overflow-hidden rounded-2xl bg-slate-900 shadow-md">
           <img
             src={gallery[activeImageIndex] || gallery[0]}
             alt={`${turf.title} mobile preview`}
@@ -1102,8 +1099,8 @@ export default function TurfDetailsPage({
               )}
             </section>
 
-            {/* ── SECTION: VENUE OWNER / CONTACT INFO (BORDERLESS GRAY CARD) ── */}
-            <div className="rounded-2xl bg-slate-100/80 p-4 sm:p-5">
+            {/* ── SECTION: VENUE OWNER / CONTACT INFO ── */}
+            <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="relative shrink-0">
@@ -1130,7 +1127,7 @@ export default function TurfDetailsPage({
                   </div>
                 </div>
 
-                {/* Contact Actions (Borderless, Pill Rounded) */}
+                {/* Contact Actions (Pill Rounded) */}
                 <div className="flex flex-wrap items-center gap-2">
                   <a
                     href={`https://wa.me/${(turf.phone || '9779841234567').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
@@ -1146,7 +1143,7 @@ export default function TurfDetailsPage({
 
                   <a
                     href={`tel:${turf.phone || '+977 9841234567'}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-white hover:bg-slate-200/90 text-slate-800 px-4 py-2 text-xs font-bold transition-all active:scale-95 shadow-2xs"
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2 text-xs font-bold transition-all active:scale-95 shadow-2xs"
                   >
                     <Phone className="h-3.5 w-3.5 text-slate-600" />
                     <span>{turf.phone || '+977 9841-234567'}</span>
@@ -1500,9 +1497,9 @@ export default function TurfDetailsPage({
         </div>
       </main>
 
-      {/* ─── SIMILAR TURFS NEARBY ─── */}
+      {/* ─── SIMILAR TURFS NEARBY (DESKTOP ONLY) ─── */}
       {similarTurfs.length > 0 && (
-        <section className="bg-white py-12 md:py-16">
+        <section className="hidden md:block bg-white py-12 md:py-16">
           <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
             <div className="flex items-end justify-between mb-8">
               <div>
