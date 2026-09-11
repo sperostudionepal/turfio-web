@@ -45,11 +45,11 @@ function RevenueChart({ bookings = [] }) {
   };
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden p-5 flex flex-col justify-between h-full shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
+    <div className="bg-white rounded-[24px] p-5 flex flex-col justify-between h-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-600">
+          <div className="w-8 h-8 rounded-xl bg-[#fff1f1] flex items-center justify-center text-[#FE4A49]">
             <BarChart3 size={16} />
           </div>
           <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Bookings Overview</h3>
@@ -65,16 +65,16 @@ function RevenueChart({ bookings = [] }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 5, right: 10, left: -15, bottom: 0 }} barCategoryGap="28%">
             <defs>
-              {/* Light Green for Regular Bars */}
+              {/* Soft Coral Tint for Regular Bars */}
               <linearGradient id="normalBarGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#bef264" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#a3e635" stopOpacity={0.6} />
+                <stop offset="0%" stopColor="#fca5a5" stopOpacity={0.7} />
+                <stop offset="100%" stopColor="#f87171" stopOpacity={0.4} />
               </linearGradient>
 
-              {/* Lime Primary Highlight Bar */}
+              {/* Bold #FE4A49 Coral Primary Highlight Bar */}
               <linearGradient id="activeBarGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#a3e635" stopOpacity={1} />
-                <stop offset="100%" stopColor="#84cc16" stopOpacity={1} />
+                <stop offset="0%" stopColor="#FE4A49" stopOpacity={1} />
+                <stop offset="100%" stopColor="#e03e3d" stopOpacity={1} />
               </linearGradient>
             </defs>
             <XAxis

@@ -6,23 +6,23 @@ function RecentBookingsTable({ bookings = [] }) {
     const name = [customer.firstName, customer.lastName].filter(Boolean).join(' ') || booking.customer?.name || 'Customer';
     return {
       initials: name.slice(0, 2).toUpperCase(),
-      initialsBg: 'bg-lime-100 text-lime-700',
+      initialsBg: 'bg-[#fff1f1] text-[#FE4A49]',
       name,
       court: booking.court?.name || booking.courtName || 'Court 1',
       date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
       time: booking.timeSlot || '—',
       amount: `NRs. ${Number(booking.totalAmount || 0).toLocaleString('en-NP')}`,
       status: booking.paymentStatus === 'Paid' ? (booking.status || 'Confirmed') : 'Pending',
-      statusStyle: booking.paymentStatus === 'Paid' ? 'bg-lime-50 text-lime-600' : 'bg-amber-50 text-amber-600',
+      statusStyle: booking.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600',
     };
   });
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden p-5 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
+    <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Recent Bookings</h3>
-        <button className="text-xs font-semibold text-lime-400 hover:text-lime-700 transition-colors cursor-pointer">
+        <button className="text-xs font-bold text-[#FE4A49] hover:text-[#e03e3d] transition-colors cursor-pointer">
           View All
         </button>
       </div>

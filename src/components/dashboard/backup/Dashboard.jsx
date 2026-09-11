@@ -30,7 +30,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [venue, setVenue] = useState(null);
   const [ownerBookings, setOwnerBookings] = useState([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const userId = user?._id || user?.id;
@@ -67,30 +66,14 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
   const todayLabel = formatDateDisplay(getTodayNepalString()) || 'Today';
 
   return (
-    <div className="flex flex-col h-screen bg-[#fdfefe] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
+    <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans antialiased overflow-hidden select-none relative">
       {/* Top Header Bar across full window width */}
-      <TopBar
-        user={user}
-        venue={venue}
-        onLogout={onLogout}
-        onSwitchToPlayer={onSwitchToPlayer}
-        isMobileMenuOpen={isMobileMenuOpen}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      />
+      <TopBar user={user} venue={venue} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />
 
       {/* Main Body Section: Left Sidebar + Right Content Area */}
       <div className="flex flex-1 min-h-0 relative">
         {/* Floating Left Sidebar */}
-        <Sidebar
-          user={user}
-          venue={venue}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onLogout={onLogout}
-          onSwitchToPlayer={onSwitchToPlayer}
-          isOpen={isMobileMenuOpen}
-          onClose={() => setIsMobileMenuOpen(false)}
-        />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />
 
         {/* Right Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
@@ -109,14 +92,14 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
 
               <div className="flex items-center gap-2.5">
                 {/* Date Filter */}
-                <button className="flex items-center gap-2 px-4 py-3 rounded-full bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] cursor-pointer">
+                <button className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-xs ring-1 ring-slate-200/80 cursor-pointer">
                   <Calendar size={14} className="text-slate-400" />
                   <span>{todayLabel}</span>
                   <ChevronDown size={13} className="text-slate-400" />
                 </button>
 
                 {/* Export Report Action */}
-                <button className="flex items-center gap-2 px-5 py-3 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-semibold transition-colors cursor-pointer">
+                <button className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#FE4A49] hover:bg-[#e03e3d] text-white text-xs font-bold transition-all shadow-sm hover:shadow cursor-pointer">
                   <Download size={14} />
                   <span>Export Report</span>
                 </button>

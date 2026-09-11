@@ -49,7 +49,7 @@ function SuperadminDashboard({ onLogout, onSwitchToVenueView }) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
+    <div className="flex flex-col h-screen bg-[#fdfefe] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
       {/* Top Header Bar across full window width */}
       <SuperadminTopbar
         onLogout={onLogout}

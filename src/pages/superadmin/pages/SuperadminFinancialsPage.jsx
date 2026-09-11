@@ -164,7 +164,7 @@ function SuperadminFinancialsPage() {
         {financialCards.map((card) => (
           <div
             key={card.title}
-            className="bg-white rounded-[24px] p-5 relative flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 hover:-translate-y-0.5 transition-all"
+            className="bg-white rounded-xl overflow-hidden p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 hover:-translate-y-0.5 transition-all"
           >
             <div>
               <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
@@ -185,7 +185,7 @@ function SuperadminFinancialsPage() {
       </div>
 
       {/* Commission Yield Breakdown Chart */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-black text-base text-slate-900 tracking-tight">
@@ -244,7 +244,7 @@ function SuperadminFinancialsPage() {
       </div>
 
       {/* Payout Batches Table */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-4">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
             <h3 className="font-black text-base text-slate-900 tracking-tight">

@@ -45,8 +45,8 @@ function ScheduleCard({ bookings = [] }) {
     } else if (bookingDate === nowNpt.date && startMinutes <= nowNpt.minutes && endMinutes > nowNpt.minutes) {
       status = 'Ongoing';
       statusType = 'ongoing';
-      dotColor = 'bg-lime-500 animate-pulse';
-      badgeStyle = 'bg-lime-400 text-slate-950 font-extrabold shadow-xs';
+      dotColor = 'bg-[#FE4A49] animate-pulse';
+      badgeStyle = 'bg-[#FE4A49] text-white font-extrabold shadow-xs';
     } else {
       status = 'Upcoming';
       statusType = 'upcoming';
@@ -71,17 +71,17 @@ function ScheduleCard({ bookings = [] }) {
   });
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden p-5 flex flex-col justify-between h-full shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
+    <div className="bg-white rounded-[24px] p-5 flex flex-col justify-between h-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
       {/* Header */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-600">
+            <div className="w-8 h-8 rounded-xl bg-[#fff1f1] flex items-center justify-center text-[#FE4A49]">
               <Clock size={16} />
             </div>
             <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Today's Schedule</h3>
           </div>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-lime-50 text-lime-600">
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#fff1f1] text-[#FE4A49]">
             {todayBookings.length} {todayBookings.length === 1 ? 'Slot' : 'Slots'} Today
           </span>
         </div>
@@ -105,7 +105,7 @@ function ScheduleCard({ bookings = [] }) {
                 <div
                   className={`flex-1 flex items-center justify-between p-3 rounded-2xl transition-colors ${
                     item.statusType === 'ongoing'
-                      ? 'bg-lime-50/80 ring-1 ring-lime-300/60 text-slate-900'
+                      ? 'bg-rose-50/80 ring-1 ring-rose-200 text-slate-900'
                       : 'bg-slate-50 hover:bg-slate-100/80'
                   }`}
                 >
@@ -138,8 +138,8 @@ function ScheduleCard({ bookings = [] }) {
       </div>
 
       {/* Footer CTA */}
-      <div className="pt-3 mt-3">
-        <button className="flex items-center justify-between w-full text-xs text-lime-600 font-bold hover:text-lime-700 transition-colors cursor-pointer group">
+      <div className="pt-3 mt-3 border-t border-slate-100">
+        <button className="flex items-center justify-between w-full text-xs text-[#FE4A49] font-bold hover:text-[#e03e3d] transition-colors cursor-pointer group">
           <span>View Complete Day Schedule</span>
           <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
         </button>

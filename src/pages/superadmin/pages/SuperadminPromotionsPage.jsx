@@ -78,7 +78,7 @@ function SuperadminPromotionsPage() {
       </div>
 
       {/* Global Broadcast Ticker Editor */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-3">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
@@ -120,7 +120,7 @@ function SuperadminPromotionsPage() {
       </div>
 
       {/* Promotions List */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80 space-y-4">
+      <div className="bg-white rounded-xl overflow-hidden p-6 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100 space-y-4">
         <h3 className="font-black text-base text-slate-900">Active Voucher Campaigns</h3>
 
         <div className="overflow-x-auto">

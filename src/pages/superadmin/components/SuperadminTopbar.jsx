@@ -40,7 +40,7 @@ function SuperadminTopbar({ onLogout, onSwitchToVenueView, onQuickAction }) {
   }, []);
 
   return (
-    <header className="w-full bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] select-none relative z-30 border-b border-slate-100/60">
+    <header className="w-full bg-white shadow-[0_0_25px_rgba(0,0,0,0.05)] border-b border-slate-100 select-none relative z-30">
       <div className="flex items-center justify-between px-4 py-3 sm:py-3.5 md:px-6 lg:px-8 gap-4">
         {/* Left side: Brand Logo + Superadmin Tag */}
         <div className="w-64 shrink-0 flex items-center gap-3">

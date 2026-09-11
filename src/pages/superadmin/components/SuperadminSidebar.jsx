@@ -100,7 +100,7 @@ function SuperadminSidebar({ activeTab = 'Overview', setActiveTab, onLogout, onS
   );
 
   return (
-    <aside className="w-64 bg-white shadow-[4px_0_24px_-4px_rgba(0,0,0,0.03)] px-3.5 py-5 flex flex-col h-full select-none shrink-0 relative z-20 border-r border-slate-100/60">
+    <aside className="w-64 bg-white shadow-[0_0_25px_rgba(0,0,0,0.05)] border-r border-slate-100 px-3.5 py-5 flex flex-col h-full select-none shrink-0 relative z-20">
       {/* Superadmin Mode Badge */}
       <div className="mx-2 mb-4 px-3 py-2 rounded-2xl bg-slate-900 text-white flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2">

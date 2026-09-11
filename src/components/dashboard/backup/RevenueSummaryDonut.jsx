@@ -48,7 +48,7 @@ function RevenueSummaryDonut({ bookings = [] }) {
       value: onlineVal,
       revenue: onlinePaidRevenue,
       count: onlineBookings.length,
-      color: '#10b981',
+      color: '#FE4A49',
       percentage: `${onlinePct}%`,
     },
     {
@@ -67,12 +67,12 @@ function RevenueSummaryDonut({ bookings = [] }) {
       : `NRs. ${totalPaidRevenue.toLocaleString('en-NP')}`;
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden p-5 flex flex-col justify-between h-full shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
+    <div className="bg-white rounded-[24px] p-5 flex flex-col justify-between h-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] ring-1 ring-slate-100/80">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-lime-100 flex items-center justify-center text-lime-600">
+            <div className="w-8 h-8 rounded-xl bg-[#fff1f1] flex items-center justify-center text-[#FE4A49]">
               <PieChartIcon size={16} />
             </div>
             <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Revenue Summary</h3>
@@ -116,7 +116,7 @@ function RevenueSummaryDonut({ bookings = [] }) {
             <span className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5 block">
               {formattedTotalRevenue}
             </span>
-            <span className="text-[11px] font-semibold text-lime-600 mt-1 block">
+            <span className="text-[11px] font-semibold text-[#FE4A49] mt-1 block">
               {bookings.length} total bookings
             </span>
           </div>
@@ -141,7 +141,7 @@ function RevenueSummaryDonut({ bookings = [] }) {
       </div>
 
       {/* Footer link */}
-      <div className="pt-3 mt-3">
+      <div className="pt-3 mt-3 border-t border-slate-100">
         <button className="flex items-center justify-between w-full text-xs text-slate-500 font-semibold hover:text-slate-900 transition-colors cursor-pointer">
           <span>Manual vs Online analytics</span>
           <ChevronRight size={14} className="text-slate-400" />
