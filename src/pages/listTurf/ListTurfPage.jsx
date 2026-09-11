@@ -159,9 +159,11 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
   const amenitiesList = [
     { name: 'Parking', icon: Car },
     { name: 'WiFi', icon: Wifi },
-    { name: 'Canteen', icon: Coffee },
+    // Names must match the Turf model's amenity list exactly, or approving
+    // the application fails when it creates the turf.
+    { name: 'Cafe / Canteen', icon: Coffee },
     { name: 'Washrooms', icon: Bath },
-    { name: 'AC', icon: Wind },
+    { name: 'Air Conditioning', icon: Wind },
     { name: 'Changing Rooms', icon: Shirt },
     { name: 'First Aid', icon: HeartPulse },
     { name: 'Sports Equipment', icon: Dumbbell },

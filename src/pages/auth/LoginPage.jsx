@@ -4,16 +4,17 @@ import { useToast } from '../../components/common/Toast';
 import Navbar from '../../components/Navbar';
 import useAuthStore from '../../store/useAuthStore';
 
-function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs }) {
+function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs, pendingMfaToken }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   
-  // 2FA Login Gate state
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [tempToken, setTempToken] = useState(null);
+  // 2FA Login Gate state. A Google sign-in for a 2FA account arrives with its
+  // half-way token already issued, so the page opens straight on the code step.
+  const [mfaRequired, setMfaRequired] = useState(Boolean(pendingMfaToken));
+  const [tempToken, setTempToken] = useState(pendingMfaToken || null);
   const [mfaCode, setMfaCode] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
 
@@ -77,6 +78,8 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
       const res = await verifyMfaLogin({ tempToken, code: mfaCode.trim() });
       if (res && res.success) {
         showToast('Welcome back! Logged in successfully.', 'success');
+        // Signed in now, so leave the login screen.
+        onClose?.();
       } else {
         showToast(res.error || 'Invalid 2FA code. Please try again.', 'error');
       }
