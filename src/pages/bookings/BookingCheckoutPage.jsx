@@ -554,6 +554,7 @@ export default function BookingCheckoutPage({
             },
             paymentMethod: 'eSewa',
             paymentStatus: 'Pending',
+            promoCode: appliedDiscount > 0 ? promoCode.trim().toUpperCase() : undefined,
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
             court: {
@@ -650,6 +651,7 @@ export default function BookingCheckoutPage({
           },
           paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'Fonepay',
           paymentStatus: 'Pending',
+          promoCode: appliedDiscount > 0 ? promoCode.trim().toUpperCase() : undefined,
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
           court: {
