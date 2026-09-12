@@ -22,14 +22,17 @@ import BookingCheckoutPage, { PublicSplitPaymentPage } from './pages/bookings/Bo
 import TurfDetailsPage from './pages/turfs/TurfDetailsPage';
 import TurfRoutePage from './pages/turfs/TurfRoutePage';
 import turfService from './services/turfService';
+import { useToast } from './components/common/Toast';
 import ApplicationStatusPage from './pages/owner/ApplicationStatusPage';
 import SetupDashboardPage from './pages/owner/SetupDashboardPage';
 import ApplicationSubmittedPage from './pages/owner/ApplicationSubmittedPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import AccessibilityModal from './components/common/AccessibilityModal';
 import AccessibilityTrigger from './components/common/AccessibilityTrigger';
+import ContinueBookingBanner from './components/common/ContinueBookingBanner';
 import ChatWidget from './components/chat/ChatWidget';
 import useAccessibilityStore from './store/useAccessibilityStore';
+
 
 function App() {
   const initializeAccessibility = useAccessibilityStore((s) => s.initialize);
@@ -48,6 +51,7 @@ function App() {
     isInitializing,
   } = useAuthStore();
 
+  const { showToast } = useToast();
   const [authMode, setAuthMode] = useState(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
@@ -93,17 +97,18 @@ function App() {
       setCurrentPage('publicSplit');
     } else if (isPaymentSuccess) {
       if (esewaDataParam) {
-        turfService.verifyEsewaPayment(esewaDataParam)
+        let pending = {};
+        try {
+          const raw = sessionStorage.getItem('turfio_pending_booking');
+          if (raw) pending = JSON.parse(raw);
+        } catch (e) {
+          console.error(e);
+        }
+
+        turfService.verifyEsewaPayment(esewaDataParam, pending?.bookingPayload)
           .then((res) => {
             console.log('[App] Payment verification response:', res);
             const verifiedBooking = res?.booking;
-            let pending = {};
-            try {
-              const raw = sessionStorage.getItem('turfio_pending_booking');
-              if (raw) pending = JSON.parse(raw);
-            } catch (e) {
-              console.error(e);
-            }
 
             const turfData = verifiedBooking?.turf || pending?.turf || selectedTurf || {
               id: 'venue',
@@ -111,7 +116,7 @@ function App() {
               name: 'Turf Venue',
             };
 
-            const turfId = turfData?.id || turfData?._id || 'venue';
+            const turfId = turfData?.slug || turfData?.id || turfData?._id || 'venue';
 
             const merged = {
               ...turfData,
@@ -141,7 +146,8 @@ function App() {
 
             setSelectedTurfForBooking(merged);
             setSelectedTurf(null);
-            window.history.replaceState({}, '', `/turfs/${turfId}/book?step=4`);
+            window.history.pushState({}, '', `/turfs/${turfId}/book?step=4`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
           })
           .catch((err) => {
             console.error('Payment verification failed:', err);
@@ -155,7 +161,7 @@ function App() {
       }
     } else if (isPaymentFailure) {
       const failedTurfId = searchParams.get('bookingId');
-      alert('eSewa payment was cancelled or failed. Please try again.');
+      showToast('eSewa payment was cancelled or failed. Please try again.', 'error');
       setCurrentPage('turfListing');
     } else if (targetBookingTurfId) {
       // Restore booking checkout page on reload or direct link
@@ -168,12 +174,18 @@ function App() {
           } catch (e) {
             console.error(e);
           }
+          const holdTokenFromUrl = searchParams.get('holdToken');
           const merged = {
             ...turfData,
             ...cachedBooking,
+            ...(holdTokenFromUrl ? { holdToken: holdTokenFromUrl } : {}),
           };
           setSelectedTurfForBooking(merged);
           setSelectedTurf(null);
+
+          if (turfData?.slug && !pathname.includes(`/turfs/${turfData.slug}`)) {
+            window.history.replaceState({}, '', `/turfs/${turfData.slug}/book${window.location.search}`);
+          }
         })
         .catch(() => {
           setCurrentPage('turfListing');
@@ -191,6 +203,9 @@ function App() {
         .then((turf) => {
           setSelectedTurf(turf);
           setCurrentPage('turfDetails');
+          if (turf?.slug && pathname !== `/turfs/${turf.slug}`) {
+            window.history.replaceState({}, '', `/turfs/${turf.slug}`);
+          }
         })
         .catch(() => {
           setCurrentPage('turfListing');
@@ -213,6 +228,8 @@ function App() {
       setCurrentPage('setupDashboard');
     } else if (pathname === '/profile' || searchParams.get('page') === 'profile') {
       setCurrentPage('profile');
+    } else if (pathname.includes('/dashboard') || searchParams.get('page') === 'dashboard') {
+      setCurrentPage('dashboard');
     } else if (pathname === '/' || pathname === '') {
       setCurrentPage('home');
     }
@@ -245,10 +262,12 @@ function App() {
             }
             setSelectedTurfForBooking({ ...turfData, ...cached });
             setSelectedTurf(null);
+            setCurrentPage('booking');
           })
           .catch(() => {
             setCurrentPage('turfListing');
           });
+
       } else if (popRouteMatch) {
         if (popTurfId) {
           turfService.getTurfById(popTurfId)
@@ -284,6 +303,10 @@ function App() {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
         setCurrentPage('profile');
+      } else if (path.includes('/dashboard') || params.get('page') === 'dashboard') {
+        setSelectedTurf(null);
+        setSelectedTurfForBooking(null);
+        setCurrentPage('dashboard');
       } else if (path === '/' || path === '') {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
@@ -354,7 +377,12 @@ function App() {
    * ---------------------------------------------------------
    */
   const handleLoginSuccess = async (credentials) => {
-    const result = await login(credentials);
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectToParam = searchParams.get('redirectTo');
+    const result = await login({
+      ...credentials,
+      redirectTo: credentials?.redirectTo || redirectToParam || undefined,
+    });
 
     if (result.success) {
       setAuthMode(null);
@@ -366,9 +394,15 @@ function App() {
         setShowOnboardingModal(true);
       }
 
+      if (result.redirectTo === '/dashboard' || redirectToParam === '/dashboard') {
+        window.history.pushState({}, '', '/dashboard');
+        setCurrentPage('dashboard');
+      }
+
       return {
         success: true,
         user: result.user,
+        redirectTo: result.redirectTo || redirectToParam,
       };
     }
 
@@ -613,10 +647,7 @@ function App() {
     if (result.success) {
       setShowOnboardingModal(false);
     } else {
-      // Create a temporary toast element or use alert if useToast is not accessible here
-      // But since we don't have useToast in App.jsx scope directly (it's inside ToastProvider),
-      // we can use standard alert for now, or dispatch a custom event if there's a global toast.
-      alert(`Profile update failed: ${result.error}`);
+      showToast(`Profile update failed: ${result.error}`, 'error');
     }
   };
 
@@ -677,8 +708,15 @@ function App() {
     const target = turf || selectedTurf;
     setRouteTurf(target);
     setSelectedTurf(null);
-    window.history.pushState({}, '', `/route${target ? `?turfId=${target.id}` : ''}`);
+    const targetId = target ? (target.slug || target.id || target._id) : '';
+    window.history.pushState({}, '', `/route${targetId ? `?turfId=${targetId}` : ''}`);
     setCurrentPage('route');
+  };
+
+  const handleOpenDashboard = () => {
+    setIsPlayerMode(false);
+    window.history.pushState({}, '', '/dashboard');
+    setCurrentPage('dashboard');
   };
 
   /**
@@ -760,11 +798,15 @@ function App() {
           onLogin={async (credentials) => {
             const res = await loginAdmin(credentials);
             if (res.success && res.user?.role !== 'superadmin') {
+              window.history.pushState({}, '', '/dashboard');
               setCurrentPage('dashboard');
             }
             return res;
           }}
-          onHome={() => setCurrentPage('home')}
+          onHome={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPage('home');
+          }}
         />
       );
     }
@@ -804,9 +846,19 @@ function App() {
           onLogin={handleOpenLogin}
           user={user}
           onLogout={handleLogout}
-          onHome={() => setCurrentPage('home')}
-          onFindTurfs={() => setCurrentPage('turfListing')}
-          onListTurf={() => setCurrentPage('listTurf')}
+          onHome={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPage('home');
+          }}
+          onFindTurfs={() => {
+            window.history.pushState({}, '', '/turfs');
+            setCurrentPage('turfListing');
+          }}
+          onListTurf={() => {
+            window.history.pushState({}, '', '/list-turf');
+            setCurrentPage('listTurf');
+          }}
+          onDashboard={handleOpenDashboard}
         />
       );
     }
@@ -834,10 +886,7 @@ function App() {
             }}
             onLogin={handleOpenLogin}
             onLogout={handleLogout}
-            onDashboard={() => {
-              setIsPlayerMode(false);
-              setCurrentPage('dashboard');
-            }}
+            onDashboard={handleOpenDashboard}
           />
 
           {showOnboardingModal && (
@@ -857,10 +906,14 @@ function App() {
     if (currentPage === 'setupDashboard') {
       return (
         <SetupDashboardPage
-          onHome={() => setCurrentPage('home')}
+          onHome={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPage('home');
+          }}
           onSetupSuccess={(data) => {
             // Initialize auth state to hydrate the newly created user session
             initialize().then(() => {
+              window.history.pushState({}, '', '/dashboard');
               setCurrentPage('dashboard');
             });
           }}
@@ -868,8 +921,8 @@ function App() {
       );
     }
 
-    // Approved venue operator, or a user who explicitly opened the dashboard.
-    if (user && (user.role === 'owner' || user.role === 'admin' || currentPage === 'dashboard') && !isPlayerMode) {
+    // Approved venue operator viewing their dashboard
+    if (currentPage === 'dashboard' && user && (user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin)) {
       return (
         <>
           <div
@@ -948,6 +1001,7 @@ function App() {
               window.history.pushState({}, '', '/turfs');
               setCurrentPage('turfListing');
             }}
+            onDashboard={handleOpenDashboard}
             onSubmitted={(data) => {
               setSubmittedApplication(data);
               setCurrentPage('applicationSubmitted');
@@ -987,7 +1041,8 @@ function App() {
             }}
             onViewTurfDetails={(turf) => {
               setSelectedTurf(turf);
-              window.history.pushState({}, '', `/turfs/${turf.id}`);
+              const turfId = turf.slug || turf.id || turf._id;
+              window.history.pushState({}, '', `/turfs/${turfId}`);
               setCurrentPage('turfDetails');
             }}
           />
@@ -1025,9 +1080,11 @@ function App() {
               window.history.pushState({}, '', '/');
               setCurrentPage('home');
             }}
+            onDashboard={handleOpenDashboard}
             onSelectTurf={(turf) => {
               setSelectedTurf(turf);
-              window.history.pushState({}, '', `/turfs/${turf.id}`);
+              const turfId = turf.slug || turf.id || turf._id;
+              window.history.pushState({}, '', `/turfs/${turfId}`);
               setCurrentPage('turfDetails');
             }}
             onNavigateRoute={handleNavigateRoute}
@@ -1063,8 +1120,9 @@ function App() {
               const target = selectedTurfForBooking;
               setSelectedTurf(target);
               setSelectedTurfForBooking(null);
-              if (target?.id) {
-                window.history.pushState({}, '', `/turfs/${target.id}`);
+              const targetId = target?.slug || target?.id || target?._id;
+              if (targetId) {
+                window.history.pushState({}, '', `/turfs/${targetId}`);
               }
             }}
             onHome={() => {
@@ -1072,14 +1130,17 @@ function App() {
               window.history.pushState({}, '', '/');
               setCurrentPage('home');
             }}
+            onDashboard={handleOpenDashboard}
             onViewTurfDetails={(t) => {
               const target = t || selectedTurfForBooking;
               setSelectedTurf(target);
               setSelectedTurfForBooking(null);
-              if (target?.id) {
-                window.history.pushState({}, '', `/turfs/${target.id}`);
+              const targetId = target?.slug || target?.id || target?._id;
+              if (targetId) {
+                window.history.pushState({}, '', `/turfs/${targetId}`);
               }
             }}
+            onNavigateRoute={handleNavigateRoute}
           />
 
           {showOnboardingModal && (
@@ -1122,14 +1183,16 @@ function App() {
               window.history.pushState({}, '', '/turfs');
               setCurrentPage('turfListing');
             }}
+            onDashboard={handleOpenDashboard}
             onBookNow={(bookingDetails) => {
               const target = bookingDetails || selectedTurf;
+              const targetId = target?.slug || target?.id || target?._id;
               try {
-                sessionStorage.setItem(`turfio_booking_${target.id}`, JSON.stringify(target));
+                sessionStorage.setItem(`turfio_booking_${target.id || target._id}`, JSON.stringify(target));
               } catch (e) {
                 console.error(e);
               }
-              window.history.pushState({}, '', `/turfs/${target.id}/book`);
+              window.history.pushState({}, '', `/turfs/${targetId}/book`);
               setSelectedTurfForBooking(target);
               setSelectedTurf(null);
             }}
@@ -1183,17 +1246,15 @@ function App() {
           }}
           onViewTurfDetails={(turf) => {
             setSelectedTurf(turf);
-            window.history.pushState({}, '', `/turfs/${turf.id}`);
+            const turfId = turf.slug || turf.id || turf._id;
+            window.history.pushState({}, '', `/turfs/${turfId}`);
             setCurrentPage('turfDetails');
           }}
           onFindTurfs={() => {
             window.history.pushState({}, '', '/turfs');
             setCurrentPage('turfListing');
           }}
-          onDashboard={() => {
-            setIsPlayerMode(false);
-            setCurrentPage('dashboard');
-          }}
+          onDashboard={handleOpenDashboard}
           onProfile={() => {
             window.history.pushState({}, '', '/profile');
             setCurrentPage('profile');
@@ -1218,9 +1279,11 @@ function App() {
       {renderCurrentView()}
       <AccessibilityModal />
       <AccessibilityTrigger />
+      <ContinueBookingBanner />
       <ChatWidget />
     </>
   );
 }
+
 
 export default App;

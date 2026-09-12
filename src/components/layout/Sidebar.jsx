@@ -9,6 +9,7 @@ import {
   HelpCircle,
   LogOut,
   Building2,
+  Image as ImageIcon,
   User,
   X,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ function Sidebar({ user, venue, activeTab = 'Dashboard', setActiveTab, onLogout,
 
   const venueItems = [
     { label: 'Courts', icon: Building2, href: '#' },
+    { label: 'Turf Images', icon: ImageIcon, href: '#' },
     { label: 'Invoices', icon: FileText, href: '#' },
   ];
 

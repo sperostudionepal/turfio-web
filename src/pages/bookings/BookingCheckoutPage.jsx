@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   Clock,
   MapPin,
@@ -36,10 +37,15 @@ import {
   RotateCcw,
   ShieldCheck,
   Loader2,
+  Navigation,
+  Car,
+  Shirt,
+  PhoneCall,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import turfService from '../../services/turfService';
+import { useToast } from '../../components/common/Toast';
 
 function WhatsAppIcon({ className = 'h-4 w-4' }) {
   return (
@@ -109,9 +115,11 @@ export default function BookingCheckoutPage({
   user,
   onLogout,
   onHome,
+  onDashboard,
   turf,
   onBack,
   onViewTurfDetails,
+  onNavigateRoute,
 }) {
   // Persist and restore step and form data across reloads
   const storageKey = turf?.id ? `turfio_checkout_state_${turf.id}` : 'turfio_checkout_state';
@@ -125,7 +133,7 @@ export default function BookingCheckoutPage({
     return 2;
   });
 
-  const [toastMessage, setToastMessage] = useState('');
+  const { showToast } = useToast();
 
   // Form State
   const [formData, setFormData] = useState(() => {
@@ -147,10 +155,22 @@ export default function BookingCheckoutPage({
       termsAgreed: true,
     };
 
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.formData) {
+          return { ...defaultData, ...parsed.formData };
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     return defaultData;
   });
 
-  // Save step and formData changes into sessionStorage and update URL query param without reload
+  // Save step and formData changes into sessionStorage and sync hold step to backend
   useEffect(() => {
     try {
       sessionStorage.setItem(
@@ -163,7 +183,13 @@ export default function BookingCheckoutPage({
     } catch (e) {
       console.error(e);
     }
-  }, [currentStep, formData, storageKey]);
+
+    const holdToken = turf?.holdToken || new URLSearchParams(window.location.search).get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
+    const turfId = turf?.id || turf?._id;
+    if (turfId && holdToken && currentStep >= 2 && currentStep <= 4) {
+      turfService.updateHoldStep(turfId, holdToken, currentStep);
+    }
+  }, [currentStep, formData, storageKey, turf]);
 
   // Listen to popstate within the checkout flow to handle back/forward between steps
   useEffect(() => {
@@ -197,6 +223,21 @@ export default function BookingCheckoutPage({
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isConvertingToSplit, setIsConvertingToSplit] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [idempotencyKey] = useState(() => {
+    const slotId = turf?.id || turf?._id || 'slot';
+    const dateVal = turf?.selectedDate || 'date';
+    const timeVal = turf?.selectedTime || 'time';
+    const storageKey = `turfio_idempotency_${slotId}_${dateVal}_${timeVal}`;
+    const existing = sessionStorage.getItem(storageKey);
+    if (existing) return existing;
+    const newKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `IDEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    try {
+      sessionStorage.setItem(storageKey, newKey);
+    } catch (e) {
+      console.error(e);
+    }
+    return newKey;
+  });
 
   const handleConvertToSplit = async () => {
     const targetBookingId = confirmedBooking?.bookingId || turf?.bookingId || confirmedBooking?._id || turf?._id;
@@ -283,10 +324,19 @@ export default function BookingCheckoutPage({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [secondsRemaining]);
 
-  // Toast Helper
-  const triggerToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+  // Toast Helper mapped to global ToastProvider
+  const triggerToast = (msg, type) => {
+    let toastType = type;
+    if (!toastType) {
+      if (msg.includes('🎉') || msg.includes('🔥') || msg.includes('confirmed') || msg.includes('copied') || msg.includes('applied') || msg.includes('downloaded')) {
+        toastType = 'success';
+      } else if (msg.includes('Please') || msg.includes('failed') || msg.includes('expired') || msg.includes('Unable') || msg.includes('Error')) {
+        toastType = 'error';
+      } else {
+        toastType = 'info';
+      }
+    }
+    showToast(msg, toastType);
   };
 
   // Safe location/address string formatter helper
@@ -393,11 +443,12 @@ export default function BookingCheckoutPage({
     {
       id: 'full',
       label: 'Pay Full Amount',
-      badge: 'Instant Confirmation',
+      badge: 'Instant',
       description: 'Pay total NPR ' + totalAmount.toLocaleString() + ' now',
       icon: Wallet,
       available: true,
     },
+    /*
     {
       id: 'split',
       label: 'Split Payment',
@@ -406,10 +457,11 @@ export default function BookingCheckoutPage({
       icon: Users,
       available: true,
     },
+    */
     {
       id: 'venue',
       label: 'Pay at Venue',
-      badge: 'Cash / QR on Arrival',
+      badge: 'On Arrival',
       description: 'Pay directly at counter before kickoff',
       icon: Banknote,
       available: true,
@@ -443,7 +495,6 @@ export default function BookingCheckoutPage({
     { id: 1, title: 'Select Time', subtitle: 'Choose your slot' },
     { id: 2, title: 'Add Details', subtitle: "Who's playing?" },
     { id: 3, title: 'Review & Pay', subtitle: 'Confirm & pay' },
-    { id: 4, title: 'Confirmed', subtitle: "You're all set!" },
   ];
 
   const handleInputChange = (field, value) => {
@@ -502,6 +553,11 @@ export default function BookingCheckoutPage({
     } else {
       window.history.pushState({}, '', url.toString());
     }
+    const holdToken = turf?.holdToken || new URLSearchParams(window.location.search).get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
+    const turfId = turf?.id || turf?._id;
+    if (turfId && holdToken && newStep >= 2 && newStep <= 4) {
+      turfService.updateHoldStep(turfId, holdToken, newStep);
+    }
   };
 
   const handleNext = async () => {
@@ -538,9 +594,13 @@ export default function BookingCheckoutPage({
             bookingDate = new Date().toISOString().split('T')[0];
           }
 
-          // Build booking payload with hold linkage
+          // Build booking payload with hold linkage and idempotency key
           const bookingPayload = {
             turf: turf?.id || turf?._id,
+            user: user?._id || user?.id,
+            userId: user?._id || user?.id,
+            contactEmail: formData?.email || user?.email,
+            contactPhone: formData?.phone || user?.phone || user?.phoneNumber,
             date: bookingDate,
             timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
             matchType,
@@ -556,6 +616,7 @@ export default function BookingCheckoutPage({
             paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
+            idempotencyKey,
             court: {
               id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
               name: courtName,
@@ -571,6 +632,7 @@ export default function BookingCheckoutPage({
             sessionStorage.setItem('turfio_pending_booking', JSON.stringify({
               turf,
               formData,
+              bookingPayload,
               totalAmount: payAmount,
               selectedDateStr,
               selectedTimeStr,
@@ -580,42 +642,26 @@ export default function BookingCheckoutPage({
             console.error(e);
           }
 
-          // 1. Create booking in backend
-          let createdBooking;
-          try {
-            const bookingRes = await turfService.createBooking(bookingPayload);
-            createdBooking = bookingRes?.data || bookingRes;
-          } catch (createErr) {
-            console.warn('Backend booking creation note:', createErr.message);
-          }
+          // Initiate eSewa payment directly using active hold token/id or booking payload
+          const effectiveHoldToken = turf?.holdToken || searchParams.get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
+          const effectiveBookingId = turf?.bookingId || turf?.id || searchParams.get('bookingId');
+          const holdIdentifier = effectiveHoldToken || turf?.holdId || effectiveBookingId;
 
-          const bookingMongoId = createdBooking?._id || createdBooking?.id;
-          const realBookingId = createdBooking?.bookingId;
+          const initRes = await turfService.initiateEsewaPayment(
+            holdIdentifier,
+            payAmount,
+            {
+              isHold: !!effectiveHoldToken || !!turf?.holdId,
+              holdToken: effectiveHoldToken,
+              bookingId: effectiveBookingId,
+              bookingData: bookingPayload,
+            }
+          );
 
-          if (!bookingMongoId) {
-            throw new Error('Failed to create booking before initiating payment');
-          }
-
-          // Save exact created bookingId and turf details in session storage for share link
-          try {
-            sessionStorage.setItem('turfio_pending_booking', JSON.stringify({
-              turf,
-              formData: { ...formData, bookingId: realBookingId },
-              bookingId: realBookingId,
-              bookingMongoId,
-              totalAmount: payAmount,
-              selectedDateStr,
-              selectedTimeStr,
-              endTimeStr,
-            }));
-          } catch (e) {
-            console.error(e);
-          }
-
-          // 2. Initiate eSewa payment
-          const initRes = await turfService.initiateEsewaPayment(bookingMongoId, payAmount);
-          if (initRes?.formData && initRes?.paymentUrl) {
-            turfService.submitEsewaForm(initRes.paymentUrl, initRes.formData);
+          const paymentFormData = initRes?.formData || initRes?.data?.formData;
+          const paymentUrl = initRes?.paymentUrl || initRes?.data?.paymentUrl;
+          if (paymentFormData && paymentUrl) {
+            turfService.submitEsewaForm(paymentUrl, paymentFormData);
             return;
           } else {
             throw new Error(initRes?.message || 'Failed to retrieve payment form data from server');
@@ -652,6 +698,7 @@ export default function BookingCheckoutPage({
           paymentStatus: 'Pending',
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
+          idempotencyKey,
           court: {
             id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
             name: courtName,
@@ -662,7 +709,7 @@ export default function BookingCheckoutPage({
           },
         };
 
-        const res = await turfService.createBooking(bookingPayload);
+        const res = await turfService.createBooking(bookingPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
         setConfirmedBooking(res?.data || res);
 
         updateStep(4);
@@ -699,86 +746,79 @@ export default function BookingCheckoutPage({
         onLogout={onLogout}
         onListTurf={onViewTurfDetails}
         onHome={onHome}
+        onDashboard={onDashboard}
       />
 
-      {/* ── Toast Notification Floating Pill ── */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-[9999] flex items-center gap-2.5 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-2xl transition-all animate-bounce">
-          <Sparkles className="h-4 w-4 text-lime-400 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* ── Sticky Progress Stepper Header (Pure White Background) ── */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 py-6">
-          <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
-            {steps.map((step, idx) => {
-              const isDone = currentStep > step.id;
-              const isActive = currentStep === step.id;
-              return (
-                <div key={step.id} className="flex items-center flex-1 last:flex-none">
-                  {/* Step Item */}
-                  <div
-                    onClick={() => {
-                      if (step.id === 1) {
-                        if (onBack) onBack();
-                      } else if (step.id < currentStep) {
-                        updateStep(step.id);
-                      }
-                    }}
-                    className={`flex items-center gap-3 transition-all ${
-                      step.id <= currentStep ? 'cursor-pointer' : 'cursor-default'
-                    }`}
-                  >
+      {currentStep < 4 && (
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
+          <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 py-6">
+            <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+              {steps.map((step, idx) => {
+                const isDone = currentStep > step.id;
+                const isActive = currentStep === step.id;
+                return (
+                  <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                    {/* Step Item */}
                     <div
-                      className={`flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full font-black text-xs md:text-sm transition-all shadow-xs ${
-                        isDone
-                          ? 'bg-lime-400 text-slate-950 font-black'
-                          : isActive
-                          ? 'bg-lime-400 text-slate-950 font-black ring-4 ring-lime-100'
-                          : 'bg-slate-100 text-slate-400'
+                      onClick={() => {
+                        if (step.id === 1) {
+                          if (onBack) onBack();
+                        } else if (step.id < currentStep) {
+                          updateStep(step.id);
+                        }
+                      }}
+                      className={`flex items-center gap-3 transition-all ${
+                        step.id <= currentStep ? 'cursor-pointer' : 'cursor-default'
                       }`}
                     >
-                      {isDone ? <Check className="h-4 w-4 stroke-[3]" /> : step.id}
-                    </div>
-
-                    <div className="hidden sm:block text-left">
-                      <p
-                        className={`text-xs md:text-sm font-bold leading-none ${
-                          isActive
-                            ? 'text-slate-900 font-extrabold'
-                            : isDone
-                            ? 'text-slate-800'
-                            : 'text-slate-400'
+                      <div
+                        className={`flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full font-black text-xs md:text-sm transition-all shadow-xs ${
+                          isDone
+                            ? 'bg-lime-400 text-slate-950 font-black'
+                            : isActive
+                            ? 'bg-lime-400 text-slate-950 font-black ring-4 ring-lime-100'
+                            : 'bg-slate-100 text-slate-400'
                         }`}
                       >
-                        {step.title}
-                      </p>
-                      <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-                        {step.subtitle}
-                      </p>
+                        {isDone ? <Check className="h-4 w-4 stroke-[3]" /> : step.id}
+                      </div>
+
+                      <div className="hidden sm:block text-left">
+                        <p
+                          className={`text-xs md:text-sm font-bold leading-none ${
+                            isActive
+                              ? 'text-slate-900 font-extrabold'
+                              : isDone
+                              ? 'text-slate-800'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {step.title}
+                        </p>
+                        <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                          {step.subtitle}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Connector Line */}
+                    {idx < steps.length - 1 && (
+                      <div className="flex-1 mx-2 md:mx-4 h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            currentStep > step.id ? 'bg-lime-400 w-full' : 'bg-transparent w-0'
+                          }`}
+                        />
+                      </div>
+                    )}
                   </div>
-
-                  {/* Connector Line */}
-                  {idx < steps.length - 1 && (
-                    <div className="flex-1 mx-2 md:mx-4 h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          currentStep > step.id ? 'bg-lime-400 w-full' : 'bg-transparent w-0'
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* ── Reservation Holding Timer Banner ── */}
-        {currentStep < 4 && (
+          {/* ── Reservation Holding Timer Banner ── */}
           <div className="bg-lime-50/90 px-6 md:px-14 lg:px-20 py-2.5">
             <div className="mx-auto max-w-[1440px] flex items-center justify-between text-xs sm:text-sm text-slate-700">
               <div className="flex items-center gap-2">
@@ -799,21 +839,373 @@ export default function BookingCheckoutPage({
               </span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* ── Main Two-Column Layout ── */}
-      <main className="mx-auto max-w-[1440px] px-6 py-8 md:px-14 lg:px-20">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_440px] lg:gap-8 xl:gap-12">
-          {/* ═════════════════════════════════════════════════
-              LEFT COLUMN: STEP CONTENT (WHITE BG, BORDERLESS)
-             ═════════════════════════════════════════════════ */}
-          <div className="space-y-8">
-            {/* ────────────────────────────────────────────────
-                STEP 2: ADD DETAILS (WHO'S PLAYING + PAYMENT TYPE)
-               ──────────────────────────────────────────────── */}
-            {currentStep === 2 && (
-              <>
+      {/* ── Main Page Content ── */}
+      {currentStep === 4 ? (
+        <main className="flex-1 max-w-5xl w-full mx-auto px-6 md:px-8 pt-12 md:pt-16 pb-12 md:pb-16 animate-fadeIn">
+          {/* Top Header Badge & Title (Centered) */}
+          <div className="text-center max-w-xl mx-auto mb-8 md:mb-10">
+            <span className="inline-flex items-center gap-2 rounded-full bg-lime-100 px-3.5 py-1.5 text-xs font-bold text-slate-800 mb-3">
+              <CheckCircle2 className="h-4 w-4 text-lime-600" />
+              Reservation Confirmed
+            </span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              Booking Confirmed!
+            </h1>
+            <p className="text-slate-500 text-sm font-medium mt-1.5 leading-relaxed">
+              Thank you for booking <span className="font-extrabold text-slate-900">{venueTitle}</span>. A copy of your match pass along with SMS pass details has been sent to <span className="font-bold text-slate-900">+977 {formData.phone || '98XXXXXXXX'}</span>.
+            </p>
+          </div>
+
+          {/* 2-Column Split Hub Grid (Matching ApplicationSubmittedPage) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start max-w-4xl mx-auto">
+            
+            {/* Left Column: Match Pass & Primary Actions */}
+            <div className="lg:col-span-6 space-y-4 w-full">
+
+              {/* Digital Match Pass / Ticket Receipt Card */}
+              <div className="relative mx-auto w-full overflow-hidden rounded-2xl bg-white text-slate-900 p-6 text-left shadow-[0_0_25px_rgba(0,0,0,0.04)]">
+                <div className="flex items-start justify-between pb-4 bg-white -mx-6 -mt-6 p-6 mb-4">
+                  <div>
+                    <p className="text-[11px] font-extrabold text-lime-700">Official Match Pass</p>
+                    <h3 className="text-xl font-extrabold text-slate-900 mt-1">{venueTitle}</h3>
+                    <p className="text-xs font-bold text-lime-700 mt-0.5">
+                      {confirmedBooking?.court?.name || courtName} • {confirmedBooking?.court?.dimension || courtDimension}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-lime-600" />
+                      {venueLocation}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-[11px] font-semibold text-slate-500">Booking ID</p>
+                    <p className="font-mono text-sm font-extrabold text-slate-900">
+                      {confirmedBooking?.bookingId || turf?.bookingId || mockBookingId}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-3 text-xs">
+                  <div>
+                    <p className="text-slate-500 font-medium">Match Date</p>
+                    <p className="font-extrabold text-sm text-slate-900 mt-0.5">{selectedDateStr}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 font-medium">Time Window</p>
+                    <p className="font-extrabold text-sm text-lime-700 mt-0.5">
+                      {selectedTimeStr} – {endTimeStr}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 font-medium">Booked For</p>
+                    <p className="font-bold text-slate-900 mt-0.5">
+                      {formData.teamName || formData.fullName || 'Futsal Squad'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 font-medium">Total Paid</p>
+                    <p className="font-bold text-slate-900 mt-0.5">
+                      NPR{' '}
+                      {formData.paymentType === 'split'
+                        ? yourShare.toLocaleString() + ' (Your share)'
+                        : totalAmount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+
+
+                {/* QR Code Entry Badge */}
+                <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-16 w-16 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 border border-slate-100 shadow-2xs">
+                      <QRCodeSVG
+                        value={confirmedBooking?.bookingId || turf?.bookingId || mockBookingId || 'TURFIO-PASS-2026'}
+                        size={54}
+                        level="M"
+                        marginSize={0}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-slate-900">Scan for Pitch Entry</p>
+                      <p className="text-[11px] text-slate-500 font-medium mt-0.5">Show this QR code at venue counter</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-extrabold text-lime-800 bg-lime-100 px-3 py-1 rounded-full shrink-0">
+                    VALID PASS
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Location Directions & Match Day Arrival Guide */}
+            <div className="lg:col-span-6 space-y-4 w-full">
+              {/* Joined Directions & Arrival Tips Card */}
+              <div className="rounded-2xl bg-white p-5 shadow-[0_0_25px_rgba(0,0,0,0.04)] space-y-4">
+                {/* Pitch Location / Directions */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-slate-200">
+                      <img
+                        src={venueImage}
+                        alt={venueTitle}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/image.png';
+                        }}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <h3 className="text-base font-extrabold text-slate-900 truncate leading-snug">
+                        {venueTitle}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium truncate flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{venueLocation}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetTurf = confirmedBooking?.turf || turf;
+                      const targetTurfId = targetTurf?._id || targetTurf?.id;
+                      if (onNavigateRoute) {
+                        onNavigateRoute(targetTurf || { id: targetTurfId });
+                      } else {
+                        const path = `/route${targetTurfId ? `?turfId=${targetTurfId}` : ''}`;
+                        window.history.pushState({}, '', path);
+                        window.location.href = path;
+                      }
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Navigation className="h-3.5 w-3.5 text-lime-700" />
+                    <span>View on Map</span>
+                  </button>
+                </div>
+
+                {/* Separator Line & Arrival Tips */}
+                <div className="border-t border-slate-100 pt-4 space-y-2.5">
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+                    <span>Arrival Tips</span>
+                    <Info className="h-4 w-4 text-slate-400" />
+                  </h3>
+
+                  <ul className="space-y-2 text-xs text-slate-600 font-medium leading-relaxed">
+                    <li className="flex items-start gap-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
+                      <span>Arrive 10–15 minutes early</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
+                      <span>Show the QR code at the counter</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
+                      <span>Bring your team and be ready to play</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
+                      <span>For any issues, contact the venue directly</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Card 3: Separate Contact Venue Card */}
+              <div className="rounded-2xl bg-white p-5 shadow-[0_0_25px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900 leading-snug">Need help with directions?</h4>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Contact arena reception desk</p>
+                </div>
+
+                <a
+                  href="tel:+9779800000000"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <PhoneCall className="h-3.5 w-3.5 text-lime-700" />
+                  <span>Call Venue</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Row 2: Full-Width Payment Information Bento Card */}
+            <div className="lg:col-span-12 rounded-2xl bg-white p-5 sm:p-6 shadow-[0_0_25px_rgba(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                  <Wallet className="h-4.5 w-4.5 text-lime-600" />
+                  <span>Payment Information</span>
+                </h3>
+                <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full ${
+                  formData.paymentType === 'venue'
+                    ? 'bg-amber-100 text-amber-800'
+                    : formData.paymentType === 'split'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-lime-100 text-lime-800'
+                }`}>
+                  {formData.paymentType === 'venue'
+                    ? 'PAY AT VENUE'
+                    : formData.paymentType === 'split'
+                    ? 'SPLIT PAYMENT'
+                    : 'PAID ONLINE'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <p className="text-slate-500 font-medium">Payment Type</p>
+                  <p className="font-extrabold text-sm text-slate-900 mt-0.5 capitalize">
+                    {formData.paymentType === 'venue'
+                      ? 'Pay at Arena Counter'
+                      : formData.paymentType === 'split'
+                      ? 'Split Payment'
+                      : 'Online Payment (eSewa)'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-slate-500 font-medium">Total Pitch Fee</p>
+                  <p className="font-extrabold text-sm text-slate-900 mt-0.5">
+                    NPR {totalAmount.toLocaleString()}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-slate-500 font-medium">Amount Paid Now</p>
+                  <p className="font-extrabold text-sm text-lime-700 mt-0.5">
+                    NPR {formData.paymentType === 'split' ? yourShare.toLocaleString() : totalAmount.toLocaleString()}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-slate-500 font-medium">Payment Status</p>
+                  <p className="font-extrabold text-sm text-slate-900 mt-0.5 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                    <span>{formData.paymentType === 'venue' ? 'Pending Arrival' : 'Verified'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Split Payment Progress & Share Section */}
+              {formData.paymentType === 'split' && (
+                <div className="mt-3 rounded-xl bg-lime-50/70 p-4 space-y-3 border border-lime-100">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-lime-700" />
+                      Squad Payment Progress
+                    </span>
+                    <span className="font-extrabold text-lime-800 bg-lime-200/80 px-2.5 py-0.5 rounded-md">
+                      1 of {splitPayers} Paid
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-lime-500 rounded-full transition-all"
+                      style={{ width: `${Math.round((1 / splitPayers) * 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span>Captain Paid: NPR {yourShare.toLocaleString()}</span>
+                    <span className="font-bold text-amber-700">
+                      NPR {remainingShare.toLocaleString()} Remaining
+                    </span>
+                  </div>
+
+                  <div className="pt-1">
+                    <p className="text-xs font-semibold text-slate-700 mb-1.5">
+                      Share this payment link with teammates (NPR {perTeammateShare} each):
+                    </p>
+                    <div className="flex items-center gap-2 max-w-lg">
+                      <input
+                        type="text"
+                        readOnly
+                        value={paymentShareUrl}
+                        className="flex-1 bg-white rounded-lg px-3 py-2 text-xs text-slate-700 border border-slate-200 select-all outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
+                      >
+                        {copiedLink ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Option to convert Pay at Venue booking to Split Payment */}
+              {formData.paymentType === 'venue' && (
+                <div className="mt-3 rounded-xl bg-slate-50 p-4 space-y-2 text-left border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-lime-600" /> Want to split payment with squad online?
+                    </span>
+                    <button
+                      type="button"
+                      disabled={isConvertingToSplit}
+                      onClick={handleConvertToSplit}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isConvertingToSplit ? 'Converting...' : 'Switch to Split Payment'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Generate a live payment link for your squad without re-booking or losing your slot.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Centered Action Buttons below both cards */}
+          <div className="mt-8 flex justify-center">
+            <div className="flex gap-4 w-full max-w-md">
+              <button
+                type="button"
+                onClick={() => triggerToast('Match pass downloaded as PDF!')}
+                className="flex-1 py-3.5 px-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <Download className="h-4 w-4" />
+                <span>Download Pass</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const shareText = formData.paymentType === 'split'
+                    ? `Hey guys! Let's play at ${venueTitle} on ${selectedDateStr} (${selectedTimeStr} - ${endTimeStr}). Pay your share of NPR ${perTeammateShare} here: ${paymentShareUrl}`
+                    : `Hey! I just booked a slot at ${venueTitle} for ${selectedDateStr} from ${selectedTimeStr} to ${endTimeStr}. See you on the pitch!`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                }}
+                className="flex-1 py-3.5 px-6 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <WhatsAppIcon className="h-4 w-4 fill-white text-white" />
+                <span>WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </main>
+      ) : (
+        <main className="mx-auto max-w-[1440px] px-6 py-8 md:px-14 lg:px-20">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_440px] lg:gap-8 xl:gap-12">
+            {/* ═════════════════════════════════════════════════
+                LEFT COLUMN: STEP CONTENT (WHITE BG, BORDERLESS)
+               ═════════════════════════════════════════════════ */}
+            <div className="space-y-8">
+              {/* ────────────────────────────────────────────────
+                  STEP 2: ADD DETAILS (WHO'S PLAYING + PAYMENT TYPE)
+                 ──────────────────────────────────────────────── */}
+              {currentStep === 2 && (
+                <>
                 {/* ── Section 1: Contact Person (At the Top) ── */}
                 <div className="space-y-6">
                   <div>
@@ -1058,7 +1450,7 @@ export default function BookingCheckoutPage({
                   </div>
 
                   {/* Payment Type Selection Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {paymentMethods.map((method) => {
                       const Icon = method.icon;
                       const isSelected = formData.paymentType === method.id;
@@ -1073,11 +1465,10 @@ export default function BookingCheckoutPage({
                               : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
                           }`}
                         >
-                          <div>
-                            {/* Top row: Icon on left, Badge on right */}
-                            <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
                               <div
-                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors shrink-0 ${
                                   isSelected
                                     ? 'bg-lime-400 text-slate-950 font-black'
                                     : 'bg-white text-slate-600'
@@ -1086,36 +1477,37 @@ export default function BookingCheckoutPage({
                                 <Icon className="h-5 w-5" />
                               </div>
 
-                              {method.badge && (
-                                <span
-                                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                                    isSelected
-                                      ? 'bg-lime-200/80 text-slate-900'
-                                      : 'bg-white text-slate-600'
-                                  }`}
-                                >
-                                  {method.badge}
-                                </span>
-                              )}
-                            </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-extrabold text-[15px] text-slate-900 leading-tight">{method.label}</p>
+                                  <div
+                                    className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                                      isSelected
+                                        ? 'bg-lime-400 text-slate-950'
+                                        : 'bg-slate-200/80 text-transparent'
+                                    }`}
+                                  >
+                                    <Check className="h-3 w-3 stroke-[3]" />
+                                  </div>
+                                </div>
 
-                            {/* Title with Radio Check right behind/after the title */}
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-extrabold text-[15px] text-slate-900">{method.label}</p>
-                              <div
-                                className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                                  isSelected
-                                    ? 'bg-lime-400 text-slate-950'
-                                    : 'bg-slate-200/80 text-transparent'
-                                }`}
-                              >
-                                <Check className="h-3 w-3 stroke-[3]" />
+                                <p className="text-xs text-slate-500 font-medium mt-1 leading-snug whitespace-nowrap">
+                                  {method.description}
+                                </p>
                               </div>
                             </div>
 
-                            <p className="text-xs text-slate-500 font-medium mt-1 leading-snug">
-                              {method.description}
-                            </p>
+                            {method.badge && (
+                              <span
+                                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
+                                  isSelected
+                                    ? 'bg-lime-200/80 text-slate-900'
+                                    : 'bg-white text-slate-600'
+                                }`}
+                              >
+                                {method.badge}
+                              </span>
+                            )}
                           </div>
                         </button>
                       );
@@ -1281,30 +1673,23 @@ export default function BookingCheckoutPage({
                       </label>
                       <p className="text-base font-extrabold text-slate-900">{venueTitle}</p>
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        <span className="text-xs font-black text-lime-950 bg-lime-300 px-2.5 py-0.5 rounded-md shadow-2xs">
+                        <span className="text-xs font-black text-lime-950 bg-lime-300 px-2.5 py-0.5 rounded-md">
                           {courtName}
                         </span>
-                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200/60">
+                        {venueType && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
+                            <Compass className="h-3.5 w-3.5 text-slate-400" />
+                            <span>{venueType}</span>
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
                           {courtDimension}
-                        </span>
-                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200/60">
-                          {courtSurface}
                         </span>
                       </div>
                       <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
                         <MapPin className="h-4 w-4 text-lime-600 shrink-0" />
                         <span>{venueLocation}</span>
                       </p>
-                      <div className="flex items-center gap-2 pt-0.5 text-xs font-bold text-slate-700">
-                        <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md">
-                          <Compass className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{venueType}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md">
-                          <Users className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{venueSize}</span>
-                        </span>
-                      </div>
                     </div>
 
                     {/* Date & Slot Time Card */}
@@ -1870,78 +2255,73 @@ export default function BookingCheckoutPage({
           </div>
         </div>
       </main>
+      )}
 
       {/* ── Fixed Bottom Sticky Action Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] p-3.5 sm:p-4">
-        <div className="mx-auto max-w-[1440px] px-4 md:px-14 lg:px-20 flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 hover:bg-slate-200 px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-700 transition-all active:scale-95 cursor-pointer shadow-2xs"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span>Back</span>
-          </button>
+      {currentStep < 4 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] p-3.5 sm:p-4">
+          <div className="mx-auto max-w-[1440px] px-4 md:px-14 lg:px-20 flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 hover:bg-slate-200 px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-700 transition-all active:scale-95 cursor-pointer shadow-2xs"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back</span>
+            </button>
 
-          {/* Center Summary on desktop */}
-          <div className="hidden sm:flex items-center gap-2.5">
-            <span className="text-sm font-medium text-slate-600">
-              {venueTitle} • {selectedDateStr}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-base font-extrabold text-slate-900">
-              NPR{' '}
-              {formData.paymentType === 'split'
-                ? yourShare.toLocaleString() + ' (Your share)'
-                : totalAmount.toLocaleString()}
-            </span>
+            {/* Center Summary on desktop */}
+            <div className="hidden sm:flex items-center gap-2.5">
+              <span className="text-sm font-medium text-slate-600">
+                {venueTitle} • {selectedDateStr}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-base font-extrabold text-slate-900">
+                NPR{' '}
+                {formData.paymentType === 'split'
+                  ? yourShare.toLocaleString() + ' (Your share)'
+                  : totalAmount.toLocaleString()}
+              </span>
+            </div>
+
+            {/* Primary CTA */}
+            {currentStep === 2 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 px-7 py-3 text-xs sm:text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
+              >
+                <span>Review & Continue to Payment</span>
+                <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!formData.termsAgreed || isProcessingPayment}
+                className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3 text-xs sm:text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
+              >
+                {isProcessingPayment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Redirecting to eSewa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    <span>
+                      {formData.paymentType === 'venue'
+                        ? 'Confirm Booking & Pay at Venue'
+                        : `Pay NPR ${(formData.paymentType === 'split' ? yourShare : totalAmount).toLocaleString()} & Confirm`}
+                    </span>
+                    <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
-
-          {/* Primary CTA */}
-          {currentStep === 2 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 px-7 py-3 text-xs sm:text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
-            >
-              <span>Review & Continue to Payment</span>
-              <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-            </button>
-          ) : currentStep === 3 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!formData.termsAgreed || isProcessingPayment}
-              className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3 text-xs sm:text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
-            >
-              {isProcessingPayment ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Redirecting to eSewa...</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4" />
-                  <span>
-                    {formData.paymentType === 'venue'
-                      ? 'Confirm Booking & Pay at Venue'
-                      : `Pay NPR ${(formData.paymentType === 'split' ? yourShare : totalAmount).toLocaleString()} & Confirm`}
-                  </span>
-                  <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onHome}
-              className="inline-flex items-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 px-7 py-3 text-xs sm:text-sm font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
-            >
-              <span>Browse More Turfs</span>
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* ── Footer ── */}
       <Footer />
@@ -1989,7 +2369,7 @@ export function PublicSplitPaymentPage({ bookingId, onHome }) {
       }
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Payment initiation failed. Please try again.');
+      showToast(err.message || 'Payment initiation failed. Please try again.', 'error');
       setIsProcessing(false);
     }
   };

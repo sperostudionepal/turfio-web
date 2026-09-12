@@ -35,26 +35,28 @@ export const authService = {
 
   /**
    * Login player/customer (Role: user)
-   * @param {{ email, password }} data
+   * @param {{ email, password, redirectTo }} data
    */
   async login(data) {
     const response = await apiClient.post('/auth/login', {
       email: data.email,
       password: data.password,
+      ...(data.redirectTo ? { redirectTo: data.redirectTo } : {}),
     });
-    return response; // { success: true, message, data: { user, token } }
+    return response; // { success: true, message, data: { user, token, redirectTo } }
   },
 
   /**
    * Login arena owner (Role: admin)
-   * @param {{ email, password }} data
+   * @param {{ email, password, redirectTo }} data
    */
   async loginAdmin(data) {
     const response = await apiClient.post('/admin/auth/login', {
       email: data.email,
       password: data.password,
+      ...(data.redirectTo ? { redirectTo: data.redirectTo } : {}),
     });
-    return response; // { success: true, message, data: { user, token } }
+    return response; // { success: true, message, data: { user, token, redirectTo } }
   },
 
   /**
@@ -72,9 +74,21 @@ export const authService = {
   /**
    * Google Login with ID token
    * @param {string} idToken
+   * @param {string} [redirectTo]
    */
-  async googleLogin(idToken) {
-    const response = await apiClient.post('/auth/google', { idToken });
+  async googleLogin(idToken, redirectTo) {
+    const response = await apiClient.post('/auth/google', {
+      idToken,
+      ...(redirectTo ? { redirectTo } : {}),
+    });
+    return response;
+  },
+
+  /**
+   * Dismiss the turf approval banner for the logged in user
+   */
+  async dismissTurfBanner() {
+    const response = await apiClient.post('/auth/dismiss-turf-banner');
     return response;
   },
 

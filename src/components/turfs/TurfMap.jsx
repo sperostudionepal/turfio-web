@@ -402,12 +402,14 @@ export default function TurfMap({
       }
     };
 
-    // Listen to map movements to emit viewport bounds
     map.on('load', () => {
       registerCustomIcons(map);
       emitBounds();
     });
     map.on('styledata', () => {
+      registerCustomIcons(map);
+    });
+    map.on('styleimagemissing', () => {
       registerCustomIcons(map);
     });
     map.on('moveend', emitBounds);
@@ -418,7 +420,9 @@ export default function TurfMap({
       const errStatus = e?.error?.status || e?.status;
       if (errStatus === 401 || errStatus === 403 || errStatus === 404 || e?.error?.message?.includes('403') || e?.error?.message?.includes('401')) {
         console.warn('Map style restricted or unavailable, switching to OSM fallback:', e);
-        map.setStyle(mapStyleMode === 'satellite' ? FALLBACK_SATELLITE_STYLE : FALLBACK_OSM_STYLE);
+        if (map.isStyleLoaded()) {
+          map.setStyle(mapStyleMode === 'satellite' ? FALLBACK_SATELLITE_STYLE : FALLBACK_OSM_STYLE);
+        }
       }
     });
 
@@ -441,11 +445,22 @@ export default function TurfMap({
     };
   }, []);
 
+  const activeStyleModeRef = useRef(mapStyleMode);
   // Update map style when style mode changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setStyle(getActiveStyle(mapStyleMode));
+    if (activeStyleModeRef.current === mapStyleMode) return;
+    activeStyleModeRef.current = mapStyleMode;
+
+    const targetStyle = getActiveStyle(mapStyleMode);
+    if (!map.isStyleLoaded()) {
+      map.once('styledata', () => {
+        map.setStyle(targetStyle);
+      });
+    } else {
+      map.setStyle(targetStyle);
+    }
   }, [mapStyleMode, getActiveStyle]);
 
   const markersRef = useRef(new Map());

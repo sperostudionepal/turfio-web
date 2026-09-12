@@ -348,6 +348,7 @@ export default function TurfListingPage({
   onLogout,
   onListTurf,
   onHome,
+  onDashboard,
   onSelectTurf,
   onNavigateRoute,
 }) {
@@ -592,6 +593,7 @@ export default function TurfListingPage({
           onLogout={onLogout}
           onListTurf={onListTurf}
           onHome={onHome}
+          onDashboard={onDashboard}
           onToggleSearch={() => setShowSearchBar((prev) => !prev)}
           searchActive={showSearchBar}
         />

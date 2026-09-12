@@ -73,6 +73,7 @@ export default function ApplicationStatusPage({
   onHome,
   onFindTurfs,
   onListTurf,
+  onDashboard,
 }) {
   const [token, setToken] = useState('');
   const [inputToken, setInputToken] = useState('');
@@ -197,6 +198,7 @@ export default function ApplicationStatusPage({
         onHome={onHome}
         onFindTurfs={onFindTurfs}
         onListTurf={onListTurf}
+        onDashboard={onDashboard}
       />
 
       {/* Main Page Content */}

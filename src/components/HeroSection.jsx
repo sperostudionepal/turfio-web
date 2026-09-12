@@ -50,6 +50,10 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const hasAdminAccess = user && (user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin);
+  const isTurfBannerActive = user && user.isTurfAdmin && !user.turfApprovalBannerSeen;
+  const hasTopbar = !hasAdminAccess || isTurfBannerActive;
+
   return (
     <div className="bg-white">
       <Navbar
@@ -80,7 +84,11 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
           </picture>
         </div>
 
-        <div className="relative mx-auto max-w-[1440px] px-6 pt-12 pb-10 md:px-14 md:pt-16 md:pb-12 lg:px-20 lg:pt-20 lg:pb-16">
+        <div className={`relative mx-auto max-w-[1440px] px-6 pb-10 md:px-14 md:pb-12 lg:px-20 lg:pb-16 transition-all ${
+          hasTopbar
+            ? 'pt-12 md:pt-16 lg:pt-20'
+            : 'pt-[82px]'
+        }`}>
           <div className="grid items-stretch gap-3 lg:grid-cols-[1fr_0.78fr] lg:gap-6 xl:gap-8">
             {/* Left column */}
             <div className="max-w-[700px]">

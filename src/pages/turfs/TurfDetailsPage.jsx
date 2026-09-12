@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -47,6 +48,7 @@ import CustomDropdown from '../../components/common/CustomDropdown';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
 import turfService from '../../services/turfService';
+import { useToast } from '../../components/common/Toast';
 
 /* ─── Amenity Icon Mapping ─── */
 const amenityIconMap = {
@@ -309,6 +311,7 @@ export default function TurfDetailsPage({
   onBack,
   onFindTurfs,
   onListTurf,
+  onDashboard,
   onBookNow,
   onViewTurfDetails,
   onNavigateRoute,
@@ -326,7 +329,7 @@ export default function TurfDetailsPage({
 
   // Favorites & Social Feedback
   const [isFavorited, setIsFavorited] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const { showToast } = useToast();
 
   // Booking Card State
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -438,11 +441,19 @@ export default function TurfDetailsPage({
     }
 
     if (availabilityData?.slots && availabilityData.slots.length > 0) {
-      return availabilityData.slots.map((s) => ({
-        value: s.time,
-        label: s.isAvailable ? s.time : `${s.time} (Taken)`,
-        disabled: !s.isAvailable,
-      }));
+      return availabilityData.slots.map((s) => {
+        let labelSuffix = '';
+        if (!s.isAvailable) {
+          if (s.state === 'past') labelSuffix = ' (Passed)';
+          else if (s.state === 'held') labelSuffix = ' (Held)';
+          else labelSuffix = ' (Taken)';
+        }
+        return {
+          value: s.time,
+          label: s.isAvailable ? s.time : `${s.time}${labelSuffix}`,
+          disabled: !s.isAvailable,
+        };
+      });
     }
 
     // Fallback if network is delayed: compute from turf openingHours
@@ -530,10 +541,19 @@ export default function TurfDetailsPage({
     return `${String(endHour12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
   }, [selectedTimeSlot, duration]);
 
-  // Toast Notification helper
-  const triggerToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+  // Toast Notification helper mapped to global ToastProvider
+  const triggerToast = (msg, type) => {
+    let toastType = type;
+    if (!toastType) {
+      if (msg.includes('Please') || msg.includes('passed') || msg.includes('not found') || msg.includes('conflict')) {
+        toastType = 'error';
+      } else if (msg.includes('Saved') || msg.includes('Selected') || msg.includes('copied') || msg.includes('Thank')) {
+        toastType = 'success';
+      } else {
+        toastType = 'info';
+      }
+    }
+    showToast(msg, toastType);
   };
 
   // Atomic Slot Hold creation before navigating to booking checkout
@@ -575,8 +595,14 @@ export default function TurfDetailsPage({
       });
 
       const holdData = holdRes?.data || holdRes;
+      if (holdData?.holdToken) {
+        localStorage.setItem('turfio_guest_hold_token', holdData.holdToken);
+      }
+      window.dispatchEvent(new Event('turfio_hold_created'));
 
       // Proceed to checkout with real hold data and selected court
+
+
       onBookNow?.({
         ...turf,
         selectedCourt,
@@ -726,15 +752,8 @@ export default function TurfDetailsPage({
         onListTurf={onListTurf}
         onHome={onHome}
         onFindTurfs={onFindTurfs}
+        onDashboard={onDashboard}
       />
-
-      {/* ─── FLOATING TOAST NOTIFICATION ─── */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-[9999] flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-2xl transition-all animate-slide-in">
-          <Sparkles className="h-4 w-4 text-lime-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* ─── BREADCRUMB (ABOVE GALLERY) ─── */}
       <div className="mx-auto max-w-[1440px] px-6 pt-6 pb-3.5 md:px-14 lg:px-20">
@@ -764,7 +783,7 @@ export default function TurfDetailsPage({
       {/* ─── SECTION 1: 5-IMAGE SHOWCASE GRID (NO BORDER) ─── */}
       <section className="mx-auto max-w-[1440px] px-6 pb-2 md:px-14 lg:px-20">
         {/* Desktop 5-Photo Mosaic Grid */}
-        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[320px] lg:h-[370px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
+        <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[380px] lg:h-[430px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
           {/* Main Hero Shot */}
           <div
             onClick={() => openLightbox(0)}
@@ -775,42 +794,45 @@ export default function TurfDetailsPage({
               alt={`${turf.title} main pitch`}
               className="h-full w-full object-cover transition-opacity duration-300"
             />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/90 text-slate-950 font-bold px-4 py-2 text-xs shadow-md backdrop-blur-xs">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+              <span className="text-sm font-bold text-white flex items-center gap-1.5">
                 <Maximize2 className="h-4 w-4" /> View full resolution
               </span>
             </div>
           </div>
 
-          {/* Secondary Grid Shots */}
-          {gallery.slice(1, 5).map((img, idx) => (
-            <div
-              key={idx}
-              onClick={() => openLightbox(idx + 1)}
-              className="relative group overflow-hidden bg-slate-900 cursor-pointer"
-            >
-              <img
-                src={img}
-                alt={`${turf.title} detail ${idx + 1}`}
-                className="h-full w-full object-cover transition-opacity duration-300"
-              />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          ))}
+          {/* Sub Images 1 to 4 */}
+          {[1, 2, 3, 4].map((index) => {
+            const imgSrc = gallery[index] || gallery[0];
+            return (
+              <div
+                key={index}
+                onClick={() => openLightbox(index)}
+                className="relative group overflow-hidden bg-slate-900 cursor-pointer"
+              >
+                <img
+                  src={imgSrc}
+                  alt={`${turf.title} view ${index + 1}`}
+                  className="h-full w-full object-cover transition-opacity duration-300"
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            );
+          })}
 
-          {/* Show All Photos Floating Badge */}
+          {/* "Show All Photos" Floating Trigger Badge */}
           <button
             type="button"
-            onClick={() => setIsLightboxOpen(true)}
-            className="absolute bottom-4 right-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 text-slate-900 text-xs font-extrabold px-4 py-2.5 shadow-md hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-sm border border-slate-200/60"
+            onClick={() => openLightbox(0)}
+            className="absolute bottom-5 right-5 flex items-center gap-2 rounded-lg bg-white/95 backdrop-blur-md px-3.5 py-2 text-xs font-semibold text-slate-900 shadow-md border border-slate-200/60 transition-all hover:bg-white active:scale-95 cursor-pointer z-10"
           >
             <Grip className="h-3.5 w-3.5 text-slate-900" />
-            Show all {gallery.length} photos
+            <span>Show all {gallery.length} photos</span>
           </button>
         </div>
 
         {/* Mobile Swipeable Carousel */}
-        <div className="md:hidden relative aspect-[16/8.5] w-full overflow-hidden rounded-2xl bg-slate-900 shadow-md">
+        <div className="md:hidden relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-slate-900 shadow-md">
           <img
             src={gallery[activeImageIndex] || gallery[0]}
             alt={`${turf.title} mobile preview`}
@@ -1028,25 +1050,22 @@ export default function TurfDetailsPage({
                             triggerToast(`Selected ${court.name} (NPR ${courtRate.toLocaleString()}/hr)`);
                           }
                         }}
-                        className={`group relative rounded-2xl p-4 transition-all border cursor-pointer ${
+                        className={`group relative rounded-2xl p-3 transition-all border cursor-pointer ${
                           isSelected
-                            ? 'border-lime-500 bg-lime-50/40 ring-2 ring-lime-400/80 shadow-md'
+                            ? 'border-lime-500 bg-lime-50/40 shadow-xs'
                             : isMaintenance
                             ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
                             : 'border-slate-200 bg-white hover:border-lime-300 hover:shadow-xs'
                         }`}
                       >
-                        <div className="flex gap-3.5">
+                        <div className="flex gap-3">
                           {/* Court Photo Thumbnail */}
-                          <div className="relative h-24 w-28 shrink-0 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
+                          <div className="relative h-20 w-24 shrink-0 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
                             <img
                               src={courtImg}
                               alt={court.name}
                               className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
-                            <span className="absolute top-1.5 left-1.5 rounded-md bg-black/75 backdrop-blur-xs px-1.5 py-0.5 text-[10px] font-black text-white tracking-wider">
-                              #{court.courtNumber || index + 1}
-                            </span>
                           </div>
 
                           {/* Court Pitch Specs */}
@@ -1062,14 +1081,10 @@ export default function TurfDetailsPage({
                               )}
                             </div>
 
-                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
-                                <Maximize2 className="h-3 w-3 text-slate-500" />
-                                {court.dimension || '25m x 15m (5v5)'}
-                              </span>
-                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
-                                <Layers className="h-3 w-3 text-emerald-600" />
-                                {court.surface || 'FIFA Synthetic'}
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-500">
+                              <span className="inline-flex items-center gap-1">
+                                <Maximize2 className="h-3 w-3 text-slate-400" />
+                                {court.dimension || '25m x 15m (Standard 5v5)'}
                               </span>
                             </div>
 
@@ -1353,33 +1368,6 @@ export default function TurfDetailsPage({
                   </div>
                 </div>
 
-                {/* Selected Pitch Info Pill */}
-                {selectedCourt && (
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-xl bg-lime-400 text-slate-950 font-black flex items-center justify-center text-xs shrink-0 shadow-xs">
-                        #{selectedCourt.courtNumber || 1}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-extrabold text-slate-900 text-xs tracking-tight truncate">
-                          {selectedCourt.name}
-                        </p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">
-                          {selectedCourt.dimension || 'Standard 5v5'} • {selectedCourt.surface || 'Synthetic Turf'}
-                        </p>
-                      </div>
-                    </div>
-                    {courts.length > 1 && (
-                      <a
-                        href="#courts"
-                        className="text-[11px] font-bold text-lime-700 hover:text-lime-800 bg-lime-100 hover:bg-lime-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors"
-                      >
-                        Change
-                      </a>
-                    )}
-                  </div>
-                )}
-
                 {/* ── COMPOUND SEGMENTED BOOKING INPUTS (AIRBNB STYLE) ── */}
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-visible divide-y divide-slate-200 shadow-2xs">
                   {/* Top Row: Match Date (Full Width) */}
@@ -1427,7 +1415,7 @@ export default function TurfDetailsPage({
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
                   <div className="flex justify-between">
                     <span>
-                      {selectedCourt?.name || 'Pitch'} (NPR {baseRateNumeric.toLocaleString()}) × {duration} {duration === 1 ? 'hr' : 'hrs'}
+                      NPR {baseRateNumeric.toLocaleString()} × {duration} {duration === 1 ? 'hr' : 'hrs'}
                     </span>
                     <span className="font-bold text-slate-900">
                       NPR {subtotal.toLocaleString()}
@@ -1472,25 +1460,13 @@ export default function TurfDetailsPage({
                     onClick={handleBookSlot}
                     className="w-full rounded-full bg-lime-400 hover:bg-lime-500 py-3.5 text-base font-black text-slate-950 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>
-                      {isSelectedDateHoliday
-                        ? 'Venue Closed on this Date'
-                        : isHoldingSlot
-                        ? 'Reserving Pitch...'
-                        : `Book ${selectedCourt?.name || 'This Slot'}`}
-                    </span>
+                    <span>{isSelectedDateHoliday ? 'Venue Closed on this Date' : isHoldingSlot ? 'Reserving...' : 'Book This Slot'}</span>
                     <ArrowRight className="h-5 w-5" />
                   </button>
                   <p className="text-center text-xs font-medium text-slate-400">
                     You won't be charged yet
                   </p>
                 </div>
-              </div>
-
-              {/* Match Window preview badge outside card below */}
-              <div className="rounded-2xl bg-slate-100/90 py-3 px-4 text-center text-xs font-medium text-slate-600">
-                Match Window: <span className="font-bold text-slate-900">{selectedTimeSlot}</span> →{' '}
-                <span className="font-bold text-lime-700">{endTimeStr}</span> ({duration}h)
               </div>
             </div>
           </div>

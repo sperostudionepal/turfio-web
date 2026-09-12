@@ -219,3 +219,18 @@ select {
 .animate-signal-down {
   animation: bounceDownSignal 0.8s ease-in-out infinite;
 }
+
+@keyframes marqueeContinuous {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-continuous {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marqueeContinuous 10s linear infinite;
+}

@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, ChevronDown, ChevronRight, Plus, Settings, LogOut, User, Menu, X, Layers } from 'lucide-react';
+import { Search, Bell, ChevronDown, ChevronRight, Plus, Settings, LogOut, User, Menu, X, Layers, CheckCircle2, Circle, Image as ImageIcon, Building2, Sparkles, ArrowRight } from 'lucide-react';
 
-function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPlayer, onToggleMobileMenu, isMobileMenuOpen }) {
+function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPlayer, onToggleMobileMenu, isMobileMenuOpen, setActiveTab }) {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSetupGuideOpen, setIsSetupGuideOpen] = useState(false);
+
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
+  const setupGuideRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -16,12 +19,39 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
         setIsNotificationsOpen(false);
       }
+      if (setupGuideRef.current && !setupGuideRef.current.contains(event.target)) {
+        setIsSetupGuideOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Compute Setup Guide checklist status
+  const turfImages = venue?.images || venue?.gallery || [];
+  const imageCount = turfImages.length;
+  const imagesDone = imageCount >= 6;
+
+  const courts = Array.isArray(venue?.courts) ? venue.courts : [];
+  const courtCount = courts.length;
+  const configuredCourtCount = courts.filter((c) => c.isConfigured === true).length;
+  const courtsDone = courtCount > 0 && configuredCourtCount === courtCount;
+
+  const step1Progress = imagesDone ? 50 : Math.round((Math.min(6, imageCount) / 6) * 50);
+  const step2Progress = courtsDone ? 50 : (courtCount > 0 ? Math.round((configuredCourtCount / courtCount) * 50) : 0);
+  const progressPercent = Math.min(100, step1Progress + step2Progress);
+  const allDone = imagesDone && courtsDone;
+
+  const strokeDashoffset = 56.5 - (56.5 * progressPercent) / 100;
+
+  const handleSetupNav = (tabName) => {
+    setIsSetupGuideOpen(false);
+    if (setActiveTab) {
+      setActiveTab(tabName);
+    }
+  };
 
   return (
     <header className="w-full bg-white shadow-[0_0_25px_rgba(0,0,0,0.05)] border-b border-slate-100 select-none relative z-40">
@@ -288,41 +318,142 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
             )}
           </div>
 
-          {/* Setup Guide Pill Button (Desktop only) */}
-          <div className="relative hidden md:block pl-1">
+          {/* Setup Guide Pill Button & Dropdown */}
+          <div ref={setupGuideRef} className="relative hidden md:block pl-1">
             <button
               type="button"
-              className="flex h-9 items-center gap-2.5 px-4 rounded-full bg-slate-100/90 hover:bg-slate-200/70 text-slate-800 transition-colors cursor-pointer shrink-0"
+              onClick={() => setIsSetupGuideOpen(!isSetupGuideOpen)}
+              className={`flex h-9 items-center gap-2.5 px-4 rounded-full transition-all cursor-pointer shrink-0 border ${
+                allDone
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/90'
+                  : 'bg-slate-100/90 hover:bg-slate-200/70 text-slate-800 border-transparent'
+              }`}
             >
-              <span className="text-xs sm:text-sm font-semibold tracking-tight text-slate-800">
-                Setup guide
+              <span className="text-xs sm:text-sm font-bold tracking-tight">
+                {allDone ? 'Setup complete' : 'Setup guide'}
               </span>
               <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5 -rotate-90 transform" viewBox="0 0 24 24">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    className="text-slate-200/80"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    className="text-lime-500"
-                    strokeDasharray="56.5"
-                    strokeDashoffset="18"
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
-                </svg>
+                {allDone ? (
+                  <CheckCircle2 size={18} className="text-emerald-600" />
+                ) : (
+                  <svg className="w-5 h-5 -rotate-90 transform" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className="text-slate-200/80"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className="text-lime-500"
+                      strokeDasharray="56.5"
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      fill="transparent"
+                    />
+                  </svg>
+                )}
               </div>
             </button>
+
+            {/* Setup Guide Popover Dropdown Panel */}
+            {isSetupGuideOpen && (
+              <div className="absolute right-0 mt-2.5 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-lime-500" size={18} />
+                    <span className="text-sm font-extrabold text-slate-900">Turf Setup Checklist</span>
+                  </div>
+                  <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
+                    allDone ? 'bg-emerald-100 text-emerald-800' : 'bg-lime-100 text-slate-900'
+                  }`}>
+                    {progressPercent}% Complete
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+                  <div
+                    className="bg-lime-500 h-full transition-all duration-300 rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+
+                {/* Checklist Items */}
+                <div className="mt-3.5 space-y-2.5">
+                  {/* Step 1: Upload Turf Images */}
+                  <div
+                    onClick={() => handleSetupNav('Turf Images')}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 group ${
+                      imagesDone
+                        ? 'bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50'
+                        : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      {imagesDone ? (
+                        <CheckCircle2 size={18} className="text-emerald-600" />
+                      ) : (
+                        <ImageIcon size={18} className="text-amber-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-xs font-bold text-slate-900">1. Upload Turf Images</p>
+                        <ArrowRight size={13} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        {imagesDone
+                          ? `${imageCount} venue photo${imageCount > 1 ? 's' : ''} uploaded.`
+                          : `Upload at least 6 photos of your venue (${imageCount}/6 uploaded).`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Configure Courts */}
+                  <div
+                    onClick={() => handleSetupNav('Courts')}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 group ${
+                      courtsDone
+                        ? 'bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50'
+                        : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      {courtsDone ? (
+                        <CheckCircle2 size={18} className="text-emerald-600" />
+                      ) : (
+                        <Building2 size={18} className="text-amber-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-xs font-bold text-slate-900">2. Configure Pitch Details</p>
+                        <ArrowRight size={13} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        {courtsDone
+                          ? `All ${courtCount} court${courtCount > 1 ? 's' : ''} fully configured.`
+                          : `Review pricing, surface & dimensions (${configuredCourtCount}/${courtCount || 1} configured).`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 text-[10px] text-slate-400 text-center font-medium">
+                  {allDone
+                    ? '🎉 Setup complete! Your venue is fully operational.'
+                    : 'Click any item above to navigate directly to its configuration page.'}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import RecentBookingsTable from '../../components/dashboard/RecentBookingsTable'
 import RecentPaymentsTable from '../../components/dashboard/RecentPaymentsTable';
 import RevenueSummaryDonut from '../../components/dashboard/RevenueSummaryDonut';
 import CourtsPage from '../turfs/CourtsPage';
+import TurfImagesPage from '../turfs/TurfImagesPage';
 import BookingsPage from '../bookings/BookingsPage';
 import CustomersPage from '../customers/CustomersPage';
 import PaymentsPage from '../payments/PaymentsPage';
@@ -49,6 +50,7 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
   }, [user?._id, user?.id]);
 
   if (activeTab === 'Courts') return <CourtsPage user={user} venue={venue} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />;
+  if (activeTab === 'Turf Images') return <TurfImagesPage user={user} venue={venue} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />;
   if (activeTab === 'Bookings') return <BookingsPage user={user} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} ownerBookings={ownerBookings} onSwitchToPlayer={onSwitchToPlayer} />;
   if (activeTab === 'Customers') return <CustomersPage user={user} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />;
   if (activeTab === 'Payments') return <PaymentsPage activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />;
@@ -72,6 +74,7 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
       <TopBar
         user={user}
         venue={venue}
+        setActiveTab={setActiveTab}
         onLogout={onLogout}
         onSwitchToPlayer={onSwitchToPlayer}
         isMobileMenuOpen={isMobileMenuOpen}

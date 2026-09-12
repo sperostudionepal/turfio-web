@@ -49,12 +49,12 @@ export const useAuthStore = create((set) => ({
   /**
    * Player / Customer Login Action (Role: user)
    */
-  login: async ({ email, password }) => {
+  login: async ({ email, password, redirectTo }) => {
     try {
       set({ isLoading: true, error: null });
       
-      const response = await authService.login({ email, password });
-      const { user, token, mfaRequired, tempToken } = response.data || {};
+      const response = await authService.login({ email, password, redirectTo });
+      const { user, token, mfaRequired, tempToken, redirectTo: resRedirectTo } = response.data || {};
 
       if (mfaRequired) {
         set({ isLoading: false, error: null });
@@ -73,7 +73,7 @@ export const useAuthStore = create((set) => ({
         error: null,
       });
 
-      return { success: true, user, token };
+      return { success: true, user, token, redirectTo: resRedirectTo || redirectTo };
     } catch (err) {
       set({ isLoading: false, error: err.message });
       return { success: false, error: err.message };
@@ -83,12 +83,12 @@ export const useAuthStore = create((set) => ({
   /**
    * Arena Owner Login Action (Role: admin)
    */
-  loginAdmin: async ({ email, password }) => {
+  loginAdmin: async ({ email, password, redirectTo }) => {
     try {
       set({ isLoading: true, error: null });
       
-      const response = await authService.loginAdmin({ email, password });
-      const { user, token } = response.data || {};
+      const response = await authService.loginAdmin({ email, password, redirectTo });
+      const { user, token, redirectTo: resRedirectTo } = response.data || {};
 
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -102,7 +102,7 @@ export const useAuthStore = create((set) => ({
         error: null,
       });
 
-      return { success: true, user, token };
+      return { success: true, user, token, redirectTo: resRedirectTo || redirectTo };
     } catch (err) {
       set({ isLoading: false, error: err.message });
       return { success: false, error: err.message };
@@ -199,11 +199,11 @@ export const useAuthStore = create((set) => ({
   /**
    * Google Login Action with ID token
    */
-  googleLogin: async (idToken) => {
+  googleLogin: async (idToken, redirectTo) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await authService.googleLogin(idToken);
-      const { user, token } = response.data || {};
+      const response = await authService.googleLogin(idToken, redirectTo);
+      const { user, token, redirectTo: resRedirectTo } = response.data || {};
 
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -217,7 +217,7 @@ export const useAuthStore = create((set) => ({
         error: null,
       });
 
-      return { success: true, user, token };
+      return { success: true, user, token, redirectTo: resRedirectTo || redirectTo };
     } catch (err) {
       set({ isLoading: false, error: err.message });
       return { success: false, error: err.message };
@@ -379,6 +379,21 @@ export const useAuthStore = create((set) => ({
       return { success: true, user, token };
     } catch (err) {
       set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Dismiss the turf approval notification banner for the current user
+   */
+  dismissTurfBanner: async () => {
+    try {
+      await authService.dismissTurfBanner();
+      set((state) => ({
+        user: state.user ? { ...state.user, turfApprovalBannerSeen: true } : null,
+      }));
+      return { success: true };
+    } catch (err) {
       return { success: false, error: err.message };
     }
   },
