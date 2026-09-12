@@ -562,15 +562,6 @@ export default function TurfDetailsPage({
       return;
     }
 
-    // A hold reserves the slot for a specific player, so the server requires a
-    // signed-in user. Ask guests to log in here rather than letting the hold
-    // fail with "Access denied".
-    if (!user) {
-      triggerToast('Please log in to book this slot');
-      onLogin?.();
-      return;
-    }
-
     try {
       setIsHoldingSlot(true);
 
@@ -810,11 +801,11 @@ export default function TurfDetailsPage({
           {/* Show All Photos Floating Badge */}
           <button
             type="button"
-            onClick={() => openLightbox(0)}
+            onClick={() => setIsLightboxOpen(true)}
             className="absolute bottom-4 right-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 text-slate-900 text-xs font-extrabold px-4 py-2.5 shadow-md hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-sm border border-slate-200/60"
           >
             <Grip className="h-3.5 w-3.5 text-slate-900" />
-            Show all {gallery.length} {gallery.length === 1 ? 'photo' : 'photos'}
+            Show all {gallery.length} photos
           </button>
         </div>
 

@@ -203,13 +203,7 @@ export const useAuthStore = create((set) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authService.googleLogin(idToken);
-      const { user, token, mfaRequired, tempToken } = response.data || {};
-
-      // A 2FA account isn't signed in until its code is entered.
-      if (mfaRequired) {
-        set({ isLoading: false, error: null });
-        return { success: true, mfaRequired: true, tempToken };
-      }
+      const { user, token } = response.data || {};
 
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);

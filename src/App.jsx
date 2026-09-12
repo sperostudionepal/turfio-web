@@ -49,8 +49,6 @@ function App() {
   } = useAuthStore();
 
   const [authMode, setAuthMode] = useState(null);
-  // Half-way token from a Google sign-in on a 2FA account; opens the code step.
-  const [pendingMfaToken, setPendingMfaToken] = useState(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [isPlayerMode, setIsPlayerMode] = useState(false);
@@ -324,16 +322,6 @@ function App() {
 
       const result = await googleLogin(idToken);
 
-      // Google verified who you are, but a 2FA account still needs its code:
-      // open the login screen on the code step with the half-way token.
-      if (result.success && result.mfaRequired) {
-        cancelOneTap();
-        setPendingMfaToken(result.tempToken);
-        window.history.pushState({}, '', '/login');
-        setAuthMode('login');
-        return { success: true, mfaRequired: true };
-      }
-
       if (result.success) {
         // Close login/signup screens
         setAuthMode(null);
@@ -367,17 +355,6 @@ function App() {
    */
   const handleLoginSuccess = async (credentials) => {
     const result = await login(credentials);
-
-    // A 2FA account isn't signed in yet: keep the login screen open and hand the
-    // half-way token back so it can switch to the code step. This used to close
-    // the screen and drop the token, so 2FA users could never finish logging in.
-    if (result.success && result.mfaRequired) {
-      return {
-        success: true,
-        mfaRequired: true,
-        tempToken: result.tempToken,
-      };
-    }
 
     if (result.success) {
       setAuthMode(null);
@@ -694,7 +671,6 @@ function App() {
   const handleCloseAuth = () => {
     window.history.pushState({}, '', '/');
     setAuthMode(null);
-    setPendingMfaToken(null);
   };
 
   const handleNavigateRoute = (turf) => {
@@ -715,13 +691,9 @@ function App() {
     if (authMode === 'login') {
       return (
         <LoginPage
-          // Remount when a Google 2FA token arrives, so the page opens on the
-          // code step even if it was already on screen.
-          key={pendingMfaToken || 'login'}
-          pendingMfaToken={pendingMfaToken}
           onLogin={async (credentials) => {
             const res = await handleLoginSuccess(credentials);
-            if (res.success && !res.mfaRequired) {
+            if (res.success) {
               window.history.pushState({}, '', '/');
             }
             return res;
