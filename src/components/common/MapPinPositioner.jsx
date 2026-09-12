@@ -18,6 +18,7 @@ import {
   getTurfioLightStyle,
   FALLBACK_OSM_STYLE,
 } from '../../config/mapConfig';
+import { useToast } from './Toast';
 
 export default function MapPinPositioner({
   initialPosition = { lat: 27.648385, lng: 85.338022 },
@@ -25,6 +26,7 @@ export default function MapPinPositioner({
   onLocationConfirmed,
   onCancel,
 }) {
+  const { showToast } = useToast();
   const mapContainerRef = useRef(null);
   const wrapperRef = useRef(null);
   const mapRef = useRef(null);
@@ -306,6 +308,9 @@ export default function MapPinPositioner({
     map.on('styledata', () => {
       registerCustomIcons(map);
     });
+    map.on('styleimagemissing', () => {
+      registerCustomIcons(map);
+    });
 
     map.on('dragstart', () => setIsDragging(true));
     map.on('movestart', () => setIsDragging(true));
@@ -400,7 +405,7 @@ export default function MapPinPositioner({
 
   const handleGPSFetch = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      showToast('Geolocation is not supported by your browser.', 'error');
       return;
     }
     setGpsLoading(true);
@@ -414,7 +419,7 @@ export default function MapPinPositioner({
       },
       (error) => {
         setGpsLoading(false);
-        alert(`Failed to fetch location: ${error.message}`);
+        showToast(`Failed to fetch location: ${error.message}`, 'error');
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );

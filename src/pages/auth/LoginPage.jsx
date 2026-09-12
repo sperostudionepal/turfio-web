@@ -47,7 +47,9 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
 
     try {
       if (onLogin) {
-        const res = await onLogin({ email, password });
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectTo = searchParams.get('redirectTo') || undefined;
+        const res = await onLogin({ email, password, redirectTo });
         if (res && res.mfaRequired) {
           setMfaRequired(true);
           setTempToken(res.tempToken);

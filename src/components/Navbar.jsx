@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell, CheckCircle2, ShieldAlert, ArrowRight, Globe, Clock, HelpCircle } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell, CheckCircle2, ShieldAlert, ArrowRight, Globe, Clock, HelpCircle, LayoutDashboard } from 'lucide-react';
+import useAuthStore from '../store/useAuthStore';
 
 function getDisplayName(user) {
   if (!user) return '';
@@ -23,11 +24,13 @@ export default function Navbar({
   onProfile,
   isInitializing = false,
 }) {
+  const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const [selectedLang, setSelectedLang] = useState({ code: 'EN', label: 'English' });
 
   const profileRef = useRef(null);
@@ -69,67 +72,101 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)]">
-      {/* Top Info Bar — always visible, sticky */}
-      <div
-        className="border-b border-lime-100/40 bg-lime-50"
-      >
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 md:px-14 lg:px-20">
-          {/* Left — announcement */}
-          <div className="flex items-center gap-2 text-[13px] font-medium text-slate-900">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-lime-500" />
-            Book faster with our new AI Match Assistant
-            <a href="#" className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors">
-              Learn more <ArrowRight className="h-3 w-3" />
-            </a>
-          </div>
-
-          {/* Right — links + language */}
-          <div className="hidden sm:flex items-center gap-4 text-[13px] font-medium text-slate-900">
-            <button onClick={onListTurf} className="font-bold text-lime-500 hover:text-lime-600 transition-colors cursor-pointer">
-              List Your Turf
-            </button>
-            <span className="text-slate-300">|</span>
-            <a href="#" className="font-bold text-slate-900 hover:text-slate-800 transition-colors flex items-center gap-1.5">
-              <HelpCircle className="h-3.5 w-3.5 text-lime-500" />
-              Help Center
-            </a>
-            <span className="text-slate-300">|</span>
-            {/* Language dropdown */}
-            <div className="relative" ref={langRef}>
+      {/* Contextual Top Banner: Turf Approval Banner for approved venue admins OR Marketing Topbar for non-logged-in visitors */}
+      {user && user.isTurfAdmin && !user.turfApprovalBannerSeen ? (
+        /* Turf Approval Notification Banner */
+        <div className="border-b border-lime-100/40 bg-lime-50">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 md:px-14 lg:px-20 text-[13px] font-medium text-slate-900">
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-base">🎉</span>
+              <span>Congratulations! Your turf listing request has been approved and your venue is ready.</span>
               <button
-                onClick={() => setLangOpen((o) => !o)}
-                className="inline-flex items-center gap-1.5 hover:text-slate-800 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => {
+                  if (onDashboard) onDashboard();
+                  else {
+                    window.history.pushState({}, '', '/dashboard');
+                    window.dispatchEvent(new Event('popstate'));
+                  }
+                }}
+                className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
               >
-                <Globe className="h-3.5 w-3.5 text-lime-500" />
-                <span className="font-semibold">{selectedLang.code}</span>
-                <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`} />
+                Go to Dashboard <ArrowRight className="h-3 w-3" />
               </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => dismissTurfBanner()}
+              className="p-1 hover:bg-lime-100/80 rounded-full transition-colors cursor-pointer text-slate-500 hover:text-slate-800 shrink-0"
+              title="Dismiss notification"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : !user || (user.role !== 'owner' && user.role !== 'admin' && !user.isTurfAdmin) ? (
+        /* Topbar — shown ONLY for logged out visitors and non-admin player accounts */
+        <div className="border-b border-lime-100/40 bg-lime-50">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 md:px-14 lg:px-20">
+            {/* Left — announcement */}
+            <div className="flex items-center gap-2 text-[13px] font-medium text-slate-900">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-lime-500" />
+              Book faster with our new AI Match Assistant
+              <a href="#" className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors">
+                Learn more <ArrowRight className="h-3 w-3" />
+              </a>
+            </div>
 
-              {langOpen && (
-                <div className="absolute right-0 top-full mt-2 w-36 rounded-xl bg-white border border-slate-100 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] overflow-hidden z-[9999]">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => { setSelectedLang(lang); setLangOpen(false); }}
-                      className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[12px] font-semibold transition-colors cursor-pointer ${
-                        selectedLang.code === lang.code
-                          ? 'bg-lime-50 text-lime-600'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Globe className="h-3.5 w-3.5 shrink-0 text-lime-500" />
-                      <span>{lang.label}</span>
-                      {selectedLang.code === lang.code && (
-                        <span className="ml-auto text-lime-500 font-bold">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+            {/* Right — links + language */}
+            <div className="hidden sm:flex items-center gap-4 text-[13px] font-medium text-slate-900">
+              <button onClick={onListTurf} className="font-bold text-lime-500 hover:text-lime-600 transition-colors cursor-pointer">
+                List Your Turf
+              </button>
+              <span className="text-slate-300">|</span>
+              <a href="#" className="font-bold text-slate-900 hover:text-slate-800 transition-colors flex items-center gap-1.5">
+                <HelpCircle className="h-3.5 w-3.5 text-lime-500" />
+                Help Center
+              </a>
+              <span className="text-slate-300">|</span>
+              {/* Language dropdown */}
+              <div className="relative" ref={langRef}>
+                <button
+                  type="button"
+                  onClick={() => setLangOpen((o) => !o)}
+                  className="inline-flex items-center gap-1.5 hover:text-slate-800 transition-colors cursor-pointer"
+                >
+                  <Globe className="h-3.5 w-3.5 text-lime-500" />
+                  <span className="font-semibold">{selectedLang.code}</span>
+                  <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {langOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-36 rounded-xl bg-white border border-slate-100 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] overflow-hidden z-[9999]">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => { setSelectedLang(lang); setLangOpen(false); }}
+                        className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[12px] font-semibold transition-colors cursor-pointer ${
+                          selectedLang.code === lang.code
+                            ? 'bg-lime-50 text-lime-600'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Globe className="h-3.5 w-3.5 shrink-0 text-lime-500" />
+                        <span>{lang.label}</span>
+                        {selectedLang.code === lang.code && (
+                          <span className="ml-auto text-lime-500 font-bold">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Main Navbar Row */}
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 md:px-14 lg:px-20">
@@ -252,77 +289,157 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2.5 p-1 rounded-full hover:bg-slate-100/80 transition-all cursor-pointer"
+                  className="group flex items-center gap-2.5 p-1 rounded-full hover:bg-slate-100/80 transition-all cursor-pointer"
                 >
                   {/* Standalone Circular Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-lime-400 text-slate-900 font-extrabold flex items-center justify-center text-sm shadow-2xs ring-2 ring-white shrink-0">
-                    {displayName[0]?.toUpperCase() || 'U'}
-                  </div>
+                  {user?.profilePicture && !avatarError ? (
+                    <img
+                      src={user.profilePicture}
+                      alt={displayName}
+                      referrerPolicy="no-referrer"
+                      onError={() => setAvatarError(true)}
+                      className="w-9 h-9 rounded-full object-cover shadow-2xs ring-2 ring-white shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-lime-400 text-slate-900 font-extrabold flex items-center justify-center text-sm shadow-2xs ring-2 ring-white shrink-0">
+                      {displayName[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
 
-                  {/* Standalone Name Text */}
-                  <span className="hidden sm:block text-xs sm:text-sm font-bold text-slate-900 pr-1">
+                  {/* Standalone Name Text with Ellipsis Truncation */}
+                  <span className="hidden sm:block text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-[140px] pr-1">
                     {displayName}
                   </span>
 
-                  <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
+                  <ChevronDown size={14} className="text-slate-400 hidden sm:block shrink-0" />
                 </button>
 
-                {/* Profile Dropdown Menu */}
+                {/* Profile Dropdown Menu (Airbnb Style) */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-step-fade">
-                    <div className="px-4 py-2.5 border-b border-slate-100">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {displayName}
-                      </p>
-                      <p className="text-[11px] font-medium text-slate-400 truncate">
-                        {user.email || 'player@turfio.app'}
-                      </p>
+                  <div className={`absolute right-0 mt-2.5 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 animate-step-fade overflow-hidden transition-all ${
+                    user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin
+                      ? 'w-60 sm:w-64 py-2.5'
+                      : 'w-48 sm:w-52 py-1.5'
+                  }`}>
+                    {/* Become a host / List Your Turf card — shown ONLY for admins/owners/venue admins in dropdown */}
+                    {(user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin) && (
+                      <>
+                        <div className="px-3 py-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              if (onListTurf) onListTurf();
+                            }}
+                            className="relative overflow-hidden w-full text-left px-3.5 py-2.5 rounded-xl bg-gradient-to-br from-lime-100/50 via-lime-50/60 to-slate-50 hover:from-lime-100 hover:to-lime-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3"
+                          >
+                            <div className="relative z-10 space-y-0.5 max-w-[72%]">
+                              <p className="text-sm font-extrabold text-slate-900 group-hover:text-lime-950 transition-colors">
+                                List Your Turf
+                              </p>
+                              <p className="text-xs font-medium text-slate-600 truncate whitespace-nowrap">
+                                Earn extra income by hosting.
+                              </p>
+                            </div>
+
+                            {/* Blended Football Graphic */}
+                            <picture>
+                              <source srcSet="/football.webp" type="image/webp" />
+                              <img
+                                src="/football.png"
+                                alt="Football"
+                                className="absolute -right-11 top-1/2 -translate-y-1/2 h-[135%] max-h-[90px] w-auto object-contain pointer-events-none z-0 -scale-x-100 group-hover:-scale-x-105 transition-transform duration-300"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </picture>
+                          </button>
+                        </div>
+
+                        <div className="border-t border-slate-100 my-1" />
+                      </>
+                    )}
+
+                    {/* Language Selector — shown ONLY for admin accounts in dropdown (non-admins use topbar) */}
+                    {(user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin) && (
+                      <>
+                        <div className="px-5 py-2.5 flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-sm font-semibold text-slate-800">
+                            <Globe size={18} className="text-slate-700 shrink-0" />
+                            <span>Language</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-full">
+                            {languages.map((lang) => (
+                              <button
+                                key={lang.code}
+                                type="button"
+                                onClick={() => setSelectedLang(lang)}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                                  selectedLang.code === lang.code
+                                    ? 'bg-white text-slate-900 shadow-2xs'
+                                    : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                              >
+                                {lang.code}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 my-1" />
+                      </>
+                    )}
+
+                    {/* User Links */}
+                    <div className="py-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          if (onProfile) {
+                            onProfile();
+                          } else {
+                            window.history.pushState({}, '', '/profile');
+                            window.dispatchEvent(new Event('popstate'));
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-4.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                      >
+                        <UserIcon size={18} className="text-slate-700 shrink-0" />
+                        <span>My Profile</span>
+                      </button>
+
+                      {(user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin) && onDashboard && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onDashboard();
+                          }}
+                          className="w-full flex items-center gap-3 px-4.5 py-2 text-sm font-semibold text-lime-700 hover:bg-lime-50 transition-colors cursor-pointer text-left"
+                        >
+                          <LayoutDashboard size={18} className="text-lime-600 shrink-0" />
+                          <span>Turf Dashboard</span>
+                        </button>
+                      )}
+
+                      {onLogout && (
+                        <>
+                          <div className="border-t border-slate-100 my-1" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              onLogout();
+                            }}
+                            className="w-full flex items-center gap-3 px-4.5 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+                          >
+                            <LogOut size={18} className="text-rose-500 shrink-0" />
+                            <span>Log Out</span>
+                          </button>
+                        </>
+                      )}
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        if (onProfile) {
-                          onProfile();
-                        } else {
-                          window.history.pushState({}, '', '/profile');
-                          window.dispatchEvent(new Event('popstate'));
-                        }
-                      }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
-                    >
-                      <UserIcon size={14} className="text-slate-500" />
-                      <span>My Profile</span>
-                    </button>
-
-                    {(user.role === 'owner' || user.role === 'admin') && onDashboard && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          onDashboard();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-lime-700 hover:bg-lime-50 transition-colors cursor-pointer text-left"
-                      >
-                        <UserIcon size={14} className="text-lime-600" />
-                        <span>Arena Dashboard</span>
-                      </button>
-                    )}
-
-                    {onLogout && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          onLogout();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
-                      >
-                        <LogOut size={14} />
-                        <span>Log Out</span>
-                      </button>
-                    )}
                   </div>
                 )}
               </div>

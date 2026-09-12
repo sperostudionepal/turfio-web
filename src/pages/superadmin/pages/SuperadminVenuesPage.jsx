@@ -82,7 +82,7 @@ function SuperadminVenuesPage() {
 
   // Derive the open request from the latest list data so the modal always
   // reflects a fresh decision without a syncing effect.
-  const selected = selectedId ? rows.find((r) => r._id === selectedId) || null : null;
+  const selected = selectedId && Array.isArray(rows) ? rows.find((r) => r._id === selectedId) || null : null;
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 350);
@@ -100,8 +100,18 @@ function SuperadminVenuesPage() {
         limit: 50,
       });
       if (ticket !== reqIdRef.current) return; // stale response
-      setRows(res.data || []);
-      setTotal(res.total ?? (res.data || []).length);
+
+      const listData = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res)
+        ? res
+        : [];
+      const totalCount = res?.data?.total ?? res?.total ?? listData.length;
+
+      setRows(listData);
+      setTotal(totalCount);
     } catch (err) {
       if (ticket !== reqIdRef.current) return;
       setError(err.message || 'Failed to load requests');
@@ -159,7 +169,7 @@ function SuperadminVenuesPage() {
   };
 
   const pendingCount = useMemo(
-    () => rows.filter((r) => r.status === 'pending' || r.status === 'needs_changes').length,
+    () => (Array.isArray(rows) ? rows : []).filter((r) => r.status === 'pending' || r.status === 'needs_changes').length,
     [rows],
   );
 

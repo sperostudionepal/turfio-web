@@ -114,18 +114,21 @@ export async function getRoute(origin, destination, costing = 'auto') {
       costing: valhallaCosting,
     });
 
-    if (response && response.success && response.primaryRoute) {
-      return response.primaryRoute;
+    const routeObj = response?.data?.primaryRoute || response?.primaryRoute;
+
+    if (routeObj) {
+      return routeObj;
     }
 
-    if (response && response.primaryRoute) {
-      return response.primaryRoute;
-    }
-
-    throw new Error(response?.message || 'Failed to calculate route.');
+    throw new Error(response?.message || 'Invalid route response structure from backend.');
   } catch (backendError) {
-    console.warn('[RouteService] Backend/Valhalla API unavailable, generating fallback road path:', backendError.message);
-    return generateFallbackRoute(originCoord, destCoord, costing);
+    console.error('[RouteService Error] Backend Valhalla route calculation failed:', backendError.message);
+    // If backend endpoint is unreachable (network failure / server down), return offline fallback route
+    if (backendError.code === 'ERR_NETWORK' || backendError.message?.includes('Network Error')) {
+      console.warn('[RouteService Warning] Server unreachable. Rendering offline fallback route.');
+      return generateFallbackRoute(originCoord, destCoord, costing);
+    }
+    throw backendError;
   }
 }
 

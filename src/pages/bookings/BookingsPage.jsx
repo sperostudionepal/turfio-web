@@ -185,7 +185,7 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
   useEffect(() => {
     turfService.getOwnerBookings().then((items) => {
       setBookings(items.map((booking) => ({
-        id: booking.bookingId || booking._id,
+        id: booking.shortCode || booking.bookingId || booking._id,
         customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
         customerPhone: booking.user?.phone || '—',
         customerEmail: booking.user?.email || '—',
@@ -206,7 +206,7 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
     }).catch(() => {
       if (ownerBookings.length > 0) {
         setBookings(ownerBookings.map((booking) => ({
-          id: booking.bookingId || booking._id,
+          id: booking.shortCode || booking.bookingId || booking._id,
           customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
           customerPhone: booking.user?.phone || '—',
           customerEmail: booking.user?.email || '—',

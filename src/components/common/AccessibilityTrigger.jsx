@@ -10,7 +10,7 @@ export default function AccessibilityTrigger() {
         type="button"
         onClick={toggleOpen}
         aria-label="Open Display Options"
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-lime-400 hover:bg-lime-500 text-slate-950 shadow-[0_8px_25px_rgba(132,204,22,0.35)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer relative overflow-hidden"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-lime-400 hover:bg-lime-500 text-slate-950 shadow-lg shadow-lime-400/20 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer relative overflow-hidden"
       >
         <Sliders className="h-5 w-5 relative z-10 stroke-[2.4] transition-transform group-hover:rotate-45 text-slate-950" />
       </button>

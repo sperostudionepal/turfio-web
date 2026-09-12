@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { compressImageFile } from '../../utils/imageCompressor';
 import LottieAnimation from '../../components/common/LottieAnimation';
 import {
   ArrowRight,
@@ -57,7 +58,7 @@ const REQUEST_STATUS_META = {
   withdrawn: { label: 'Withdrawn', tone: 'slate', blurb: 'This request was withdrawn.' },
 };
 
-export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs, onSubmitted }) {
+export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted }) {
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
@@ -161,7 +162,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
     { name: 'WiFi', icon: Wifi },
     { name: 'Canteen', icon: Coffee },
     { name: 'Washrooms', icon: Bath },
-    { name: 'AC', icon: Wind },
+    { name: 'Air Conditioning', icon: Wind },
     { name: 'Changing Rooms', icon: Shirt },
     { name: 'First Aid', icon: HeartPulse },
     { name: 'Sports Equipment', icon: Dumbbell },
@@ -208,55 +209,6 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
         ? prev.amenities.filter((a) => a !== amenityName)
         : [...prev.amenities, amenityName],
     }));
-  };
-
-  const compressImageFile = (file, maxWidth = 1800, quality = 0.8) => {
-    return new Promise((resolve) => {
-      // If file is not an image (e.g. PDF), return original as-is
-      if (!file.type.startsWith('image/')) {
-        return resolve(file);
-      }
-
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              if (blob && blob.size < file.size) {
-                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
-                  type: 'image/jpeg',
-                  lastModified: Date.now(),
-                });
-                resolve(compressedFile);
-              } else {
-                resolve(file);
-              }
-            },
-            'image/jpeg',
-            quality
-          );
-        };
-        img.onerror = () => resolve(file);
-      };
-      reader.onerror = () => resolve(file);
-    });
   };
 
   const handleDocumentUpload = async (e) => {
@@ -426,7 +378,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
   return (
     <div className="bg-white min-h-screen text-slate-900 font-sans">
       {/* Top Navbar */}
-      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} />
+      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} onDashboard={onDashboard} />
 
       {/* 1. Main Registration Form & How It Works Column */}
       <section className="pt-6 md:pt-10 pb-16 md:pb-24">
@@ -612,14 +564,14 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                     <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
                       Number of Courts <span className="text-rose-500">*</span>
                     </label>
-                    <div className="flex items-center rounded-2xl bg-slate-50 border border-slate-200/80 p-1 focus-within:border-lime-400 focus-within:ring-2 focus-within:ring-lime-400/20 transition-all">
+                    <div className="w-full flex items-center rounded-2xl bg-slate-50 border border-slate-200/80 p-1 focus-within:border-lime-400 focus-within:ring-2 focus-within:ring-lime-400/20 transition-all">
                       <button
                         type="button"
                         onClick={() => {
                           const current = parseInt(formData.courtsCount, 10) || 1;
                           handleInputChange('courtsCount', Math.max(1, current - 1).toString());
                         }}
-                        className="h-11 w-11 flex items-center justify-center rounded-xl bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="h-11 w-11 aspect-square flex items-center justify-center rounded-xl bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                         disabled={(parseInt(formData.courtsCount, 10) || 1) <= 1}
                         aria-label="Decrease court count"
                       >
@@ -654,7 +606,7 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                           const current = parseInt(formData.courtsCount, 10) || 1;
                           handleInputChange('courtsCount', Math.min(30, current + 1).toString());
                         }}
-                        className="h-11 w-11 flex items-center justify-center rounded-xl bg-lime-400 text-slate-950 hover:bg-lime-500 active:scale-95 transition-all shadow-xs cursor-pointer font-bold"
+                        className="h-11 w-11 aspect-square flex items-center justify-center rounded-xl bg-lime-400 text-slate-950 hover:bg-lime-500 active:scale-95 transition-all shadow-xs cursor-pointer font-bold shrink-0"
                         aria-label="Increase court count"
                       >
                         <Plus className="h-4 w-4" />
@@ -713,6 +665,21 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
                       );
                     })}
                   </div>
+                </div>
+
+                {/* About Your Arena / Turf Description */}
+                <div>
+                  <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
+                    About Your Arena / Description <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe your turf (e.g. FIFA-grade synthetic grass, 500 Lux LED floodlights, hot showers, drinking water, spectator seating, parking, and rules)..."
+                    value={formData.turfDescription}
+                    onChange={(e) => handleInputChange('turfDescription', e.target.value)}
+                    className="w-full p-4 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all resize-none"
+                    required
+                  />
                 </div>
 
                 {/* Navigation Buttons */}

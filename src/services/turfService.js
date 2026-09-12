@@ -67,6 +67,7 @@ export function transformTurf(turf) {
   return {
     id,
     _id: turf._id,
+    slug: turf.slug,
     title: name,
     name,
     description: turf.description || '',
@@ -194,10 +195,27 @@ export const turfService = {
   },
 
   /**
+   * Update the current step (2, 3, 4) on an active hold
+   */
+  async updateHoldStep(id, holdToken, step) {
+    if (!id || !holdToken || !step) return null;
+    try {
+      const response = await apiClient.patch(`/turfs/${id}/holds/step`, {
+        holdToken,
+        step,
+      });
+      return response?.data || response;
+    } catch (err) {
+      console.warn(`Failed to update hold step:`, err.message);
+      return null;
+    }
+  },
+
+  /**
    * Create a booking record on the backend
    */
-  async createBooking(bookingData) {
-    const response = await apiClient.post('/bookings', bookingData);
+  async createBooking(bookingData, options = {}) {
+    const response = await apiClient.post('/bookings', bookingData, options);
     return response?.data || response;
   },
 
@@ -225,7 +243,7 @@ export const turfService = {
       amount,
       ...extraOptions,
     });
-    return response;
+    return response?.data || response;
   },
 
   /**
@@ -256,7 +274,7 @@ export const turfService = {
       amount,
       ...extraOptions,
     });
-    return response;
+    return response?.data || response;
   },
 
   /**
@@ -267,7 +285,7 @@ export const turfService = {
       data: encodedData,
       bookingPayload,
     });
-    return response;
+    return response?.data || response;
   },
 
   /**
@@ -337,7 +355,57 @@ export const turfService = {
     });
     return response?.data || response;
   },
+  /**
+   * Upload multiple global turf images
+   */
+  async uploadTurfImages(turfId, files) {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+    const response = await apiClient.post(`/turfs/${turfId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const item = response?.data || response;
+    return transformTurf(item);
+  },
+
+  /**
+   * Delete a single turf image
+   */
+  async deleteTurfImage(turfId, imageUrl) {
+    const response = await apiClient.delete(`/turfs/${turfId}/images`, {
+      data: { imageUrl },
+    });
+    const item = response?.data || response;
+    return transformTurf(item);
+  },
+
+  /**
+   * Reorder turf images array
+   */
+  async reorderTurfImages(turfId, images) {
+    const response = await apiClient.put(`/turfs/${turfId}/images/reorder`, { images });
+    const item = response?.data || response;
+    return transformTurf(item);
+  },
+
+  /**
+   * Fetch any interrupted hold or unpaid booking to show a "Continue Booking" banner
+   */
+  async getResumableBooking(guestHoldToken) {
+    try {
+      const response = await apiClient.get('/bookings/resumable', {
+        params: guestHoldToken ? { holdToken: guestHoldToken } : {},
+      });
+      return response?.data || response;
+    } catch (err) {
+      console.warn('Failed to fetch resumable booking:', err.message);
+      return { item: null };
+    }
+  },
 };
 
 export default turfService;
+
 

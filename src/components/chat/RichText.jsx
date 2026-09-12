@@ -61,9 +61,14 @@ const renderInline = (text) =>
             href={href}
             target={isExternal ? '_blank' : undefined}
             rel={isExternal ? 'noopener noreferrer' : undefined}
-            className="font-semibold text-lime-700 underline underline-offset-2 hover:text-lime-800"
+            className="inline-flex items-center gap-1 font-semibold text-lime-800 bg-lime-200/60 hover:bg-lime-300/60 px-2.5 py-0.5 rounded-lg transition-all duration-150 hover:scale-[1.02] active:scale-95"
           >
-            {label}
+            <span>{label}</span>
+            {isExternal && (
+              <svg className="w-3 h-3 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            )}
           </a>
         );
       }

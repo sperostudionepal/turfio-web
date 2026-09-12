@@ -26,6 +26,7 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar,
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const formatDob = (dobStr) => {
     if (!dobStr) return '2000-01-01';
@@ -139,10 +140,12 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar,
             {/* Avatar Circle with Camera Overlay */}
             <div className="relative group shrink-0">
               <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-slate-900 ring-4 ring-slate-100 text-white font-black text-2xl flex items-center justify-center overflow-hidden">
-                {user?.profilePicture ? (
+                {user?.profilePicture && !imgError ? (
                   <img
                     src={user.profilePicture}
                     alt={displayName}
+                    referrerPolicy="no-referrer"
+                    onError={() => setImgError(true)}
                     className="w-full h-full object-cover"
                   />
                 ) : (

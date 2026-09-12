@@ -176,12 +176,15 @@ export default function TurfSingleLocationMap({
 
     map.on('load', () => registerCustomIcons(map));
     map.on('styledata', () => registerCustomIcons(map));
+    map.on('styleimagemissing', () => registerCustomIcons(map));
 
     // Error fallback
     map.on('error', (e) => {
       const errStatus = e?.error?.status || e?.status;
       if (errStatus === 401 || errStatus === 403 || errStatus === 404 || e?.error?.message?.includes('403') || e?.error?.message?.includes('401')) {
-        map.setStyle(mapStyleMode === 'satellite' ? FALLBACK_SATELLITE_STYLE : FALLBACK_OSM_STYLE);
+        if (map.isStyleLoaded()) {
+          map.setStyle(mapStyleMode === 'satellite' ? FALLBACK_SATELLITE_STYLE : FALLBACK_OSM_STYLE);
+        }
       }
     });
 
@@ -256,11 +259,22 @@ export default function TurfSingleLocationMap({
     }
   }, [lat, lng]);
 
+  const activeStyleModeRef = useRef(mapStyleMode);
   // Style update
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setStyle(getActiveStyle(mapStyleMode));
+    if (activeStyleModeRef.current === mapStyleMode) return;
+    activeStyleModeRef.current = mapStyleMode;
+
+    const targetStyle = getActiveStyle(mapStyleMode);
+    if (!map.isStyleLoaded()) {
+      map.once('styledata', () => {
+        map.setStyle(targetStyle);
+      });
+    } else {
+      map.setStyle(targetStyle);
+    }
   }, [mapStyleMode, getActiveStyle]);
 
   // Controls

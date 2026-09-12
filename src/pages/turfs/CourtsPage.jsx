@@ -19,6 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
+import { useToast } from '../../components/common/Toast';
 
 const DIMENSION_PRESETS = [
   { label: 'Standard 5v5 (25m x 15m)', value: '25m x 15m (Standard 5v5)', length: 25, width: 15, matchType: '5v5' },
@@ -37,6 +38,7 @@ const SURFACE_OPTIONS = [
 ];
 
 function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
+  const { showToast } = useToast();
   const [currentVenue, setCurrentVenue] = useState(venue || null);
   const [courts, setCourts] = useState(() => (Array.isArray(venue?.courts) ? venue.courts : []));
   const [loading, setLoading] = useState(false);
@@ -286,6 +288,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
         hourlyRate: Number(editForm.hourlyRate),
         peakRate: Number(editForm.peakRate),
         status: editForm.status,
+        isConfigured: true,
       };
 
       await turfService.updateCourt(turfId, editingCourt._id, updateData);
@@ -314,7 +317,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
       await loadCourts();
       if (selectedCourt?._id === courtId) setSelectedCourt(null);
     } catch (err) {
-      alert(err.response?.data?.error || err.message || 'Failed to delete court');
+      showToast(err.response?.data?.error || err.message || 'Failed to delete court', 'error');
     }
   };
 
@@ -404,7 +407,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
   return (
     <>
       <div className="flex flex-col h-screen bg-[#f3f5fc] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
-        <TopBar user={user} venue={currentVenue} onLogout={onLogout} />
+        <TopBar user={user} venue={currentVenue} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />
 
         <div className="flex flex-1 min-h-0 relative">
           <div className="absolute top-[45%] right-[35%] w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[160px] pointer-events-none" />
@@ -549,7 +552,18 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
                                     className="w-12 h-10 rounded-xl object-cover border border-white shadow-2xs shrink-0"
                                   />
                                   <div className="whitespace-nowrap">
-                                    <h4 className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{court.name}</h4>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{court.name}</h4>
+                                      {court.isConfigured ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                          <CheckCircle2 size={10} /> Configured
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                          Setup Needed
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
                                       {court.matchType || '5v5'} Standard
                                     </span>

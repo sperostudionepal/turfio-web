@@ -136,10 +136,13 @@ export default function TurfRoutePage({
   // Costing / Transport mode: 'auto' | 'motorcycle' | 'bicycle' | 'pedestrian'
   const [costing, setCosting] = useState('auto');
 
-  // Search filter query inside destination picker dropdown
-  const [venueSearchQuery, setVenueSearchQuery] = useState('');
-  const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
+  // Source POI Search & Picker state
   const [isOriginPickerOpen, setIsOriginPickerOpen] = useState(false);
+  const [originSearchQuery, setOriginSearchQuery] = useState('');
+  const [originSuggestions, setOriginSuggestions] = useState([]);
+  const [isSearchingOrigin, setIsSearchingOrigin] = useState(false);
+  const [originSearchError, setOriginSearchError] = useState(null);
+  const originSearchTimeoutRef = useRef(null);
 
   // Route calculation state
   const [routeData, setRouteData] = useState(null);
@@ -162,18 +165,7 @@ export default function TurfRoutePage({
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
 
-  // Filtered venues for picker dropdown
-  const filteredTurfs = useMemo(() => {
-    if (!venueSearchQuery.trim()) return allTurfs;
-    const q = venueSearchQuery.toLowerCase();
-    return allTurfs.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) ||
-        (t.location && t.location.toLowerCase().includes(q))
-    );
-  }, [allTurfs, venueSearchQuery]);
-
-  // Destination coordinates helper
+  // Destination coordinates helper (Destination is locked to selectedTurf)
   const destinationCoords = useMemo(() => {
     if (!selectedTurf) return { lat: 27.71585, lon: 85.36209 };
     return {
@@ -181,6 +173,55 @@ export default function TurfRoutePage({
       lon: selectedTurf.lng || selectedTurf.lon,
     };
   }, [selectedTurf]);
+
+  // Debounced search handler for source POI / location search (reusing Nominatim API)
+  const handleOriginSearchChange = (val) => {
+    setOriginSearchQuery(val);
+    setOriginSearchError(null);
+    if (originSearchTimeoutRef.current) {
+      clearTimeout(originSearchTimeoutRef.current);
+    }
+    if (!val.trim()) {
+      setOriginSuggestions([]);
+      return;
+    }
+    originSearchTimeoutRef.current = setTimeout(async () => {
+      setIsSearchingOrigin(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=6&countrycodes=np`
+        );
+        if (!response.ok) {
+          throw new Error('Geocoding request failed');
+        }
+        const data = await response.json();
+        setOriginSuggestions(data || []);
+      } catch (err) {
+        console.error('[RoutePage] Origin search error:', err);
+        setOriginSearchError('Unable to load search results.');
+        setOriginSuggestions([]);
+      } finally {
+        setIsSearchingOrigin(false);
+      }
+    }, 400);
+  };
+
+  const handleSelectOriginSuggestion = (item) => {
+    const lat = parseFloat(item.lat);
+    const lon = parseFloat(item.lon);
+    const parts = (item.display_name || '').split(',');
+    const name = parts.slice(0, 2).join(',').trim() || item.display_name;
+
+    setOriginLocation({
+      name,
+      lat,
+      lon,
+      isGps: false,
+    });
+    setIsOriginPickerOpen(false);
+    setOriginSearchQuery('');
+    setOriginSuggestions([]);
+  };
 
   // Check initial permission status on mount
   useEffect(() => {
@@ -255,24 +296,6 @@ export default function TurfRoutePage({
     }
   };
 
-  // Swap Origin and Destination
-  const handleSwapLocations = () => {
-    if (!selectedTurf) return;
-    const oldOrigin = { ...originLocation };
-    const oldDestTurf = { ...selectedTurf };
-
-    setOriginLocation({
-      name: oldDestTurf.title,
-      lat: oldDestTurf.lat,
-      lon: oldDestTurf.lng || oldDestTurf.lon,
-      isGps: false,
-    });
-
-    const matchingTurf = allTurfs.find((t) => t.title === oldOrigin.name);
-    if (matchingTurf) {
-      setSelectedTurf(matchingTurf);
-    }
-  };
 
   // Fetch Route whenever Origin, Destination, or Costing changes
   useEffect(() => {
@@ -395,6 +418,7 @@ export default function TurfRoutePage({
           },
         });
       }
+    } else {
       const source = map.getSource('route-source');
       if (source && coords.length > 0) {
         source.setData({
@@ -694,13 +718,18 @@ export default function TurfRoutePage({
     map.on('styledata', () => {
       registerCustomIcons(map);
     });
+    map.on('styleimagemissing', () => {
+      registerCustomIcons(map);
+    });
 
     map.on('error', (e) => {
       console.warn('[MapLibre] Style fallback triggered:', e.error?.message);
-      if (mapStyleMode === 'satellite') {
-        map.setStyle(FALLBACK_SATELLITE_STYLE);
-      } else {
-        map.setStyle(FALLBACK_OSM_STYLE);
+      if (map.isStyleLoaded()) {
+        if (mapStyleMode === 'satellite') {
+          map.setStyle(FALLBACK_SATELLITE_STYLE);
+        } else {
+          map.setStyle(FALLBACK_OSM_STYLE);
+        }
       }
     });
 
@@ -715,25 +744,61 @@ export default function TurfRoutePage({
     };
   }, []);
 
+  const activeStyleModeRef = useRef(mapStyleMode);
   // Switch map style mode
   useEffect(() => {
     if (!mapRef.current) return;
+    if (activeStyleModeRef.current === mapStyleMode) return;
+    activeStyleModeRef.current = mapStyleMode;
+
     const styleSpec =
       mapStyleMode === 'satellite'
         ? getSatelliteStyleUrl(MAPTILER_KEY)
         : getTurfioLightStyle(MAPTILER_KEY);
 
-    mapRef.current.setStyle(styleSpec);
-
-    const handleStyleLoad = () => {
+    const applyStyle = () => {
       const map = mapRef.current;
       if (!map) return;
-      ensureRouteLayers(map, routeDataRef.current?.geometry);
-      updateMapMarkers(map);
+      map.setStyle(styleSpec);
+
+      const handleStyleLoad = () => {
+        const m = mapRef.current;
+        if (!m) return;
+        ensureRouteLayers(m, routeDataRef.current?.geometry);
+        updateMapMarkers(m);
+      };
+
+      map.once('style.load', handleStyleLoad);
     };
 
-    mapRef.current.once('style.load', handleStyleLoad);
+    if (!mapRef.current.isStyleLoaded()) {
+      mapRef.current.once('styledata', applyStyle);
+    } else {
+      applyStyle();
+    }
   }, [mapStyleMode, ensureRouteLayers, updateMapMarkers]);
+
+  // Smooth ResizeObserver to update MapLibre GL viewport frame-by-frame during CSS sidebar transition
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    let animFrameId = null;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+      });
+    });
+
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Update Route Polyline & Markers on Map whenever data changes
   useEffect(() => {
@@ -753,14 +818,12 @@ export default function TurfRoutePage({
       bounds.extend([destinationCoords.lon, destinationCoords.lat]);
 
       map.fitBounds(bounds, {
-        padding: isPanelCollapsed
-          ? { top: 90, bottom: 90, left: 140, right: 90 }
-          : { top: 90, bottom: 90, left: 380, right: 90 },
+        padding: { top: 90, bottom: 140, left: 140, right: 120 },
         maxZoom: 16,
         duration: 1200,
       });
     }
-  }, [routeData, originLocation, destinationCoords, selectedTurf, userGpsCoord, costing, isPanelCollapsed, ensureRouteLayers, updateMapMarkers]);
+  }, [routeData, originLocation, destinationCoords, selectedTurf, userGpsCoord, costing, ensureRouteLayers, updateMapMarkers]);
 
   // Recenter map on route bounds
   const handleRecenterRoute = useCallback(() => {
@@ -770,25 +833,15 @@ export default function TurfRoutePage({
     const bounds = new maplibregl.LngLatBounds();
     routeData.geometry.forEach((coord) => bounds.extend(coord));
     map.fitBounds(bounds, {
-      padding: isPanelCollapsed
-        ? { top: 90, bottom: 90, left: 140, right: 90 }
-        : { top: 90, bottom: 90, left: 380, right: 90 },
+      padding: { top: 90, bottom: 140, left: 140, right: 120 },
       maxZoom: 16,
       duration: 1000,
     });
-  }, [routeData, isPanelCollapsed]);
+  }, [routeData]);
 
-  // Handle collapsible sidebar toggle and trigger map resize
+  // Handle collapsible sidebar toggle - map remains completely still
   const handleToggleCollapse = useCallback(() => {
-    setIsPanelCollapsed((prev) => {
-      const next = !prev;
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.resize();
-        }
-      }, 320);
-      return next;
-    });
+    setIsPanelCollapsed((prev) => !prev);
   }, []);
 
   // Step hover pin highlighting
@@ -831,24 +884,134 @@ export default function TurfRoutePage({
 
   return (
     <div ref={wrapperRef} className="relative h-screen w-full overflow-hidden bg-slate-50 font-sans flex flex-col">
-      {/* ─── MAIN CONTENT CONTAINER (SPLIT DRAWER + MAP) ─── */}
-      <div className="relative flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+      {/* ─── MAIN CONTENT CONTAINER (MAP CANVAS UNDERLAY + OVERLAY SIDEBAR) ─── */}
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         {/* ══════════════════════════════════════
-            LEFT FLOATING SIDEBAR (DIRECTIONS PANEL)
+            RIGHT INTERACTIVE MAP CANVAS (FULL BACKGROUND UNDERLAY)
            ══════════════════════════════════════ */}
+        <main className="absolute inset-0 h-full w-full bg-slate-100 overflow-hidden z-0">
+          <div ref={mapContainerRef} className="h-full w-full" />
+
+          {/* ── Top-Right Standard Navigation & Zoom Controls ── */}
+          <div className="absolute top-4 right-4 z-30 flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-[#E7EBE5] overflow-hidden divide-y divide-[#E7EBE5]">
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomIn()}
+              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
+              title="Zoom In"
+            >
+              <Plus className="h-4 w-4 stroke-[2.4]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomOut()}
+              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
+              title="Zoom Out"
+            >
+              <Minus className="h-4 w-4 stroke-[2.4]" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRecenterRoute}
+              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
+              title="Recenter Route"
+            >
+              <Compass className="h-4 w-4 stroke-[2.2]" />
+            </button>
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              disabled={isLocatingUser}
+              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer disabled:opacity-50"
+              title="Locate Me (GPS)"
+            >
+              {isLocatingUser ? (
+                <Loader2 className="h-4 w-4 animate-spin text-lime-600" />
+              ) : (
+                <Locate className="h-4 w-4 stroke-[2.2]" />
+              )}
+            </button>
+          </div>
+
+          {/* ── Bottom-Left Satellite / Vector Style Switcher ── */}
+          <div
+            className={`absolute bottom-4 z-30 transition-[left] duration-300 ease-in-out ${
+              isPanelCollapsed ? 'left-[88px]' : 'left-4 lg:left-[366px]'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setMapStyleMode((prev) => (prev === 'vector' ? 'satellite' : 'vector'))
+              }
+              className="group relative h-11 w-11 rounded-xl overflow-hidden border border-[#E7EBE5] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:scale-105 transition-all cursor-pointer bg-slate-900"
+              title={mapStyleMode === 'vector' ? 'Switch to Satellite view' : 'Switch to Clean Map view'}
+            >
+              <img
+                src={
+                  mapStyleMode === 'vector'
+                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/13/3592/5801'
+                    : 'https://a.tile.openstreetmap.org/13/5801/3592.png'
+                }
+                alt="Layer switch"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+              <span className="absolute bottom-0 inset-x-0 text-[7.5px] font-extrabold text-white text-center drop-shadow-sm bg-black/60 py-0.5">
+                {mapStyleMode === 'vector' ? 'Satellite' : 'Map'}
+              </span>
+            </button>
+          </div>
+
+          {/* Bottom Right Venue Card Pill on Map with high z-index */}
+          {selectedTurf && (
+            <div className="absolute bottom-4 right-4 z-50 pointer-events-auto hidden sm:flex items-center gap-3.5 rounded-2xl bg-white/98 p-3 pr-4 shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-[#E7EBE5] max-w-sm backdrop-blur-md">
+              <img
+                src={selectedTurf.image}
+                alt={selectedTurf.title}
+                className="h-12 w-12 rounded-2xl object-cover shrink-0 shadow-xs"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/image.png';
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  <span className="text-xs font-bold text-slate-900">{selectedTurf.rating || 4.8}</span>
+                  <span className="text-[11px] text-slate-400 font-medium">({selectedTurf.reviews || 120})</span>
+                </div>
+                <h4 className="text-xs font-black text-slate-900 truncate">{selectedTurf.title}</h4>
+                <p className="text-[11px] text-slate-500 truncate">{selectedTurf.location}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onBookTurf?.(selectedTurf)}
+                className="rounded-full bg-lime-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-lime-500 transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+              >
+                Book
+              </button>
+            </div>
+          )}
+        </main>
+
         {/* ══════════════════════════════════════
-            LEFT FLOATING SIDEBAR (DIRECTIONS PANEL OR SLIM RAIL)
+            LEFT FLOATING SIDEBAR (OVERLAY ON MAP)
            ══════════════════════════════════════ */}
         <aside
-          className={`relative z-20 shrink-0 bg-white border-r border-slate-200 flex flex-col shadow-xl lg:shadow-none max-h-[48vh] lg:max-h-full overflow-hidden transition-all duration-300 ease-in-out ${
+          className={`absolute top-0 bottom-0 left-0 z-20 shrink-0 bg-white/98 backdrop-blur-md border-r border-slate-200/90 flex flex-col shadow-2xl max-h-[48vh] lg:max-h-full overflow-hidden transition-[width] duration-300 ease-in-out ${
             isPanelCollapsed
               ? 'w-[72px] lg:w-[72px]'
               : 'w-full lg:w-[350px]'
           }`}
         >
-          {isPanelCollapsed ? (
-            /* ─── SLIM COLLAPSED ICON RAIL (GOOGLE MAPS STYLE) ─── */
-            <div className="h-full flex flex-col items-center justify-between py-4 px-1.5 overflow-y-auto select-none">
+          <div className="relative w-full h-full overflow-hidden">
+            {/* ─── SLIM COLLAPSED ICON RAIL (GOOGLE MAPS STYLE) ─── */}
+            <div
+              className={`absolute inset-0 w-[72px] flex flex-col items-center justify-between py-4 px-1.5 overflow-y-auto select-none transition-opacity duration-200 ${
+                isPanelCollapsed ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
+              }`}
+            >
               {/* Top Action Items */}
               <div className="flex flex-col items-center gap-3.5 w-full">
                 {/* Hamburger Menu Toggle -> Expand Panel */}
@@ -915,38 +1078,6 @@ export default function TurfRoutePage({
                     </span>
                   </button>
                 )}
-
-                {/* Venue Thumbnails list */}
-                {allTurfs.slice(0, 3).map((turf) => (
-                  <button
-                    key={turf.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTurf(turf);
-                      setIsPanelCollapsed(false);
-                    }}
-                    className="flex flex-col items-center gap-1 w-full py-1 group cursor-pointer"
-                    title={turf.title}
-                  >
-                    <div className="relative h-9 w-9 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-105 transition-all shadow-2xs">
-                      <img
-                        src={turf.image}
-                        alt={turf.title}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/image.png';
-                        }}
-                      />
-                      <span className="absolute inset-0 bg-black/25 flex items-center justify-center text-[10px] font-black text-white">
-                        {turf.rating || '★'}
-                      </span>
-                    </div>
-                    <span className="text-[9.5px] font-bold text-slate-700 truncate max-w-[62px] text-center leading-tight">
-                      {turf.title?.split(' ')[0]}...
-                    </span>
-                  </button>
-                ))}
               </div>
 
               {/* Bottom "Get app" Action */}
@@ -965,11 +1096,15 @@ export default function TurfRoutePage({
                 </button>
               </div>
             </div>
-          ) : (
-            /* ─── FULL EXPANDED DIRECTIONS PANEL ─── */
-            <>
+
+            {/* ─── FULL EXPANDED DIRECTIONS PANEL ─── */}
+            <div
+              className={`absolute inset-0 w-[350px] flex flex-col transition-opacity duration-200 ${
+                isPanelCollapsed ? 'opacity-0 pointer-events-none z-0' : 'opacity-100 pointer-events-auto z-10'
+              }`}
+            >
               {/* Top Brand Header with Collapse Button */}
-              <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100/80 min-w-[350px]">
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100/80 w-[350px] shrink-0">
                 <a
                   href="#"
                   onClick={(e) => {
@@ -1006,7 +1141,7 @@ export default function TurfRoutePage({
               </div>
 
               {/* Scrollable controls container */}
-              <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-200 min-w-[350px]">
+              <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-200 w-[350px]">
                 {/* 0. LOCATION OFF / PERMISSION DENIED WARNING BANNER */}
                 {permissionDeniedBanner && (
                   <div className="rounded-2xl bg-amber-50/90 p-3.5 border border-amber-200/80 text-xs font-medium text-amber-900 flex items-start gap-2.5">
@@ -1054,11 +1189,11 @@ export default function TurfRoutePage({
                   })}
                 </div>
 
-                {/* 2. ORIGIN & DESTINATION INPUT CARD (TURFIO SIGNATURE SEGMENTED PILLS) */}
-                <div className="rounded-3xl bg-white p-2 shadow-[0_2px_18px_rgba(0,0,0,0.06)] space-y-1">
+                {/* 2. ORIGIN & DESTINATION INPUT CARD */}
+                <div className="rounded-3xl bg-white p-2 shadow-[0_2px_18px_rgba(0,0,0,0.06)] space-y-1.5">
                   {/* Origin Input (Starting Point) */}
                   <div className="relative">
-                    <label className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
+                    <div className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
                         <div className="h-3 w-3 rounded-full border-2 border-slate-900 bg-white" />
                       </span>
@@ -1069,7 +1204,7 @@ export default function TurfRoutePage({
                         <button
                           type="button"
                           onClick={() => setIsOriginPickerOpen(!isOriginPickerOpen)}
-                          className="mt-0.5 block w-full text-left text-[14px] font-bold text-slate-900 truncate outline-none"
+                          className="mt-0.5 block w-full text-left text-[14px] font-bold text-slate-900 truncate outline-none cursor-pointer"
                         >
                           {originLocation.name}
                         </button>
@@ -1082,7 +1217,7 @@ export default function TurfRoutePage({
                             handleUseCurrentLocation();
                           }}
                           disabled={isLocatingUser}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-slate-200/80 text-slate-600 transition-colors"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-slate-200/80 text-slate-600 transition-colors cursor-pointer"
                           title="Use My Real-time GPS Location"
                         >
                           {isLocatingUser ? (
@@ -1091,130 +1226,165 @@ export default function TurfRoutePage({
                             <Locate className="h-4 w-4" />
                           )}
                         </button>
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <button
+                          type="button"
+                          onClick={() => setIsOriginPickerOpen(!isOriginPickerOpen)}
+                          className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        >
+                          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOriginPickerOpen ? 'rotate-180' : ''}`} />
+                        </button>
                       </div>
-                    </label>
+                    </div>
 
-                    {/* Origin Preset Dropdown */}
+                    {/* Origin POI Search & Suggestions Dropdown */}
                     {isOriginPickerOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 z-40 rounded-2xl bg-white p-2 shadow-xl animate-fadeIn space-y-1 max-h-56 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-40 rounded-2xl bg-white p-2.5 shadow-2xl animate-fadeIn space-y-2 max-h-80 overflow-y-auto border border-slate-100">
+                        {/* Free-text POI Search Bar */}
+                        <div className="relative flex items-center">
+                          <Search className="absolute left-3.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={originSearchQuery}
+                            onChange={(e) => handleOriginSearchChange(e.target.value)}
+                            placeholder="Search any place, address, landmark..."
+                            className="w-full rounded-xl bg-slate-50 pl-9 pr-8 py-2 text-xs font-semibold text-slate-900 outline-none border border-slate-200 focus:bg-white focus:ring-2 focus:ring-lime-400 transition-all placeholder:text-slate-400"
+                            autoFocus
+                          />
+                          {originSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOriginSearchQuery('');
+                                setOriginSuggestions([]);
+                              }}
+                              className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-full"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Fast GPS Action */}
                         <button
                           type="button"
                           onClick={handleUseCurrentLocation}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-xs font-black text-lime-800 bg-lime-50/60 hover:bg-lime-100 transition-colors"
+                          disabled={isLocatingUser}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-black text-lime-900 bg-lime-50/70 hover:bg-lime-100 transition-colors cursor-pointer"
                         >
-                          <Locate className="h-4 w-4 text-lime-700" />
-                          <span>Use My Current GPS Location</span>
+                          {isLocatingUser ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-lime-700" />
+                          ) : (
+                            <Locate className="h-4 w-4 text-lime-700" />
+                          )}
+                          <span>My Current Location (GPS)</span>
                         </button>
-                        <div className="my-1 border-t border-slate-100" />
-                        {KATHMANDU_PRESET_LOCATIONS.filter((l) => !l.isCurrentLocation).map((loc) => (
-                          <button
-                            key={loc.id}
-                            type="button"
-                            onClick={() => {
-                              setOriginLocation({
-                                name: loc.name,
-                                lat: loc.lat,
-                                lon: loc.lon,
-                                isGps: false,
-                              });
-                              setIsOriginPickerOpen(false);
-                            }}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                          >
-                            <span>{loc.name}</span>
-                            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                          </button>
-                        ))}
+
+                        <div className="border-t border-slate-100 my-1" />
+
+                        {/* Search Status & Results */}
+                        {isSearchingOrigin && (
+                          <div className="flex items-center justify-center gap-2 py-4 text-xs font-bold text-slate-500">
+                            <Loader2 className="h-4 w-4 animate-spin text-lime-600" />
+                            <span>Searching locations...</span>
+                          </div>
+                        )}
+
+                        {originSearchError && (
+                          <div className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-medium">
+                            {originSearchError}
+                          </div>
+                        )}
+
+                        {!isSearchingOrigin && originSuggestions.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="px-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                              Search Results
+                            </div>
+                            {originSuggestions.map((item) => (
+                              <button
+                                key={item.place_id || item.osm_id}
+                                type="button"
+                                onClick={() => handleSelectOriginSuggestion(item)}
+                                className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer"
+                              >
+                                <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-xs font-bold text-slate-900 truncate">
+                                    {(item.display_name || '').split(',')[0]}
+                                  </h4>
+                                  <p className="text-[10px] text-slate-500 truncate">
+                                    {item.display_name}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {!isSearchingOrigin && originSearchQuery.trim() && originSuggestions.length === 0 && !originSearchError && (
+                          <div className="px-3 py-4 text-center text-xs font-semibold text-slate-500">
+                            No locations found for &ldquo;{originSearchQuery}&rdquo;
+                          </div>
+                        )}
+
+                        {!originSearchQuery.trim() && originSuggestions.length === 0 && (
+                          <div className="space-y-1">
+                            <div className="px-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                              Popular Landmarks
+                            </div>
+                            {KATHMANDU_PRESET_LOCATIONS.filter((l) => !l.isCurrentLocation).map((loc) => (
+                              <button
+                                key={loc.id}
+                                type="button"
+                                onClick={() => {
+                                  setOriginLocation({
+                                    name: loc.name,
+                                    lat: loc.lat,
+                                    lon: loc.lon,
+                                    isGps: false,
+                                  });
+                                  setIsOriginPickerOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                              >
+                                <span>{loc.name}</span>
+                                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Divider with Swap Button */}
-                  <div className="relative flex items-center justify-center px-4">
+                  {/* Visual Divider (No Swap Button) */}
+                  <div className="px-4 py-0.5">
                     <div className="w-full border-t border-slate-100" />
-                    <button
-                      type="button"
-                      onClick={handleSwapLocations}
-                      className="absolute flex h-7 w-7 items-center justify-center rounded-full bg-white hover:bg-slate-100 text-slate-600 shadow-sm transition-all hover:rotate-180 active:scale-90 cursor-pointer"
-                      title="Swap Origin and Destination"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </button>
                   </div>
 
-                  {/* Destination Input (Arena) */}
-                  <div className="relative">
-                    <label className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
-                        <MapPin className="h-4 w-4 stroke-[2.2]" />
-                      </span>
-                      <div className="min-w-0 flex-1">
+                  {/* Destination Field (Read-Only Display - Locked to selectedTurf) */}
+                  <div className="relative rounded-2xl bg-slate-50/80 border border-slate-100 p-3 flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lime-100 text-lime-800">
+                      <MapPin className="h-4 w-4 stroke-[2.2]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
                         <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 leading-tight">
                           Destination Arena
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsVenuePickerOpen(!isVenuePickerOpen)}
-                          className="mt-0.5 block w-full text-left text-[14px] font-bold text-slate-900 truncate outline-none"
-                        >
-                          {selectedTurf?.title || 'Select a Futsal Arena'}
-                        </button>
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wide px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-600">
+                          Locked
+                        </span>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-slate-400" />
-                    </label>
-
-                    {/* Destination Arena Selector Dropdown */}
-                    {isVenuePickerOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 z-40 rounded-2xl bg-white p-2.5 shadow-xl animate-fadeIn space-y-2 max-h-72 overflow-y-auto">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                          <input
-                            type="text"
-                            value={venueSearchQuery}
-                            onChange={(e) => setVenueSearchQuery(e.target.value)}
-                            placeholder="Search arena name or location..."
-                            className="w-full rounded-xl bg-slate-50 pl-8 pr-3 py-2 text-xs font-medium text-slate-900 outline-none border border-slate-200 placeholder:text-slate-400"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          {filteredTurfs.map((turf) => (
-                            <button
-                              key={turf.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedTurf(turf);
-                                setIsVenuePickerOpen(false);
-                                setVenueSearchQuery('');
-                              }}
-                              className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-colors ${
-                                selectedTurf?.id === turf.id
-                                  ? 'bg-lime-50 text-slate-900 font-bold'
-                                  : 'hover:bg-slate-50 text-slate-700'
-                              }`}
-                            >
-                              <img
-                                src={turf.image}
-                                alt={turf.title}
-                                className="h-9 w-9 rounded-lg object-cover shrink-0"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = '/image.png';
-                                }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-xs font-bold truncate text-slate-900">{turf.title}</h4>
-                                <p className="text-[10px] text-slate-500 truncate">{turf.location}</p>
-                              </div>
-                              <span className="text-[11px] font-black text-slate-900 shrink-0">
-                                {turf.price?.split('/')[0] || 'NPR 1,200'}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      <span className="mt-0.5 block w-full text-left text-[14px] font-extrabold text-slate-900 truncate">
+                        {selectedTurf?.title || 'Destination Arena'}
+                      </span>
+                      {selectedTurf?.location && (
+                        <span className="block text-[11px] font-medium text-slate-500 truncate mt-0.5">
+                          {selectedTurf.location}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1284,116 +1454,11 @@ export default function TurfRoutePage({
                   </div>
                 )}
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </aside>
 
-        {/* ══════════════════════════════════════
-            RIGHT INTERACTIVE MAP CANVAS
-           ══════════════════════════════════════ */}
-        <main className="relative flex-1 h-full min-h-[350px] w-full bg-slate-100 overflow-hidden">
-          <div ref={mapContainerRef} className="h-full w-full" />
 
-
-
-          {/* ── Top-Right Standard Navigation & Zoom Controls ── */}
-          <div className="absolute top-4 right-4 z-30 flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-[#E7EBE5] overflow-hidden divide-y divide-[#E7EBE5]">
-            <button
-              type="button"
-              onClick={() => mapRef.current?.zoomIn()}
-              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
-              title="Zoom In"
-            >
-              <Plus className="h-4 w-4 stroke-[2.4]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => mapRef.current?.zoomOut()}
-              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
-              title="Zoom Out"
-            >
-              <Minus className="h-4 w-4 stroke-[2.4]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleRecenterRoute}
-              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer"
-              title="Recenter Route"
-            >
-              <Compass className="h-4 w-4 stroke-[2.2]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleUseCurrentLocation}
-              disabled={isLocatingUser}
-              className="p-2.5 text-[#172033] hover:bg-slate-50 hover:text-[#0f172a] transition-colors cursor-pointer disabled:opacity-50"
-              title="Locate Me (GPS)"
-            >
-              {isLocatingUser ? (
-                <Loader2 className="h-4 w-4 animate-spin text-lime-600" />
-              ) : (
-                <Locate className="h-4 w-4 stroke-[2.2]" />
-              )}
-            </button>
-          </div>
-
-          {/* ── Bottom-Left Satellite / Vector Style Switcher ── */}
-          <div className="absolute bottom-4 left-4 z-30">
-            <button
-              type="button"
-              onClick={() =>
-                setMapStyleMode((prev) => (prev === 'vector' ? 'satellite' : 'vector'))
-              }
-              className="group relative h-11 w-11 rounded-xl overflow-hidden border border-[#E7EBE5] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:scale-105 transition-all cursor-pointer bg-slate-900"
-              title={mapStyleMode === 'vector' ? 'Switch to Satellite view' : 'Switch to Clean Map view'}
-            >
-              <img
-                src={
-                  mapStyleMode === 'vector'
-                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/13/3592/5801'
-                    : 'https://a.tile.openstreetmap.org/13/5801/3592.png'
-                }
-                alt="Layer switch"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-              <span className="absolute bottom-0 inset-x-0 text-[7.5px] font-extrabold text-white text-center drop-shadow-sm bg-black/60 py-0.5">
-                {mapStyleMode === 'vector' ? 'Satellite' : 'Map'}
-              </span>
-            </button>
-          </div>
-
-          {/* Bottom Right Venue Card Pill on Map with high z-index */}
-          {selectedTurf && (
-            <div className="absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-3.5 rounded-2xl bg-white/98 p-3 pr-4 shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E7EBE5] max-w-sm backdrop-blur-md">
-              <img
-                src={selectedTurf.image}
-                alt={selectedTurf.title}
-                className="h-12 w-12 rounded-2xl object-cover shrink-0 shadow-xs"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/image.png';
-                }}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  <span className="text-xs font-bold text-slate-900">{selectedTurf.rating || 4.8}</span>
-                  <span className="text-[11px] text-slate-400 font-medium">({selectedTurf.reviews || 120})</span>
-                </div>
-                <h4 className="text-xs font-black text-slate-900 truncate">{selectedTurf.title}</h4>
-                <p className="text-[11px] text-slate-500 truncate">{selectedTurf.location}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onBookTurf?.(selectedTurf)}
-                className="rounded-full bg-lime-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-lime-500 transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
-              >
-                Book
-              </button>
-            </div>
-          )}
-        </main>
       </div>
 
       {/* ─── FIRST TIME LOCATION PERMISSION PROMPT MODAL ─── */}
