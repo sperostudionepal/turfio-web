@@ -37,7 +37,7 @@ const SURFACE_OPTIONS = [
   'Indoor Wooden / Hardcourt',
 ];
 
-function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
+function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout, onSwitchToPlayer }) {
   const { showToast } = useToast();
   const [currentVenue, setCurrentVenue] = useState(venue || null);
   const [courts, setCourts] = useState(() => (Array.isArray(venue?.courts) ? venue.courts : []));

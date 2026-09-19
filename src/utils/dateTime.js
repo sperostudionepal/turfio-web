@@ -132,6 +132,29 @@ export function parseSlotInterval(timeSlot) {
 }
 
 /**
+ * Formats a timestamp as Nepal time, e.g. "19 Sep 2026, 02:30 PM". Returns '—' for missing/invalid values.
+ */
+export function formatNepalDateTime(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '—';
+  // Assembled from parts so the month is always 3 letters ("Sep"); en-GB alone renders "Sept" in some engines.
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kathmandu',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  );
+  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} ${parts.dayPeriod}`;
+}
+
+/**
  * Processes and filters slots for a given date:
  * 1. Skips / removes past slots completely when viewing today or past dates.
  * 2. For future slots, marks which are Available vs Booked / Held.

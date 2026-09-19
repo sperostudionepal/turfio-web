@@ -1,65 +1,36 @@
-import { ChevronDown, ChevronRight, PieChart as PieChartIcon } from 'lucide-react';
+import { ChevronRight, PieChart as PieChartIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { getPeriodRange, summarizeBookings, paidAmount, periodLabel } from '../../utils/dashboardStats';
+import { useOwnerContext } from '../../context/ownerContext';
 
-function RevenueSummaryDonut({ bookings = [] }) {
-  const isManual = (b) =>
-    b.paymentMethod === 'Pay at Venue' ||
-    b.paymentType === 'venue' ||
-    b.source === 'Walk-in Counter' ||
-    b.source === 'Phone Call';
+const isPayAtVenue = (b) => b.paymentMethod === 'Pay at Venue' || b.paymentType === 'venue';
 
-  const manualBookings = bookings.filter(isManual);
-  const onlineBookings = bookings.filter((b) => !isManual(b));
+function RevenueSummaryDonut({ bookings = [], period = 'month' }) {
+  const { setActiveTab } = useOwnerContext();
+  // Live (non-cancelled) bookings inside the selected period.
+  const { inPeriod, revenue: totalPaidRevenue } = summarizeBookings(bookings, getPeriodRange(period));
 
-  const manualPaidRevenue = manualBookings.reduce(
-    (sum, b) => sum + (b.paymentStatus === 'Paid' ? Number(b.totalPaidAmount || b.totalAmount || 0) : 0),
-    0
-  );
-  const onlinePaidRevenue = onlineBookings.reduce(
-    (sum, b) => sum + (b.paymentStatus === 'Paid' ? Number(b.totalPaidAmount || b.totalAmount || 0) : 0),
-    0
-  );
+  const venueBookings = inPeriod.filter(isPayAtVenue);
+  const onlineBookings = inPeriod.filter((b) => !isPayAtVenue(b));
 
-  const totalPaidRevenue = manualPaidRevenue + onlinePaidRevenue;
+  const sumPaid = (list) => list.reduce((sum, b) => sum + paidAmount(b), 0);
+  const onlinePaidRevenue = sumPaid(onlineBookings);
+  const venuePaidRevenue = sumPaid(venueBookings);
 
-  // Determine chart values
-  let onlineVal = onlinePaidRevenue;
-  let manualVal = manualPaidRevenue;
-  let onlinePct = 50;
-  let manualPct = 50;
-
-  if (totalPaidRevenue > 0) {
-    onlinePct = Math.round((onlinePaidRevenue / totalPaidRevenue) * 100);
-    manualPct = 100 - onlinePct;
-  } else if (bookings.length > 0) {
-    onlineVal = onlineBookings.length || 1;
-    manualVal = manualBookings.length || 1;
-    const totalCount = onlineVal + manualVal;
-    onlinePct = Math.round((onlineVal / totalCount) * 100);
-    manualPct = 100 - onlinePct;
-  } else {
-    onlineVal = 1;
-    manualVal = 1;
-  }
+  // Slice by money collected; before anything is paid, fall back to booking counts.
+  const byRevenue = totalPaidRevenue > 0;
+  const onlineValue = byRevenue ? onlinePaidRevenue : onlineBookings.length;
+  const venueValue = byRevenue ? venuePaidRevenue : venueBookings.length;
+  const totalValue = onlineValue + venueValue;
+  const onlinePct = totalValue > 0 ? Math.round((onlineValue / totalValue) * 100) : 0;
+  const venuePct = totalValue > 0 ? 100 - onlinePct : 0;
 
   const data = [
-    {
-      name: 'Online Bookings',
-      value: onlineVal,
-      revenue: onlinePaidRevenue,
-      count: onlineBookings.length,
-      color: '#10b981',
-      percentage: `${onlinePct}%`,
-    },
-    {
-      name: 'Manual Bookings',
-      value: manualVal,
-      revenue: manualPaidRevenue,
-      count: manualBookings.length,
-      color: '#38bdf8',
-      percentage: `${manualPct}%`,
-    },
+    { name: 'Paid Online', value: onlineValue, revenue: onlinePaidRevenue, count: onlineBookings.length, color: '#10b981', percentage: `${onlinePct}%` },
+    { name: 'Pay at Venue', value: venueValue, revenue: venuePaidRevenue, count: venueBookings.length, color: '#38bdf8', percentage: `${venuePct}%` },
   ];
+  // Nothing to slice yet: draw a neutral ring instead of a made-up 50/50 split.
+  const pieData = totalValue > 0 ? data : [{ name: 'No data', value: 1, color: '#e2e8f0' }];
 
   const formattedTotalRevenue =
     totalPaidRevenue >= 100000
@@ -77,10 +48,10 @@ function RevenueSummaryDonut({ bookings = [] }) {
             </div>
             <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Revenue Summary</h3>
           </div>
-          <button className="flex items-center gap-1 text-xs font-semibold text-slate-700 px-3 py-2 rounded-full bg-slate-100 hover:bg-slate-200/80 transition-colors cursor-pointer">
-            <span>This Month</span>
-            <ChevronDown size={13} className="text-slate-400" />
-          </button>
+          {/* The period is picked once in the dashboard header; this just shows which one is applied. */}
+          <span className="text-xs font-semibold text-slate-700 px-3 py-2 rounded-full bg-slate-100">
+            {periodLabel(period)}
+          </span>
         </div>
 
         {/* Filled Pie Chart & Total Revenue Right Side Container */}
@@ -90,7 +61,7 @@ function RevenueSummaryDonut({ bookings = [] }) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data}
+                  data={pieData}
                   cx="50%"
                   cy="50%"
                   innerRadius={0}
@@ -100,8 +71,8 @@ function RevenueSummaryDonut({ bookings = [] }) {
                   strokeWidth={3}
                   strokeLinejoin="round"
                 >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
               </PieChart>
@@ -117,7 +88,7 @@ function RevenueSummaryDonut({ bookings = [] }) {
               {formattedTotalRevenue}
             </span>
             <span className="text-[11px] font-semibold text-lime-600 mt-1 block">
-              {bookings.length} total bookings
+              {inPeriod.length} {inPeriod.length === 1 ? 'booking' : 'bookings'}
             </span>
           </div>
         </div>
@@ -142,10 +113,15 @@ function RevenueSummaryDonut({ bookings = [] }) {
 
       {/* Footer link */}
       <div className="pt-3 mt-3">
-        <button className="flex items-center justify-between w-full text-xs text-slate-500 font-semibold hover:text-slate-900 transition-colors cursor-pointer">
-          <span>Manual vs Online analytics</span>
-          <ChevronRight size={14} className="text-slate-400" />
-        </button>
+        {setActiveTab && (
+          <button
+            onClick={() => setActiveTab('Analytics')}
+            className="flex items-center justify-between w-full text-xs text-slate-500 font-semibold hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            <span>Online vs venue analytics</span>
+            <ChevronRight size={14} className="text-slate-400" />
+          </button>
+        )}
       </div>
     </div>
   );

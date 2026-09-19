@@ -1,74 +1,43 @@
-import { Clock, ChevronRight, CircleDot } from 'lucide-react';
+import { Clock, ChevronRight } from 'lucide-react';
 import { getTodayNepalString, getNepalCurrentDateTime, parseSlotInterval } from '../../utils/dateTime';
+import { getBookingDateStr, isActiveBooking } from '../../utils/bookingStatus';
+import { useOwnerContext } from '../../context/ownerContext';
+
+const STATUS_STYLES = {
+  upcoming: { label: 'Upcoming', dotColor: 'bg-amber-400', badgeStyle: 'bg-amber-50 text-amber-600 font-bold' },
+  ongoing: { label: 'Ongoing', dotColor: 'bg-lime-500 animate-pulse', badgeStyle: 'bg-lime-400 text-slate-950 font-extrabold shadow-xs' },
+  completed: { label: 'Completed', dotColor: 'bg-emerald-500', badgeStyle: 'bg-emerald-50 text-emerald-600 font-bold' },
+};
 
 function ScheduleCard({ bookings = [] }) {
+  const { openBookings } = useOwnerContext();
   const nowNpt = getNepalCurrentDateTime();
   const todayStr = getTodayNepalString();
 
-  // Filter today's bookings first
-  const isToday = (b) => {
-    const dStr = b.dateStr || (b.date ? new Date(b.date).toISOString().slice(0, 10) : '');
-    return dStr.startsWith(todayStr);
-  };
+  // Only today's live bookings, in slot order (cancelled bookings free the slot).
+  const scheduleItems = bookings
+    .filter((b) => isActiveBooking(b) && getBookingDateStr(b) === todayStr)
+    .map((b) => {
+      const interval = parseSlotInterval(b.timeSlot);
+      const startMinutes = b.startMinutes ?? interval.startMinutes;
+      const endMinutes = b.endMinutes ?? interval.endMinutes;
 
-  const todayBookings = bookings.filter(isToday);
+      let statusType = 'upcoming';
+      if (endMinutes <= nowNpt.minutes) statusType = 'completed';
+      else if (startMinutes <= nowNpt.minutes) statusType = 'ongoing';
 
-  // If fewer than 3 today, append future upcoming bookings, then recent bookings
-  const otherBookings = bookings.filter((b) => !isToday(b));
-  const futureBookings = otherBookings.filter((b) => {
-    const dStr = b.dateStr || (b.date ? new Date(b.date).toISOString().slice(0, 10) : '');
-    return dStr > todayStr;
-  });
-  const pastBookings = otherBookings.filter((b) => {
-    const dStr = b.dateStr || (b.date ? new Date(b.date).toISOString().slice(0, 10) : '');
-    return dStr < todayStr;
-  });
-
-  const displayList = [...todayBookings, ...futureBookings, ...pastBookings].slice(0, 4);
-
-  const scheduleItems = displayList.map((b) => {
-    const interval = parseSlotInterval(b.timeSlot);
-    const startMinutes = b.startMinutes ?? interval.startMinutes;
-    const endMinutes = b.endMinutes ?? interval.endMinutes;
-    const bookingDate = b.dateStr || (b.date ? new Date(b.date).toISOString().slice(0, 10) : todayStr);
-
-    let status = 'Upcoming';
-    let statusType = 'upcoming';
-    let dotColor = 'bg-amber-400';
-    let badgeStyle = 'bg-amber-50 text-amber-600 font-bold';
-
-    if (bookingDate < nowNpt.date || (bookingDate === nowNpt.date && endMinutes <= nowNpt.minutes)) {
-      status = 'Completed';
-      statusType = 'completed';
-      dotColor = 'bg-emerald-500';
-      badgeStyle = 'bg-emerald-50 text-emerald-600 font-bold';
-    } else if (bookingDate === nowNpt.date && startMinutes <= nowNpt.minutes && endMinutes > nowNpt.minutes) {
-      status = 'Ongoing';
-      statusType = 'ongoing';
-      dotColor = 'bg-lime-500 animate-pulse';
-      badgeStyle = 'bg-lime-400 text-slate-950 font-extrabold shadow-xs';
-    } else {
-      status = 'Upcoming';
-      statusType = 'upcoming';
-      dotColor = 'bg-amber-400';
-      badgeStyle = 'bg-amber-50 text-amber-600 font-bold';
-    }
-
-    const customer = [b.user?.firstName, b.user?.lastName].filter(Boolean).join(' ') || b.customer?.name || 'Customer';
-    const courtName = b.court?.name || 'Court 1';
-
-    return {
-      startTime: interval.startTime,
-      endTime: interval.endTime,
-      customer,
-      courtName,
-      status,
-      statusType,
-      badgeStyle,
-      dotColor,
-      isTodayMatch: bookingDate === todayStr,
-    };
-  });
+      return {
+        key: b._id || b.bookingId || `${b.timeSlot}-${b.court?.name}`,
+        startMinutes,
+        startTime: interval.startTime,
+        endTime: interval.endTime,
+        customer: [b.user?.firstName, b.user?.lastName].filter(Boolean).join(' ') || b.customer?.name || 'Customer',
+        courtName: b.court?.name || 'Court 1',
+        statusType,
+        ...STATUS_STYLES[statusType],
+      };
+    })
+    .sort((a, b) => a.startMinutes - b.startMinutes);
 
   return (
     <div className="bg-white rounded-xl overflow-hidden p-5 flex flex-col justify-between h-full shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
@@ -82,22 +51,22 @@ function ScheduleCard({ bookings = [] }) {
             <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Today's Schedule</h3>
           </div>
           <span className="text-xs font-bold px-3 py-1 rounded-full bg-lime-50 text-lime-600">
-            {todayBookings.length} {todayBookings.length === 1 ? 'Slot' : 'Slots'} Today
+            {scheduleItems.length} {scheduleItems.length === 1 ? 'Slot' : 'Slots'} Today
           </span>
         </div>
 
         {/* Timeline List */}
         {scheduleItems.length === 0 ? (
           <div className="py-10 text-center text-xs text-slate-400 font-medium">
-            No bookings scheduled yet today.
+            No bookings scheduled for today.
           </div>
         ) : (
-          <div className="relative space-y-3 pt-1">
+          <div className="relative space-y-3 pt-1 max-h-[17rem] overflow-y-auto pr-1">
             {/* Vertical Connecting Line */}
             <div className="absolute left-[5px] top-4 bottom-4 w-[2px] bg-slate-100 rounded-full pointer-events-none z-0" />
 
-            {scheduleItems.map((item, idx) => (
-              <div key={idx} className="relative flex items-center gap-3.5 group">
+            {scheduleItems.map((item) => (
+              <div key={item.key} className="relative flex items-center gap-3.5 group">
                 {/* Timeline Dot */}
                 <div className={`w-3 h-3 rounded-full shrink-0 relative z-10 ${item.dotColor}`} />
 
@@ -128,7 +97,7 @@ function ScheduleCard({ bookings = [] }) {
 
                   {/* Status Badge */}
                   <span className={`text-[10px] px-2.5 py-1 rounded-full shrink-0 ${item.badgeStyle}`}>
-                    {item.status}
+                    {item.label}
                   </span>
                 </div>
               </div>
@@ -139,10 +108,15 @@ function ScheduleCard({ bookings = [] }) {
 
       {/* Footer CTA */}
       <div className="pt-3 mt-3">
-        <button className="flex items-center justify-between w-full text-xs text-lime-600 font-bold hover:text-lime-700 transition-colors cursor-pointer group">
-          <span>View Complete Day Schedule</span>
-          <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        {openBookings && (
+          <button
+            onClick={() => openBookings({ date: 'today' })}
+            className="flex items-center justify-between w-full text-xs text-lime-600 font-bold hover:text-lime-700 transition-colors cursor-pointer group"
+          >
+            <span>View Complete Day Schedule</span>
+            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        )}
       </div>
     </div>
   );

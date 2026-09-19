@@ -1,7 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, ChevronDown, ChevronRight, Plus, Settings, LogOut, User, Menu, X, Layers, CheckCircle2, Circle, Image as ImageIcon, Building2, Sparkles, ArrowRight } from 'lucide-react';
+import { useOwnerContext } from '../../context/ownerContext';
 
-function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPlayer, onToggleMobileMenu, isMobileMenuOpen, setActiveTab }) {
+function TopBar(props) {
+  // Explicit props win; otherwise fall back to the owner dashboard context so every page shows the same venue.
+  const ctx = useOwnerContext();
+  const { userVenues, onSelectVenue } = props;
+  // The hamburger works on every owner page because the open/closed state lives in the dashboard context
+  const onToggleMobileMenu = props.onToggleMobileMenu ?? ctx.toggleMobileMenu;
+  const isMobileMenuOpen = props.isMobileMenuOpen ?? ctx.isMobileMenuOpen;
+  const user = props.user ?? ctx.user;
+  const venue = props.venue ?? ctx.venue;
+  const onSwitchToPlayer = props.onSwitchToPlayer ?? ctx.onSwitchToPlayer;
+  const setActiveTab = props.setActiveTab ?? ctx.setActiveTab;
+  const { openBookings } = ctx;
+  const searchRef = useRef(null);
+  const [searchText, setSearchText] = useState('');
+
+  // Enter searches the Bookings list (name, phone, booking ID, court or date)
+  const handleSearchKeyDown = (event) => {
+    if (event.key !== 'Enter' || !openBookings) return;
+    openBookings({ search: searchText.trim() });
+  };
+
+  // Ctrl/Cmd + K jumps to the search box
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -102,10 +135,10 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
               }`}
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-lime-400 text-slate-900 font-black flex items-center justify-center text-sm sm:text-base shrink-0 shadow-2xs">
-                {(venue?.name || 'K').substring(0, 1).toUpperCase()}
+                {(venue?.name || 'T').substring(0, 1).toUpperCase()}
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-900 max-w-[120px] sm:max-w-[170px] truncate">
-                {venue?.name || 'Kathmandu Futsal'}
+                {venue?.name || 'Your venue'}
               </span>
               <ChevronDown size={14} className="text-slate-500 shrink-0 ml-0.5" />
             </button>
@@ -116,13 +149,13 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
                 {/* Active Venue Hero Header */}
                 <div className="flex flex-col items-center justify-center p-3 text-center border-b border-slate-200/70 mb-1.5">
                   <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 font-extrabold flex items-center justify-center text-sm mb-2">
-                    {(venue?.name || 'K').substring(0, 2).toUpperCase()}
+                    {(venue?.name || 'T').substring(0, 2).toUpperCase()}
                   </div>
                   <p className="text-sm font-bold text-slate-900 leading-tight">
-                    {venue?.name || 'Kathmandu Futsal'}
+                    {venue?.name || 'Your venue'}
                   </p>
                   <p className="text-xs font-medium text-slate-400 mt-0.5 truncate max-w-[200px]">
-                    {user?.email || 'dev.shahi.apps@gmail.com'}
+                    {user?.email || ''}
                   </p>
                   <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
                     <span>{user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()) : 'Admin'}</span>
@@ -132,10 +165,11 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
                 {/* Venues List */}
                 <div className="py-0.5">
                   <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {(userVenues && userVenues.length > 0 ? userVenues : [
-                      { id: '1', name: venue?.name || 'Hattiban Futsal', location: 'Baluwatar' },
-                      { id: '2', name: 'Valley Sports Complex', location: 'Jhawakhel' },
-                    ]).map((v) => {
+                    {(userVenues && userVenues.length > 0
+                      ? userVenues
+                      : venue
+                      ? [{ id: venue.id || venue._id, name: venue.name, location: venue.location }]
+                      : []).map((v) => {
                       const isSelected = (venue?.id || venue?._id || '1') === (v.id || v._id);
                       return (
                         <button
@@ -218,8 +252,12 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
           <div className="relative flex items-center w-full">
             <Search size={17} className="absolute left-4 text-slate-400 pointer-events-none" />
             <input
+              ref={searchRef}
               type="text"
-              placeholder="Search bookings, turfs, customers..."
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search bookings by name, phone, ID or date..."
               className="w-full pl-11 pr-16 py-2.5 sm:py-3 rounded-full bg-slate-100/80 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition-colors focus:bg-slate-100"
             />
             <div className="absolute right-3.5 flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-400 pointer-events-none">
@@ -253,19 +291,28 @@ function TopBar({ user, venue, userVenues, onSelectVenue, onLogout, onSwitchToPl
             {isQuickAddOpen && (
               <div className="absolute top-full right-0 mt-2 w-44 bg-white rounded-2xl border border-slate-100 p-1.5 z-40 text-xs font-semibold text-slate-700 shadow-xl">
                 <button
-                  onClick={() => setIsQuickAddOpen(false)}
+                  onClick={() => {
+                    setIsQuickAddOpen(false);
+                    if (openBookings) openBookings({ openAdd: true });
+                  }}
                   className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <span>📅 New Booking</span>
                 </button>
                 <button
-                  onClick={() => setIsQuickAddOpen(false)}
+                  onClick={() => {
+                    setIsQuickAddOpen(false);
+                    if (setActiveTab) setActiveTab('Courts');
+                  }}
                   className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <span>🏟️ New Court</span>
                 </button>
                 <button
-                  onClick={() => setIsQuickAddOpen(false)}
+                  onClick={() => {
+                    setIsQuickAddOpen(false);
+                    if (setActiveTab) setActiveTab('Customers');
+                  }}
                   className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <span>👤 New Customer</span>

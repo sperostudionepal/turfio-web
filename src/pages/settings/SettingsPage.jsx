@@ -17,28 +17,42 @@ import {
   Type,
   ZoomIn,
 } from 'lucide-react';
+import turfService from '../../services/turfService';
 import useAccessibilityStore, {
   FONT_OPTIONS,
   FONT_SIZES,
 } from '../../store/useAccessibilityStore';
 
-function SettingsPage({ activeTab, setActiveTab }) {
+// "06:00" (24h, as stored on the venue) -> "6:00 AM"
+const formatClock = (value) => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value || '');
+  if (!match) return '—';
+  const hours = Number(match[1]);
+  return `${hours % 12 || 12}:${match[2]} ${hours < 12 ? 'AM' : 'PM'}`;
+};
+
+function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
   const [activeSection, setActiveSection] = useState('General');
   const [showToast, setShowToast] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 1. General & Venue Details State
-  const [arenaName, setArenaName] = useState('Kathmandu Futsal Arena');
-  const [arenaTagline, setArenaTagline] = useState('Premier 5v5 Synthetic Turf in Kathmandu');
-  const [email, setEmail] = useState('contact@ktmfutsal.com.np');
-  const [phone, setPhone] = useState('+977 9841-234567');
+  const venueId = venue?.id || venue?._id;
+  const rawVenue = venue?.raw || {};
+
+  // 1. General & Venue Details State (seeded from the real venue/account; Dashboard remounts this page when the venue changes)
+  const [arenaName, setArenaName] = useState(venue?.name || '');
+  const [arenaTagline, setArenaTagline] = useState(venue?.description || '');
+  const email = user?.email || '';
+  const phone = user?.phone || '';
   const [altPhone, setAltPhone] = useState('+977 01-4234567');
   const [timezone, setTimezone] = useState('(GMT+05:45) Kathmandu, Nepal');
   const [currency, setCurrency] = useState('NPR (Nepalese Rupee - NRs.)');
   const [panNumber, setPanNumber] = useState('609823415');
 
   // Business Address State
-  const [address, setAddress] = useState('Ring Road, Kalanki (Near Bhatbhateni Supermarket)');
-  const [city, setCity] = useState('Kathmandu');
+  const [address, setAddress] = useState(rawVenue.address?.area || '');
+  const [city, setCity] = useState(rawVenue.address?.city || '');
   const [stateProvince, setStateProvince] = useState('Bagmati Province');
   const [zipCode, setZipCode] = useState('44600');
   const [mapsUrl, setMapsUrl] = useState('https://maps.google.com/?q=Kathmandu+Futsal+Arena');
@@ -61,8 +75,8 @@ function SettingsPage({ activeTab, setActiveTab }) {
   const [reportRecipient, setReportRecipient] = useState('owner@ktmfutsal.com.np');
 
   // 4. Booking & Slot Rules State
-  const [openTime, setOpenTime] = useState('06:00 AM');
-  const [closeTime, setCloseTime] = useState('10:00 PM');
+  const openTime = formatClock(venue?.openingHours?.start);
+  const closeTime = formatClock(venue?.openingHours?.end);
   const [slotDuration, setSlotDuration] = useState('60 Minutes');
   const [cancellationWindow, setCancellationWindow] = useState('4 Hours Prior');
   const [gracePeriod, setGracePeriod] = useState('10 Minutes');
@@ -89,10 +103,27 @@ function SettingsPage({ activeTab, setActiveTab }) {
     { id: 'Accessibility', label: 'Typography & Size', description: 'Font family & text size scaling', icon: Sliders },
   ];
 
-  const handleSave = () => {
-    applySettings(draftFontTheme, draftFontSize);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  const handleSave = async () => {
+    setSaveError('');
+    setIsSaving(true);
+    try {
+      if (venueId) {
+        await turfService.updateTurf(venueId, {
+          name: arenaName.trim(),
+          description: arenaTagline.trim(),
+          address: { city: city.trim(), area: address.trim() },
+        });
+        // Push the saved venue back to the dashboard so the top bar/sidebar show the new name.
+        if (refreshVenue) await refreshVenue();
+      }
+      applySettings(draftFontTheme, draftFontSize);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      setSaveError(error.message || 'Could not save settings.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -136,13 +167,33 @@ function SettingsPage({ activeTab, setActiveTab }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Save size={14} />
-                  <span>Save All Changes</span>
+                  <span>{isSaving ? 'Saving...' : 'Save All Changes'}</span>
                 </button>
               </div>
             </div>
+
+            {saveError && (
+              <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                {saveError}
+              </p>
+            )}
+            {!venueId && (
+              <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                No venue is linked to this account yet, so venue details can't be loaded or saved.
+              </p>
+            )}
+
+            {activeSection !== 'Accessibility' && (
+              <p className="text-xs font-semibold text-slate-600 bg-white/70 border border-slate-200 rounded-xl px-3 py-2">
+                {activeSection === 'General'
+                  ? 'Venue name, description, city and area are saved to your venue. Email and phone come from your account. PAN, alternative contact, state/zip and map link are a preview and are not saved yet.'
+                  : 'These options are a preview and are not saved to the server yet.'}
+              </p>
+            )}
 
             {/* 2-Column Settings Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -207,7 +258,7 @@ function SettingsPage({ activeTab, setActiveTab }) {
                         </div>
 
                         <div>
-                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Arena Tagline</label>
+                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Venue Description</label>
                           <input
                             type="text"
                             value={arenaTagline}
@@ -221,8 +272,9 @@ function SettingsPage({ activeTab, setActiveTab }) {
                           <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            readOnly
+                            title="Comes from your account"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-semibold focus:outline-none cursor-not-allowed"
                           />
                         </div>
 
@@ -237,12 +289,13 @@ function SettingsPage({ activeTab, setActiveTab }) {
                         </div>
 
                         <div>
-                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Counter Front Desk Phone</label>
+                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Account Phone</label>
                           <input
                             type="text"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            readOnly
+                            title="Comes from your account"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-bold focus:outline-none cursor-not-allowed"
                           />
                         </div>
 
@@ -294,7 +347,7 @@ function SettingsPage({ activeTab, setActiveTab }) {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
                         <div className="md:col-span-2">
-                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Street Address & Landmark</label>
+                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Area / Landmark</label>
                           <input
                             type="text"
                             value={address}
@@ -574,29 +627,24 @@ function SettingsPage({ activeTab, setActiveTab }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
                       <div>
                         <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Daily Arena Opening Time</label>
-                        <select
+                        <input
+                          type="text"
                           value={openTime}
-                          onChange={(e) => setOpenTime(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-sm font-bold text-slate-900"
-                        >
-                          <option>05:00 AM</option>
-                          <option>06:00 AM</option>
-                          <option>07:00 AM</option>
-                        </select>
+                          readOnly
+                          title="Set per day in your venue schedule"
+                          className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-500 cursor-not-allowed"
+                        />
                       </div>
 
                       <div>
                         <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Daily Arena Closing Time</label>
-                        <select
+                        <input
+                          type="text"
                           value={closeTime}
-                          onChange={(e) => setCloseTime(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-sm font-bold text-slate-900"
-                        >
-                          <option>09:00 PM</option>
-                          <option>10:00 PM</option>
-                          <option>11:00 PM</option>
-                          <option>12:00 AM (Midnight)</option>
-                        </select>
+                          readOnly
+                          title="Set per day in your venue schedule"
+                          className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-500 cursor-not-allowed"
+                        />
                       </div>
 
                       <div>
