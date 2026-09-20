@@ -13,12 +13,26 @@ import {
   User,
   X,
 } from 'lucide-react';
+import { useOwnerContext } from '../../context/ownerContext';
 
-function Sidebar({ user, venue, activeTab = 'Dashboard', setActiveTab, onLogout, onSwitchToPlayer, isOpen, onClose }) {
+function Sidebar(props) {
+  // Explicit props win; otherwise fall back to the owner dashboard context so every page behaves the same.
+  const ctx = useOwnerContext();
+  const { activeTab = 'Dashboard' } = props;
+  // Off-canvas open/close state comes from the dashboard context on pages that don't pass it
+  const isOpen = props.isOpen ?? ctx.isMobileMenuOpen;
+  const onClose = props.onClose ?? ctx.closeMobileMenu;
+  const user = props.user ?? ctx.user;
+  const venue = props.venue ?? ctx.venue;
+  const setActiveTab = props.setActiveTab ?? ctx.setActiveTab;
+  const onLogout = props.onLogout ?? ctx.onLogout;
+  const onSwitchToPlayer = props.onSwitchToPlayer ?? ctx.onSwitchToPlayer;
+
   // Navigation structured specifically for Turf Arena Owners
   const mainItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '#' },
-    { label: 'Bookings', icon: Calendar, badge: '24', href: '#' },
+    // Number of bookings waiting for the owner to confirm; hidden when there are none
+    { label: 'Bookings', icon: Calendar, badge: ctx.pendingCount > 0 ? String(ctx.pendingCount) : undefined, href: '#' },
     { label: 'Customers', icon: Users, href: '#' },
   ];
 
@@ -135,11 +149,11 @@ function Sidebar({ user, venue, activeTab = 'Dashboard', setActiveTab, onLogout,
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-lime-400 text-slate-900 font-black flex items-center justify-center text-xs shrink-0">
-                  {(venue?.name || 'K').substring(0, 1).toUpperCase()}
+                  {(venue?.name || 'T').substring(0, 1).toUpperCase()}
                 </div>
                 <div className="truncate">
-                  <p className="text-xs font-bold text-slate-900 truncate">{venue?.name || 'Kathmandu Futsal'}</p>
-                  <p className="text-[10px] font-medium text-slate-400 truncate">{user?.email || 'dev.shahi.apps@gmail.com'}</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">{venue?.name || 'Your venue'}</p>
+                  <p className="text-[10px] font-medium text-slate-400 truncate">{user?.email || ''}</p>
                 </div>
               </div>
             </div>

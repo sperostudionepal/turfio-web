@@ -229,6 +229,32 @@ export const turfService = {
     return response?.data || response;
   },
 
+  /**
+   * Update editable venue fields (name, description, address city/area, pricePerHour, amenities)
+   */
+  async updateTurf(turfId, updates) {
+    const response = await apiClient.put(`/turfs/${turfId}`, updates);
+    return transformTurf(response?.data || response);
+  },
+
+  async cancelBooking(bookingId) {
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/cancel`);
+    return response?.data || response;
+  },
+
+  /**
+   * Owner records that the customer paid the outstanding balance in person (Pay at Venue)
+   */
+  async markBookingPaid(bookingId) {
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/payment`, { paymentStatus: 'Paid' });
+    return response?.data || response;
+  },
+
+  async confirmBooking(bookingId) {
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/confirm`);
+    return response?.data || response;
+  },
+
   async createManualBooking(bookingData) {
     const response = await apiClient.post('/bookings/manual', bookingData);
     return response?.data || response;

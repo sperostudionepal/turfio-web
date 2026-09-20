@@ -25,208 +25,226 @@ import {
   ArrowUpRight,
   MoreHorizontal,
   Printer,
+  Banknote,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
-import { getTodayNepalString, processFutureSlots } from '../../utils/dateTime';
+import { getTodayNepalString, processFutureSlots, parseSlotInterval, formatNepalDateTime } from '../../utils/dateTime';
+import { buildPaymentRows } from '../../utils/paymentRecords';
+import { getMaxDuration, buildSlotRange, suggestedPrice, parsePrice, defaultTeamSize, MAX_DURATION_HOURS } from '../../utils/manualBooking';
+import { getPageItems } from '../../utils/pagination';
+import { canConfirm, canMarkPaid, canCancel } from '../../utils/bookingActions';
+import { paidAmount } from '../../utils/dashboardStats';
+import { deriveBookingStatus, getBookingDateStr } from '../../utils/bookingStatus';
+import { DATE_FILTER_OPTIONS, getDateFilterRange, matchesDateRange, sortBookings, nextSort } from '../../utils/bookingFilters';
+import { buildBookingsCsv, downloadCsv } from '../../utils/reportExport';
+import CancelBookingDialog from '../../components/bookings/CancelBookingDialog';
+import MarkPaidDialog from '../../components/bookings/MarkPaidDialog';
+import BookingDetailsModal from '../../components/bookings/BookingDetailsModal';
+import { ErrorNotice } from '../../components/dashboard/DashboardNotices';
+import PeriodSelect from '../../components/dashboard/PeriodSelect';
 
-function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
+const formatDuration = (booking) => {
+  const interval = parseSlotInterval(booking.timeSlot);
+  const minutes =
+    typeof booking.startMinutes === 'number' && typeof booking.endMinutes === 'number'
+      ? booking.endMinutes - booking.startMinutes
+      : interval.endMinutes - interval.startMinutes;
+  const hours = Math.max(0, minutes) / 60;
+  return hours === 1 ? '1 Hour' : `${Number(hours.toFixed(2))} Hours`;
+};
+
+const mapServerBooking = (booking) => ({
+  id: booking.shortCode || booking.bookingId || booking._id,
+  rawId: booking._id,
+  customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
+  customerPhone: booking.user?.phone || '—',
+  customerEmail: booking.user?.email || '—',
+  avatar: booking.user?.profilePicture || '/logo.png',
+  courtName: booking.court?.name || booking.turf?.name || 'Court 1',
+  courtDimension: booking.court?.dimension || '',
+  date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
+  dateStr: getBookingDateStr(booking),
+  startMinutes:
+    typeof booking.startMinutes === 'number' ? booking.startMinutes : parseSlotInterval(booking.timeSlot).startMinutes,
+  timeSlot: booking.timeSlot || '—',
+  duration: formatDuration(booking),
+  amount: Number(booking.totalAmount || 0),
+  paid: paidAmount(booking),
+  due: Math.max(0, Number(booking.totalAmount || 0) - paidAmount(booking)),
+  paymentType: booking.paymentType || 'full',
+  paymentMethod: booking.paymentMethod || '—',
+  paymentStatus: booking.paymentStatus || 'Pending',
+  bookingStatus: deriveBookingStatus(booking),
+  bookedOn: formatNepalDateTime(booking.createdAt),
+  confirmedAt: booking.confirmedAt || null,
+  raw: booking, // the untouched server booking, used by the CSV export
+  payments: buildPaymentRows([booking]),
+  playersCount: booking.teamSize || 0,
+});
+
+// Blank New Booking form. price stays "auto" (court rate x hours) until the owner edits it.
+const newManualForm = (courtId = '') => ({
+  name: '',
+  phone: '',
+  email: '',
+  courtId,
+  date: getTodayNepalString(),
+  timeSlot: '',
+  durationHours: 1,
+  matchType: '',
+  teamSize: '',
+  price: '',
+  priceTouched: false,
+  paymentStatus: 'Pending',
+});
+
+function BookingsPage({
+  user,
+  activeTab,
+  setActiveTab,
+  ownerBookings = [],
+  refreshBookings,
+  initialSearch = '',
+  initialStatus = 'All',
+  initialDateFilter = 'all',
+  initialAddOpen = false,
+}) {
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [dateFilter, setDateFilter] = useState(initialDateFilter);
+  const [customRange, setCustomRange] = useState({ from: '', to: '' });
+  const [sort, setSort] = useState(null); // { key, dir } or null for the server's order (newest match first)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(initialAddOpen);
+  const [selectedId, setSelectedId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [ownerTurf, setOwnerTurf] = useState(null);
   const [slotOptions, setSlotOptions] = useState([]);
-  const [manualForm, setManualForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    courtId: '',
-    date: getTodayNepalString(),
-    timeSlot: '',
-    paymentStatus: 'Pending',
-  });
+  const [manualForm, setManualForm] = useState(() => newManualForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [paidTarget, setPaidTarget] = useState(null);
+  const [loadStatus, setLoadStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const selectedBooking = bookings.find((b) => b.id === selectedId) || null;
+  const [actionBusyId, setActionBusyId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
-  // Top Stat Cards Data (matching Dashboard StatCards format)
+  // Headline numbers from the real bookings. Cancelled bookings never count towards these.
+  const liveBookings = bookings.filter((b) => b.bookingStatus !== 'Cancelled');
+  const cancelledCount = bookings.length - liveBookings.length;
   const stats = [
     {
       title: 'Total Bookings',
-      value: '1,085',
-      change: '14.2%',
-      period: 'from last month',
+      value: liveBookings.length.toLocaleString(),
+      subtext: `${cancelledCount} cancelled`,
       icon: CalendarIcon,
       iconBg: 'bg-emerald-50 text-emerald-600',
     },
     {
       title: 'Confirmed Slots',
-      value: '842',
-      change: '8.4%',
-      period: 'from last month',
+      value: liveBookings.filter((b) => b.bookingStatus === 'Confirmed' || b.bookingStatus === 'Completed').length.toLocaleString(),
+      subtext: 'reserved for players',
       icon: CheckCircle2,
       iconBg: 'bg-blue-50 text-blue-600',
     },
     {
       title: 'Pending Confirmation',
-      value: '24',
-      change: '2.1%',
-      period: 'from last month',
+      value: liveBookings.filter((b) => b.bookingStatus === 'Pending').length.toLocaleString(),
+      subtext: 'waiting for you',
       icon: AlertCircle,
       iconBg: 'bg-amber-50 text-amber-600',
     },
     {
       title: 'Gross Revenue',
-      value: 'NRs. 1,65,450',
-      change: '18.2%',
-      period: 'from last month',
+      value: `NRs. ${liveBookings.reduce((sum, b) => sum + b.paid, 0).toLocaleString('en-NP')}`,
+      subtext: `Due: NRs. ${liveBookings.reduce((sum, b) => sum + b.due, 0).toLocaleString('en-NP')}`,
       icon: DollarSign,
       iconBg: 'bg-purple-50 text-purple-600',
     },
   ];
+  const showSkeleton = loadStatus === 'loading' && !hasLoaded;
 
-  // Mock Bookings Data
-  const [bookings, setBookings] = useState([
-    {
-      id: 'BK-1082',
-      customerName: 'Rohan Shrestha',
-      customerPhone: '+977 9841234567',
-      customerEmail: 'rohan.s@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=80',
-      courtName: 'Main Pro Pitch',
-      date: '12 Jun 2026',
-      timeSlot: '09:00 AM - 10:00 AM',
-      duration: '1 Hour',
-      amount: 60.0,
-      paymentMethod: 'eSewa',
-      paymentStatus: 'Paid',
-      bookingStatus: 'Ongoing',
-      bookedOn: '10 Jun 2026, 04:30 PM',
-      playersCount: 10,
-      source: 'Mobile App',
-    },
-    {
-      id: 'BK-1083',
-      customerName: 'Aman Tamang',
-      customerPhone: '+977 9818765432',
-      customerEmail: 'aman.tamang@hotmail.com',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&auto=format&fit=crop&q=80',
-      courtName: 'Standard Pitch',
-      date: '12 Jun 2026',
-      timeSlot: '10:00 AM - 11:00 AM',
-      duration: '1 Hour',
-      amount: 50.0,
-      paymentMethod: 'Khalti',
-      paymentStatus: 'Paid',
-      bookingStatus: 'Confirmed',
-      bookedOn: '11 Jun 2026, 09:15 AM',
-      playersCount: 10,
-      source: 'Mobile App',
-    },
-    {
-      id: 'BK-1084',
-      customerName: 'Bikash Gurung',
-      customerPhone: '+977 9801122334',
-      customerEmail: 'bikash.g@yahoo.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
-      courtName: 'Rooftop Open Turf',
-      date: '12 Jun 2026',
-      timeSlot: '11:00 AM - 01:00 PM',
-      duration: '2 Hours',
-      amount: 160.0,
-      paymentMethod: 'VISA Card',
-      paymentStatus: 'Paid',
-      bookingStatus: 'Confirmed',
-      bookedOn: '11 Jun 2026, 02:40 PM',
-      playersCount: 14,
-      source: 'Walk-in Counter',
-    },
-    {
-      id: 'BK-1085',
-      customerName: 'Sujan Magar',
-      customerPhone: '+977 9865432109',
-      customerEmail: 'sujan.magar@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
-      courtName: 'Main Pro Pitch',
-      date: '12 Jun 2026',
-      timeSlot: '01:00 PM - 02:00 PM',
-      duration: '1 Hour',
-      amount: 60.0,
-      paymentMethod: 'Cash',
-      paymentStatus: 'Unpaid',
-      bookingStatus: 'Pending',
-      bookedOn: '12 Jun 2026, 08:00 AM',
-      playersCount: 10,
-      source: 'Phone Call',
-    },
-    {
-      id: 'BK-1086',
-      customerName: 'Nabin Karki',
-      customerPhone: '+977 9849988776',
-      customerEmail: 'karki.nabin@outlook.com',
-      avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80',
-      courtName: 'Standard Pitch',
-      date: '12 Jun 2026',
-      timeSlot: '02:00 PM - 04:00 PM',
-      duration: '2 Hours',
-      amount: 100.0,
-      paymentMethod: 'eSewa',
-      paymentStatus: 'Paid',
-      bookingStatus: 'Completed',
-      bookedOn: '09 Jun 2026, 01:10 PM',
-      playersCount: 10,
-      source: 'Mobile App',
-    },
-  ]);
+  const loadBookings = () =>
+    turfService.getOwnerBookings().then((items) => {
+      setBookings(items.map(mapServerBooking));
+      setHasLoaded(true);
+      setLoadStatus('ready');
+    }).catch(() => {
+      // Fall back to the dashboard's copy of the list rather than an empty page
+      if (ownerBookings.length > 0) {
+        setBookings((current) => (current.length > 0 ? current : ownerBookings.map(mapServerBooking)));
+        setHasLoaded(true);
+      }
+      setLoadStatus('error');
+    });
+
+  const retryLoad = async () => {
+    setIsRetrying(true);
+    await loadBookings();
+    setIsRetrying(false);
+  };
 
   useEffect(() => {
-    turfService.getOwnerBookings().then((items) => {
-      setBookings(items.map((booking) => ({
-        id: booking.shortCode || booking.bookingId || booking._id,
-        customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
-        customerPhone: booking.user?.phone || '—',
-        customerEmail: booking.user?.email || '—',
-        avatar: booking.user?.profilePicture || '/logo.png',
-        courtName: booking.court?.name || booking.turf?.name || 'Court 1',
-        courtDimension: booking.court?.dimension || '',
-        date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
-        timeSlot: booking.timeSlot || '—',
-        duration: '1 Hour',
-        amount: Number(booking.totalAmount || 0),
-        paymentMethod: booking.paymentMethod || '—',
-        paymentStatus: booking.paymentStatus || 'Pending',
-        bookingStatus: booking.paymentStatus === 'Paid' ? (booking.status || 'Confirmed') : 'Pending',
-        bookedOn: new Date(booking.createdAt).toLocaleString(),
-        playersCount: booking.teamSize || 0,
-        source: 'Turfio',
-      })));
-    }).catch(() => {
-      if (ownerBookings.length > 0) {
-        setBookings(ownerBookings.map((booking) => ({
-          id: booking.shortCode || booking.bookingId || booking._id,
-          customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
-          customerPhone: booking.user?.phone || '—',
-          customerEmail: booking.user?.email || '—',
-          avatar: booking.user?.profilePicture || '/logo.png',
-          courtName: booking.court?.name || booking.turf?.name || 'Court 1',
-          courtDimension: booking.court?.dimension || '',
-          date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
-          timeSlot: booking.timeSlot || '—',
-          duration: '1 Hour',
-          amount: Number(booking.totalAmount || 0),
-          paymentMethod: booking.paymentMethod || '—',
-          paymentStatus: booking.paymentStatus || 'Pending',
-          bookingStatus: booking.paymentStatus === 'Paid' ? (booking.status || 'Confirmed') : 'Pending',
-          bookedOn: new Date(booking.createdAt).toLocaleString(),
-          playersCount: booking.teamSize || 0,
-          source: 'Turfio',
-        })));
-      }
-    });
+    loadBookings();
   }, [ownerBookings.length]);
+
+  const handleConfirm = async (booking) => {
+    setActionBusyId(booking.id);
+    setActionError('');
+    try {
+      await turfService.confirmBooking(booking.rawId || booking.id);
+      await loadBookings();
+      if (refreshBookings) refreshBookings(); // keep the dashboard's counts (sidebar badge etc.) in step
+    } catch (error) {
+      setActionError(error.message || 'Could not confirm booking.');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleMarkPaidConfirmed = async () => {
+    const booking = paidTarget;
+    if (!booking) return;
+    setActionBusyId(booking.id);
+    setActionError('');
+    try {
+      await turfService.markBookingPaid(booking.rawId || booking.id);
+      await loadBookings();
+      if (refreshBookings) refreshBookings();
+    } catch (error) {
+      setActionError(error.message || 'Could not record the payment.');
+    } finally {
+      setActionBusyId(null);
+      setPaidTarget(null);
+    }
+  };
+
+  const handleCancelConfirmed = async () => {
+    const booking = cancelTarget;
+    if (!booking) return;
+    setActionBusyId(booking.id);
+    setActionError('');
+    try {
+      await turfService.cancelBooking(booking.rawId || booking.id);
+      await loadBookings();
+      if (refreshBookings) refreshBookings();
+      setCancelTarget(null);
+    } catch (error) {
+      setActionError(error.message || 'Could not cancel booking.');
+      setCancelTarget(null);
+    } finally {
+      setActionBusyId(null);
+    }
+  };
 
   useEffect(() => {
     const userId = user?._id || user?.id;
@@ -295,17 +313,32 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
       });
   }, [ownerTurf?.id, ownerTurf?._id, manualForm.date, manualForm.courtId]);
 
+  // ---- New Booking form: values derived from the form, the venue and the day's availability
+  const courts = ownerTurf?.courts || [];
+  const selectedCourt = courts.find((c) => (c._id || c.id) === manualForm.courtId) || courts[0];
+  const hourlyRate = Number(selectedCourt?.hourlyRate || ownerTurf?.pricePerHour || 1200);
+  const selectedSlot = slotOptions.find((slot) => slot.value === manualForm.timeSlot) || null;
+  const maxDuration = getMaxDuration(slotOptions, manualForm.timeSlot); // hours free back-to-back from this start
+  const duration = Math.max(1, Math.min(manualForm.durationHours, maxDuration || 1));
+  const matchTypes = ownerTurf?.matchTypes?.length ? ownerTurf.matchTypes : ['5v5', '7v7', '11v11'];
+  const matchType = matchTypes.includes(manualForm.matchType) ? manualForm.matchType : matchTypes[0];
+  const teamSizeValue = manualForm.teamSize !== '' ? manualForm.teamSize : String(defaultTeamSize(matchType));
+  const autoPrice = suggestedPrice(hourlyRate, duration);
+  const priceValue = manualForm.priceTouched ? manualForm.price : String(autoPrice);
+  const slotRange = selectedSlot ? buildSlotRange(selectedSlot.startMinutes, duration) : null;
+
   const saveManualBooking = async (event) => {
     event.preventDefault();
     setSaving(true);
     setFormError('');
     try {
       const turfId = ownerTurf?.id || ownerTurf?._id;
-      if (!turfId || !manualForm.timeSlot) throw new Error('Select an available date and future time slot.');
+      if (!turfId || !slotRange) throw new Error('Select an available date and future start time.');
 
-      const selectedCourt = (ownerTurf?.courts || []).find(
-        (c) => (c._id || c.id) === manualForm.courtId
-      ) || ownerTurf?.courts?.[0];
+      const totalAmount = parsePrice(priceValue);
+      if (totalAmount === null) throw new Error('Enter a total price greater than 0.');
+      const teamSize = Number(teamSizeValue);
+      if (!Number.isInteger(teamSize) || teamSize < 1 || teamSize > 60) throw new Error('Players must be a whole number from 1 to 60.');
 
       await turfService.createManualBooking({
         turf: turfId,
@@ -315,49 +348,26 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
           courtNumber: selectedCourt.courtNumber,
           dimension: selectedCourt.dimension,
           surface: selectedCourt.surface,
-          hourlyRate: selectedCourt.hourlyRate || ownerTurf?.pricePerHour || 1200,
+          hourlyRate,
         } : null,
         courtId: selectedCourt?._id || selectedCourt?.id || null,
         customer: { name: manualForm.name, phone: manualForm.phone, email: manualForm.email },
         date: manualForm.date,
-        timeSlot: manualForm.timeSlot,
-        matchType: '5v5',
-        teamSize: 10,
-        totalAmount: selectedCourt?.hourlyRate || ownerTurf?.pricePerHour || 1200,
+        // A real range plus exact minutes: the server checks the whole range is free, not just the first hour
+        timeSlot: slotRange.timeSlot,
+        startMinutes: slotRange.startMinutes,
+        endMinutes: slotRange.endMinutes,
+        matchType,
+        teamSize,
+        totalAmount,
         paymentMethod: 'Pay at Venue',
         paymentStatus: manualForm.paymentStatus,
         paymentType: 'venue',
       });
-      const refreshed = await turfService.getOwnerBookings();
-      setBookings(refreshed.map((booking) => ({
-        id: booking.bookingId || booking._id,
-        customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
-        customerPhone: booking.user?.phone || '—',
-        customerEmail: booking.user?.email || '—',
-        avatar: booking.user?.profilePicture || '/logo.png',
-        courtName: booking.court?.name || booking.turf?.name || 'Court 1',
-        courtDimension: booking.court?.dimension || '',
-        date: booking.dateStr || new Date(booking.date).toLocaleDateString(),
-        timeSlot: booking.timeSlot || '—',
-        duration: '1 Hour',
-        amount: Number(booking.totalAmount || 0),
-        paymentMethod: booking.paymentMethod || '—',
-        paymentStatus: booking.paymentStatus || 'Pending',
-        bookingStatus: booking.paymentStatus === 'Paid' ? (booking.status || 'Confirmed') : 'Pending',
-        bookedOn: new Date(booking.createdAt).toLocaleString(),
-        playersCount: booking.teamSize || 0,
-        source: 'Turfio',
-      })));
+      await loadBookings();
+      if (refreshBookings) refreshBookings();
       setIsAddModalOpen(false);
-      setManualForm({
-        name: '',
-        phone: '',
-        email: '',
-        courtId: selectedCourt?._id || selectedCourt?.id || '',
-        date: getTodayNepalString(),
-        timeSlot: '',
-        paymentStatus: 'Pending',
-      });
+      setManualForm(newManualForm(selectedCourt?._id || selectedCourt?.id || ''));
     } catch (error) {
       setFormError(error.message || 'Could not save booking.');
     } finally {
@@ -402,18 +412,59 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
     }
   };
 
-  const filteredBookings = bookings.filter((b) => {
+  const dateRange = getDateFilterRange(dateFilter, customRange);
+  const matchingBookings = bookings.filter((b) => {
     const matchesSearch =
       b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.customerPhone.includes(searchQuery) ||
-      b.courtName.toLowerCase().includes(searchQuery.toLowerCase());
+      b.courtName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(b.date).includes(searchQuery.trim());
     const matchesStatus = statusFilter === 'All' || b.bookingStatus === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesDateRange(b.dateStr, dateRange);
   });
+  const filteredBookings = sortBookings(matchingBookings, sort);
+  const hasActiveFilters = Boolean(searchQuery.trim()) || statusFilter !== 'All' || dateFilter !== 'all';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('All');
+    setDateFilter('all');
+    setCustomRange({ from: '', to: '' });
+    setCurrentPage(1);
+  };
+
+  // Exports what the table is showing (all pages of the current search/status/date filter, in the current order)
+  const handleExport = () => {
+    if (filteredBookings.length === 0) return;
+    const name = hasActiveFilters ? 'turfio-bookings-filtered' : 'turfio-bookings';
+    downloadCsv(`${name}-${getTodayNepalString()}.csv`, buildBookingsCsv(filteredBookings.map((b) => b.raw), null, { sort: false }));
+  };
+
+  // Sortable column header: click cycles ascending, descending, then back to the default order
+  const sortHeader = (label, key, className = 'pb-3 pr-4') => {
+    const active = sort?.key === key;
+    const Icon = !active ? ArrowUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown;
+    return (
+      <th className={className} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+        <button
+          type="button"
+          onClick={() => {
+            setSort((current) => nextSort(current, key));
+            setCurrentPage(1);
+          }}
+          className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors cursor-pointer hover:text-slate-700 ${active ? 'text-slate-700' : ''}`}
+        >
+          {label}
+          <Icon size={12} className={active ? 'text-emerald-600' : 'text-slate-300'} />
+        </button>
+      </th>
+    );
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const page = Math.min(currentPage, totalPages);
+  const startIndex = (page - 1) * itemsPerPage;
   const paginatedBookings = filteredBookings.slice(startIndex, startIndex + itemsPerPage);
 
   return (
@@ -446,7 +497,16 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/90 text-xs font-semibold text-slate-700 hover:bg-white transition-all shadow-xs">
+                <button
+                  onClick={handleExport}
+                  disabled={filteredBookings.length === 0}
+                  title={
+                    filteredBookings.length === 0
+                      ? 'No bookings to export'
+                      : `Download ${filteredBookings.length} booking${filteredBookings.length === 1 ? '' : 's'} as CSV${hasActiveFilters ? ' (current filters)' : ''}`
+                  }
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/90 text-xs font-semibold text-slate-700 hover:bg-white transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <Download size={14} className="text-slate-500" />
                   <span>Export Bookings</span>
                 </button>
@@ -461,48 +521,26 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
               </div>
             </div>
 
-            {/* Top Row: 4 Metric Cards (Identical to Dashboard StatCards) */}
+            {/* Top Row: 4 Metric Cards (computed from the real bookings) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat) => {
                 const Icon = stat.icon;
-                const liveValue = stat.title === 'Total Bookings'
-                  ? bookings.length.toLocaleString()
-                  : stat.title === 'Confirmed Slots'
-                  ? bookings.filter((booking) => booking.bookingStatus === 'Confirmed' || booking.bookingStatus === 'Completed').length.toLocaleString()
-                  : stat.title === 'Pending Confirmation'
-                  ? bookings.filter((booking) => booking.bookingStatus === 'Pending').length.toLocaleString()
-                  : `NRs. ${bookings.filter((booking) => booking.paymentStatus === 'Paid').reduce((sum, booking) => sum + Number(booking.amount || 0), 0).toLocaleString('en-NP')}`;
                 return (
                   <div
                     key={stat.title}
-                    className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-5 relative flex flex-col justify-between shadow-xs hover:shadow-md hover:bg-white/80 transition-all"
+                    className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-5 flex items-center gap-3 shadow-xs hover:shadow-md hover:bg-white/80 transition-all"
                   >
-                    {/* Top row: Icon on left, Title & Value on right, Options menu top right */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-3.5 rounded-2xl shrink-0 ${stat.iconBg}`}>
-                          <Icon size={20} />
-                        </div>
-                        <div>
-                          <span className="text-[12px] font-semibold text-slate-400 block leading-tight">
-                            {stat.title}
-                          </span>
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
-                              {liveValue}
-                          </h3>
-                        </div>
-                      </div>
-                      <button className="text-slate-400 hover:text-slate-700 p-1 -mr-1 -mt-1 transition-colors">
-                        <MoreHorizontal size={16} />
-                      </button>
+                    <div className={`p-3.5 rounded-2xl shrink-0 ${stat.iconBg}`}>
+                      <Icon size={20} />
                     </div>
-
-                    {/* Bottom row: Percentage badge & period */}
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                      <span className="text-emerald-600 bg-emerald-50/80 px-1.5 py-1 rounded-md flex items-center gap-0.5 font-bold">
-                        <ArrowUpRight size={12} /> {stat.change}
+                    <div className="min-w-0">
+                      <span className="text-[12px] font-semibold text-slate-400 block leading-tight">{stat.title}</span>
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1 truncate">
+                        {showSkeleton ? <span className="inline-block h-6 w-16 rounded-lg bg-slate-100 animate-pulse align-middle" /> : stat.value}
+                      </h3>
+                      <span className="text-[11px] text-slate-400 font-medium block mt-0.5 truncate">
+                        {showSkeleton ? '' : stat.subtext}
                       </span>
-                      <span className="text-slate-400 font-medium">{stat.period}</span>
                     </div>
                   </div>
                 );
@@ -530,7 +568,7 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
 
               {/* Status Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto py-0.5">
-                {['All', 'Ongoing', 'Confirmed', 'Pending', 'Completed', 'Cancelled'].map((status) => (
+                {['All', 'Confirmed', 'Pending', 'Completed', 'Cancelled'].map((status) => (
                   <button
                     key={status}
                     onClick={() => {
@@ -549,51 +587,145 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
               </div>
             </div>
 
+            {/* Date filter */}
+            <div className="flex flex-wrap items-center gap-2">
+              <PeriodSelect
+                value={dateFilter}
+                onChange={(value) => {
+                  setDateFilter(value);
+                  setCurrentPage(1);
+                }}
+                options={DATE_FILTER_OPTIONS}
+                icon={CalendarIcon}
+                ariaLabel="Filter by booking date"
+                className="bg-slate-50 border border-slate-100"
+              />
+              {dateFilter === 'custom' && (
+                <>
+                  <div className="w-44">
+                    <CustomDatePicker
+                      value={customRange.from}
+                      onChange={(from) => {
+                        setCustomRange((current) => ({ ...current, from }));
+                        setCurrentPage(1);
+                      }}
+                      minDate="2000-01-01"
+                      label="From"
+                      buttonClassName="h-10 text-xs bg-slate-50 border-slate-100"
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-400">to</span>
+                  <div className="w-44">
+                    <CustomDatePicker
+                      value={customRange.to}
+                      onChange={(to) => {
+                        setCustomRange((current) => ({ ...current, to }));
+                        setCurrentPage(1);
+                      }}
+                      minDate="2000-01-01"
+                      label="To"
+                      buttonClassName="h-10 text-xs bg-slate-50 border-slate-100"
+                    />
+                  </div>
+                </>
+              )}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="px-3 py-2 rounded-full text-xs font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Clear all filters
+                </button>
+              )}
+              {hasActiveFilters && (
+                <span className="ml-auto text-[11px] font-semibold text-slate-400">
+                  {filteredBookings.length} of {bookings.length} bookings
+                </span>
+              )}
+            </div>
+
+            {loadStatus === 'error' && (
+              <ErrorNotice
+                message={hasLoaded ? "Couldn't refresh your bookings. Showing the last data that loaded." : "Couldn't load your bookings."}
+                onRetry={retryLoad}
+                busy={isRetrying}
+              />
+            )}
+
+            {actionError && (
+              <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                {actionError}
+              </p>
+            )}
+
             {/* Bookings Directory Table */}
             <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
+              <table className="w-full min-w-[1100px] text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="text-xs font-bold text-slate-400 border-b border-slate-100 uppercase tracking-wider whitespace-nowrap">
                     <th className="pb-3 pr-4">Booking ID</th>
-                    <th className="pb-3 pr-4">Customer</th>
-                    <th className="pb-3 pr-4">Court Pitch</th>
-                    <th className="pb-3 pr-4">Channel / Source</th>
-                    <th className="pb-3 pr-4">Date & Time Slot</th>
-                    <th className="pb-3 pr-4">Total Amount</th>
-                    <th className="pb-3 pr-4">Payment</th>
-                    <th className="pb-3 pr-4">Status</th>
+                    {sortHeader('Customer', 'customer', 'pb-3 pr-6 min-w-[210px]')}
+                    {sortHeader('Court Pitch', 'court', 'pb-3 pr-6 min-w-[110px]')}
+                    {sortHeader('Date & Time Slot', 'when')}
+                    {sortHeader('Total Amount', 'amount')}
+                    {sortHeader('Payment', 'payment')}
+                    {sortHeader('Status', 'status')}
                     <th className="pb-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-sm whitespace-nowrap">
-                  {paginatedBookings.map((b) => (
+                  {showSkeleton ? (
+                    Array.from({ length: 5 }, (_, index) => (
+                      <tr key={index}>
+                        <td colSpan={8} className="py-3.5">
+                          <div className="h-9 rounded-xl bg-slate-100 animate-pulse" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : paginatedBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center whitespace-normal">
+                        <p className="text-sm font-bold text-slate-700">
+                          {loadStatus === 'error' && bookings.length === 0
+                            ? "Bookings couldn't be loaded"
+                            : bookings.length === 0
+                            ? 'No bookings yet'
+                            : 'No bookings match your search or filter'}
+                        </p>
+                        <p className="text-xs text-slate-400 font-medium mt-1">
+                          {loadStatus === 'error' && bookings.length === 0
+                            ? 'Use Retry above to try again.'
+                            : bookings.length === 0
+                            ? 'Bookings from players, and the ones you add yourself, will show up here.'
+                            : 'Try a different search, or clear the filters.'}
+                        </p>
+                        {bookings.length > 0 && (
+                          <button
+                            onClick={clearFilters}
+                            className="mt-3 px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
+                          >
+                            Clear filters
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ) : paginatedBookings.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-50/50 transition-colors whitespace-nowrap">
                       <td className="py-3.5 pr-4 font-bold text-emerald-600 text-sm whitespace-nowrap">{b.id}</td>
-                      <td className="py-3.5 pr-4 whitespace-nowrap">
+                      <td className="py-3.5 pr-6 min-w-[210px] whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <img
                             src={b.avatar || '/logo.png'}
                             alt={b.customerName}
                             className="w-9 h-9 rounded-full object-cover border border-slate-100 shrink-0"
                           />
-                          <div className="whitespace-nowrap">
-                            <h4 className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{b.customerName}</h4>
+                          <div className="min-w-0 whitespace-nowrap">
+                            <h4 title={b.customerName} className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap max-w-[150px] truncate">{b.customerName}</h4>
                             <span className="text-xs text-slate-400 font-medium whitespace-nowrap">{b.customerPhone}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 pr-4 font-bold text-slate-800 text-sm whitespace-nowrap">{b.courtName}</td>
-                      <td className="py-3.5 pr-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          b.source === 'Mobile App'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            : b.source === 'Walk-in Counter'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                            : 'bg-purple-50 text-purple-700 border border-purple-100'
-                        }`}>
-                          {b.source}
-                        </span>
-                      </td>
+                      <td className="py-3.5 pr-6 min-w-[110px] font-bold text-slate-800 text-sm whitespace-nowrap">{b.courtName}</td>
                       <td className="py-3.5 pr-4 whitespace-nowrap">
                         <div>
                           <span className="font-bold text-slate-900 text-xs block">{b.date}</span>
@@ -615,21 +747,38 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
                       <td className="py-3.5 pr-4 whitespace-nowrap">{getStatusBadge(b.bookingStatus)}</td>
                       <td className="py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {b.bookingStatus !== 'Cancelled' && (
+                          {canMarkPaid(b) && (
+                            <button
+                              title="Mark as paid (received at the venue)"
+                              disabled={actionBusyId === b.id}
+                              onClick={() => setPaidTarget(b)}
+                              className="p-1.5 rounded-xl border border-slate-200 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                            >
+                              <Banknote size={14} />
+                            </button>
+                          )}
+                          {canConfirm(b) && (
+                            <button
+                              title="Confirm Booking"
+                              disabled={actionBusyId === b.id}
+                              onClick={() => handleConfirm(b)}
+                              className="p-1.5 rounded-xl border border-slate-200 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                          )}
+                          {canCancel(b) && (
                             <button
                               title="Cancel Booking"
-                              onClick={() => {
-                                setBookings((prev) =>
-                                  prev.map((item) => (item.id === b.id ? { ...item, bookingStatus: 'Cancelled' } : item))
-                                );
-                              }}
-                              className="p-1.5 rounded-xl border border-slate-200 text-rose-500 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-2xs"
+                              disabled={actionBusyId === b.id}
+                              onClick={() => setCancelTarget(b)}
+                              className="p-1.5 rounded-xl border border-slate-200 text-rose-500 hover:bg-rose-600 hover:text-white hover:border-rose-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
                             >
                               <XCircle size={14} />
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedBooking(b)}
+                            onClick={() => { setActionError(''); setSelectedId(b.id); }}
                             className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-2xs"
                           >
                             Details
@@ -671,30 +820,38 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
               {/* Navigation Controls */}
               <div className="flex items-center gap-1.5">
                 <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  aria-label="Previous page"
+                  onClick={() => setCurrentPage(Math.max(1, page - 1))}
                   className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft size={15} />
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
-                      currentPage === page
+                {getPageItems(page, totalPages).map((item) =>
+                  typeof item === 'number' ? (
+                    <button
+                      key={item}
+                      onClick={() => setCurrentPage(item)}
+                      aria-label={'Page ' + item}
+                      aria-current={page === item ? 'page' : undefined}
+                      className={'min-w-7 h-7 px-1.5 rounded-lg text-xs font-bold transition-all ' + (page === item
                         ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                        : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                        : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100')}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={item.key} className="w-5 text-center text-slate-400 font-bold" aria-hidden="true">
+                      ...
+                    </span>
+                  )
+                )}
 
                 <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  aria-label="Next page"
+                  onClick={() => setCurrentPage(Math.min(totalPages, page + 1))}
                   className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight size={15} />
@@ -708,105 +865,37 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
   </div>
 
       {/* Booking Details Modal */}
-      {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl border border-white/80 w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="p-5 pb-4 border-b border-slate-100/80 flex items-center justify-between bg-white/60">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-lg text-slate-900 tracking-tight">Booking {selectedBooking.id}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
-                  Booked on {selectedBooking.bookedOn}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {getStatusBadge(selectedBooking.bookingStatus)}
-                <button
-                  onClick={() => setSelectedBooking(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors ml-1"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
+      <BookingDetailsModal
+        booking={selectedBooking}
+        statusBadge={selectedBooking ? getStatusBadge(selectedBooking.bookingStatus) : null}
+        busy={Boolean(selectedBooking) && actionBusyId === selectedBooking.id}
+        error={actionError}
+        onClose={() => { setSelectedId(null); setActionError(''); }}
+        onConfirm={() => handleConfirm(selectedBooking)}
+        onMarkPaid={() => setPaidTarget(selectedBooking)}
+        onCancel={() => setCancelTarget(selectedBooking)}
+      />
 
-            {/* Modal Content */}
-            <div className="p-5 space-y-4 text-xs">
-              {/* Customer Profile Card */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={selectedBooking.avatar || '/logo.png'}
-                    alt={selectedBooking.customerName}
-                    className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs shrink-0"
-                  />
-                  <div>
-                    <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{selectedBooking.customerName}</h4>
-                    <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">{selectedBooking.customerPhone}</p>
-                    <p className="text-[10px] text-slate-400 font-medium leading-tight">{selectedBooking.customerEmail}</p>
-                  </div>
-                </div>
-              </div>
+      {/* Mark-as-paid Confirmation Popup */}
+      <MarkPaidDialog
+        booking={paidTarget}
+        busy={Boolean(paidTarget) && actionBusyId === paidTarget.id}
+        onKeep={() => setPaidTarget(null)}
+        onConfirm={handleMarkPaidConfirmed}
+      />
 
-              {/* Booking Info Grid */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                    <CalendarIcon size={13} /> Date & Slot
-                  </div>
-                  <p className="font-extrabold text-xs text-slate-900">{selectedBooking.date}</p>
-                  <p className="text-[11px] font-semibold text-slate-600">{selectedBooking.timeSlot}</p>
-                </div>
-
-                <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100/60 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                    <CircleDot size={13} /> Court Pitch
-                  </div>
-                  <p className="font-extrabold text-xs text-slate-900">{selectedBooking.courtName}</p>
-                  <p className="text-[11px] font-semibold text-slate-600">{selectedBooking.duration}</p>
-                </div>
-              </div>
-
-              {/* Payment Summary Box */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-100 space-y-2 shadow-2xs">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Payment Channel</span>
-                  <span className="font-bold text-slate-900">{selectedBooking.paymentMethod}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Payment Status</span>
-                  <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    {selectedBooking.paymentStatus}
-                  </span>
-                </div>
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm">
-                  <span className="font-extrabold text-slate-900">Total Price</span>
-                  <span className="font-black text-slate-900 text-base">
-                    NRs. {selectedBooking.amount.toLocaleString('en-NP')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-1">
-                <button
-                  onClick={() => setSelectedBooking(null)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-xs text-xs"
-                >
-                  Close Details
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Cancel Confirmation Popup */}
+      <CancelBookingDialog
+        booking={cancelTarget}
+        busy={Boolean(cancelTarget) && actionBusyId === cancelTarget.id}
+        onKeep={() => setCancelTarget(null)}
+        onConfirm={handleCancelConfirmed}
+      />
 
       {/* New Booking Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-100 w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl border border-slate-100 w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h3 className="font-extrabold text-base text-slate-900">Create New Booking</h3>
               <button
@@ -879,20 +968,98 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Start time</label>
+                    <span className="text-[10px] text-slate-400 font-semibold">Future slots only</span>
+                  </div>
+                  <CustomDropdown
+                    options={slotOptions}
+                    value={manualForm.timeSlot}
+                    onChange={(timeSlot) => setManualForm({ ...manualForm, timeSlot })}
+                    placeholder={slotOptions.length === 0 ? 'No future slots left' : 'Select start time'}
+                    buttonClassName="h-10 text-xs bg-slate-50 border-slate-100 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Duration</label>
+                  <select
+                    value={duration}
+                    disabled={!selectedSlot}
+                    onChange={(e) => setManualForm({ ...manualForm, durationHours: Number(e.target.value) })}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 font-bold disabled:opacity-50"
+                  >
+                    {Array.from({ length: Math.max(1, maxDuration) }, (_, index) => index + 1).map((hours) => (
+                      <option key={hours} value={hours}>
+                        {hours === 1 ? '1 hour' : hours + ' hours'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {slotRange && (
+                <p className="text-[11px] font-semibold text-slate-500 -mt-1.5">
+                  Booking {slotRange.timeSlot}
+                  {maxDuration > 0 && maxDuration < MAX_DURATION_HOURS
+                    ? ' · only ' + maxDuration + (maxDuration === 1 ? ' hour is' : ' hours are') + ' free from this start'
+                    : ''}
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Match type</label>
+                  <select
+                    value={matchType}
+                    onChange={(e) => setManualForm({ ...manualForm, matchType: e.target.value, teamSize: '' })}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 font-bold"
+                  >
+                    {matchTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Players</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={teamSizeValue}
+                    onChange={(e) => setManualForm({ ...manualForm, teamSize: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="font-bold text-slate-700">Available Future Time Slot</label>
-                  <span className="text-[10px] text-slate-400 font-semibold">
-                    Past times are automatically excluded
-                  </span>
+                  <label className="font-bold text-slate-700">Total price (NRs.)</label>
+                  {manualForm.priceTouched && (
+                    <button
+                      type="button"
+                      onClick={() => setManualForm({ ...manualForm, priceTouched: false, price: '' })}
+                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700"
+                    >
+                      Reset to court rate
+                    </button>
+                  )}
                 </div>
-                <CustomDropdown
-                  options={slotOptions}
-                  value={manualForm.timeSlot}
-                  onChange={(timeSlot) => setManualForm({ ...manualForm, timeSlot })}
-                  placeholder={slotOptions.length === 0 ? 'No future slots available today' : 'Select time slot'}
-                  buttonClassName="h-10 text-xs bg-slate-50 border-slate-100 font-bold"
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={priceValue}
+                  onChange={(e) => setManualForm({ ...manualForm, price: e.target.value, priceTouched: true })}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
+                <p className="text-[10px] text-slate-400 font-medium mt-1">
+                  Court rate NRs. {hourlyRate.toLocaleString('en-NP')}/hr x {duration} {duration === 1 ? 'hour' : 'hours'} = NRs.{' '}
+                  {autoPrice.toLocaleString('en-NP')}. Edit the price to give a discount.
+                </p>
               </div>
 
               <div>
@@ -917,7 +1084,8 @@ function BookingsPage({ user, activeTab, setActiveTab, ownerBookings = [] }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Saving...' : 'Save Booking'}
                 </button>
