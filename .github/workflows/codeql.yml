@@ -16,6 +16,8 @@ permissions:
   contents: read
   security-events: write
   packages: read
+  # CodeQL reads its own workflow run before uploading results; private repos need this.
+  actions: read
 
 jobs:
   analyze:
