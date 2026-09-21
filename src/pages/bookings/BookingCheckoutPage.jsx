@@ -170,7 +170,7 @@ export default function BookingCheckoutPage({
     return defaultData;
   });
 
-  // Save step and formData changes into sessionStorage and sync hold step to backend
+  // Save step and formData changes into sessionStorage
   useEffect(() => {
     try {
       sessionStorage.setItem(
@@ -183,13 +183,16 @@ export default function BookingCheckoutPage({
     } catch (e) {
       console.error(e);
     }
+  }, [currentStep, formData, storageKey]);
 
+  // Sync hold step to backend when currentStep changes
+  useEffect(() => {
     const holdToken = turf?.holdToken || new URLSearchParams(window.location.search).get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
     const turfId = turf?.id || turf?._id;
     if (turfId && holdToken && currentStep >= 2 && currentStep <= 4) {
       turfService.updateHoldStep(turfId, holdToken, currentStep);
     }
-  }, [currentStep, formData, storageKey, turf]);
+  }, [currentStep, turf]);
 
   // Listen to popstate within the checkout flow to handle back/forward between steps
   useEffect(() => {

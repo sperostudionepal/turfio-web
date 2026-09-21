@@ -94,10 +94,33 @@ export const authService = {
 
   /**
    * Get current authenticated user details
+   * @param {string} [roleContext] 'player' or 'owner'
    */
-  async getCurrentUser() {
-    const response = await apiClient.get('/auth/me');
+  async getCurrentUser(roleContext = 'player') {
+    const response = await apiClient.get('/auth/me', {
+      headers: { 'X-Role-Context': roleContext },
+    });
     return response; // { success: true, message, data: { user } }
+  },
+
+  /**
+   * Revoke Player session server-side
+   */
+  async logoutPlayer() {
+    const response = await apiClient.post('/auth/logout', {}, {
+      headers: { 'X-Role-Context': 'player' },
+    });
+    return response;
+  },
+
+  /**
+   * Revoke Owner session server-side
+   */
+  async logoutOwner() {
+    const response = await apiClient.post('/admin/auth/logout', {}, {
+      headers: { 'X-Role-Context': 'owner' },
+    });
+    return response;
   },
 
   /**
