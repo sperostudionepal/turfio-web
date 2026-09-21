@@ -252,10 +252,7 @@ export default function ProfilePage({
                         <div className="w-5 h-5 rounded-full bg-lime-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</div>
                         <span>Add Playing Preferences</span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-slate-400">
-                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex items-center justify-center shrink-0" />
-                        <span>Write a Short Bio</span>
-                      </div>
+                      
                     </div>
                   </div>
 
@@ -308,17 +305,7 @@ export default function ProfilePage({
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('security')}
-                        className="w-full flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-semibold text-slate-800">
-                          <ShieldCheck className="h-4 w-4 text-slate-400" />
-                          <span>Two-Factor Authentication</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-                      </button>
+                      
 
                       <button
                         type="button"
