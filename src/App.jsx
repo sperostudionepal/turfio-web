@@ -22,7 +22,7 @@ import BookingCheckoutPage, { PublicSplitPaymentPage } from './pages/bookings/Bo
 import TurfDetailsPage from './pages/turfs/TurfDetailsPage';
 import TurfRoutePage from './pages/turfs/TurfRoutePage';
 import turfService from './services/turfService';
-import { useToast } from './components/common/Toast';
+import { useToast } from './components/common/toastContext';
 import ApplicationStatusPage from './pages/owner/ApplicationStatusPage';
 import SetupDashboardPage from './pages/owner/SetupDashboardPage';
 import ApplicationSubmittedPage from './pages/owner/ApplicationSubmittedPage';
@@ -88,7 +88,7 @@ function App() {
   const [authMode, setAuthMode] = useState(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
-  const [isPlayerMode, setIsPlayerMode] = useState(false);
+  const [, setIsPlayerMode] = useState(false);
   const [selectedTurf, setSelectedTurf] = useState(null);
   const [routeTurf, setRouteTurf] = useState(null);
   const [selectedTurfForBooking, setSelectedTurfForBooking] = useState(null);
@@ -210,7 +210,6 @@ function App() {
         setCurrentPage('home');
       }
     } else if (isPaymentFailure) {
-      const failedTurfId = searchParams.get('bookingId');
       showToast('eSewa payment was cancelled or failed. Please try again.', 'error');
       setCurrentPage('turfListing');
     } else if (targetBookingTurfId) {

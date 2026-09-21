@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Lock, Mail, User, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useToast } from '../../components/common/toastContext';
 import Navbar from '../../components/Navbar';
 
-function SignUpPage({ onSignUp, onGoogleLogin, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs }) {
+function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');

@@ -54,7 +54,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
   const [address, setAddress] = useState(rawVenue.address?.area || '');
   const [city, setCity] = useState(rawVenue.address?.city || '');
   const [stateProvince, setStateProvince] = useState('Bagmati Province');
-  const [zipCode, setZipCode] = useState('44600');
   const [mapsUrl, setMapsUrl] = useState('https://maps.google.com/?q=Kathmandu+Futsal+Arena');
 
   // 2. Payments & eSewa State
@@ -83,7 +82,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
 
   // 5. Security & Access Control State
   const [managerPin, setManagerPin] = useState('4412');
-  const [twoFactor, setTwoFactor] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState('30 Minutes');
   const {
     fontTheme: activeFontTheme,

@@ -3,7 +3,6 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ProfileInfoCard from './ProfileInfoCard';
 import PlayerProfileCard from './PlayerProfileCard';
-import GamePreferencesCard from './GamePreferencesCard';
 import PreferencesForm from './PreferencesForm';
 import SecuritySettings from './SecuritySettings';
 import DangerZone from './DangerZone';
@@ -22,13 +21,10 @@ import {
   LogIn,
   Crown,
   ArrowRight,
-  Check,
   ChevronRight,
   HelpCircle,
   Key,
   ShieldCheck,
-  Star,
-  Edit2,
 } from 'lucide-react';
 
 export default function ProfilePage({

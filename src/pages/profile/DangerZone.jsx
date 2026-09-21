@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Trash2, ShieldAlert, Loader2 } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 export default function DangerZone({ user, onDeleteAccount }) {
   const { showToast } = useToast();

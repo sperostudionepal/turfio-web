@@ -46,7 +46,7 @@ function SuperadminAuditHealthPage() {
   ];
 
   // Immutable Audit Trail Logs
-  const [auditLogs, setAuditLogs] = useState([
+  const [auditLogs] = useState([
     {
       id: 'AUD-9021',
       actor: 'superadmin@turfio.app',

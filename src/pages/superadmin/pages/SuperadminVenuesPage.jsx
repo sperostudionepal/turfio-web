@@ -14,7 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import ownerApplicationService from '../../../services/ownerApplicationService';
-import { useToast } from '../../../components/common/Toast';
+import { useToast } from '../../../components/common/toastContext';
 
 const STATUS_TABS = [
   { key: 'pending', label: 'Pending' },

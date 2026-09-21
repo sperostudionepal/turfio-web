@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, ChevronDown, ChevronRight, Plus, Settings, LogOut, User, Menu, X, Layers, CheckCircle2, Circle, Image as ImageIcon, Building2, Sparkles, ArrowRight } from 'lucide-react';
+import { Search, Bell, ChevronDown, Plus, Menu, X, CheckCircle2, Image as ImageIcon, Building2, Sparkles, ArrowRight } from 'lucide-react';
 import { useOwnerContext } from '../../context/ownerContext';
 
 function TopBar(props) {
@@ -11,7 +11,6 @@ function TopBar(props) {
   const isMobileMenuOpen = props.isMobileMenuOpen ?? ctx.isMobileMenuOpen;
   const user = props.user ?? ctx.user;
   const venue = props.venue ?? ctx.venue;
-  const onSwitchToPlayer = props.onSwitchToPlayer ?? ctx.onSwitchToPlayer;
   const setActiveTab = props.setActiveTab ?? ctx.setActiveTab;
   const { openBookings } = ctx;
   const searchRef = useRef(null);

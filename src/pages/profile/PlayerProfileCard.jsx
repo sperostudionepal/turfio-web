@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Activity, Check, Edit2, Loader2, Target, Users, Flame } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { Trophy, Check, Edit2, Loader2 } from 'lucide-react';
+import { useToast } from '../../components/common/toastContext';
 
-export default function PlayerProfileCard({ user, onUpdateProfile, isLoading }) {
+export default function PlayerProfileCard({ user, onUpdateProfile }) {
   const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

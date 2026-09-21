@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Clock, Calendar, Navigation, Flame, Zap, Check, Edit2, Loader2 } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { Clock, Check, Edit2, Loader2 } from 'lucide-react';
+import { useToast } from '../../components/common/toastContext';
 
-export default function GamePreferencesCard({ user, onUpdateProfile, isLoading }) {
+export default function GamePreferencesCard({ user, onUpdateProfile }) {
   const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

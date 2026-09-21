@@ -10,16 +10,8 @@ import {
   CircleDot,
   CheckCircle2,
   AlertCircle,
-  XCircle,
   Download,
-  Filter,
-  User,
-  Phone,
   X,
-  Grid,
-  List,
-  Check,
-  TrendingUp,
   DollarSign
 } from 'lucide-react';
 import turfService from '../../services/turfService';

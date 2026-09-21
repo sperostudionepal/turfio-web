@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, Smartphone, Laptop, LogOut, KeyRound, Check, AlertCircle, Loader2, Eye, EyeOff, QrCode, Copy, RefreshCw } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { Shield, Lock, Smartphone, Laptop, LogOut, KeyRound, Loader2, Eye, EyeOff, QrCode, Copy } from 'lucide-react';
+import { useToast } from '../../components/common/toastContext';
 import authService from '../../services/authService';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -41,11 +41,6 @@ export default function SecuritySettings({ user, onChangePassword }) {
   const [disableCode, setDisableCode] = useState('');
   const [isDisablingMfa, setIsDisablingMfa] = useState(false);
 
-  // Fetch active sessions on mount
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
   const fetchSessions = async () => {
     try {
       setIsLoadingSessions(true);
@@ -59,6 +54,11 @@ export default function SecuritySettings({ user, onChangePassword }) {
       setIsLoadingSessions(false);
     }
   };
+
+  // Fetch active sessions on mount
+  useEffect(() => {
+    fetchSessions();
+  }, []);
 
   // Password validation & strength calculation
   const isGoogleOnly = user?.provider === 'google' && !user?.password;

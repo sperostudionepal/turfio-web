@@ -6,13 +6,11 @@ import {
   CheckCircle2,
   XCircle,
   ShieldCheck,
-  Building2,
   ArrowRight,
   Loader2,
-  AlertTriangle,
 } from 'lucide-react';
 import ownerApplicationService from '../../services/ownerApplicationService';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 export default function SetupDashboardPage({ onSetupSuccess, onHome }) {
   const [token, setToken] = useState('');

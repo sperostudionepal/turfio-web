@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { ArrowRight, ArrowLeft, Check, Sparkles, User, Calendar, MapPin, Activity, Trophy, Clock, Flame, Navigation, Shield, Footprints, Users, ChevronDown, X, AtSign, Hand, Compass, Target, Zap } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Calendar, MapPin, Clock, Shield, Footprints, Users, ChevronDown, X, AtSign, Hand, Compass, Target, Zap } from 'lucide-react';
 
 function OnboardingPage({ onComplete, onClose, userData = {} }) {
   const [step, setStep] = useState(1);
 
   // Step 1 Form Data - Personal Details
-  const randomSuffix = useRef(Math.floor(1000 + Math.random() * 9000)).current;
+  // Picked once on first render (a lazy initializer), not recomputed on every render.
+  const [randomSuffix] = useState(() => Math.floor(1000 + Math.random() * 9000));
   const [username, setUsername] = useState(userData.firstName ? `${userData.firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${randomSuffix}` : `baller${randomSuffix}`);
   const [dob, setDob] = useState('2000-01-01');
   const [gender, setGender] = useState('Male');
@@ -52,7 +53,6 @@ function OnboardingPage({ onComplete, onClose, userData = {} }) {
   };
 
   // Options list
-  const positions = ['Goalkeeper', 'Defender', 'Midfielder', 'Winger', 'Striker'];
   const skillLevels = ['Casual', 'Weekend Warrior', 'Competitive', 'Professional'];
   const playingStylesList = [
     'Playmaker', 'Finisher', 'Dribbler', 'Fast Runner',

@@ -6,10 +6,7 @@ import {
   Search,
   Plus,
   Phone,
-  Mail,
   Award,
-  CheckCircle2,
-  AlertCircle,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +14,6 @@ import {
   UserCheck,
   DollarSign,
   Calendar,
-  Eye,
   ArrowUpRight,
   MoreHorizontal,
   MessageSquare
@@ -32,6 +28,8 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  // Real customers are loaded from bookings; keep the old fixture out of the rendered state.
+  const [customers, setCustomers] = useState([]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -65,8 +63,6 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
 
   // Top Stat Cards Data (matching Dashboard StatCards format)
 
-  // Real customers are loaded from bookings; keep the old fixture out of the rendered state.
-  const [customers, setCustomers] = useState([]);
   // Stat cards are worked out from the owner's real customers.
   const formatNpr = (amount) => `NRs. ${Math.round(amount).toLocaleString('en-IN')}`;
   const percentOf = (count) => (customers.length ? Math.round((count / customers.length) * 100) : 0);

@@ -3,14 +3,12 @@ import {
   Calendar,
   Users,
   FileText,
-  UserCheck,
   Star,
   Settings,
   HelpCircle,
   LogOut,
   Building2,
   Image as ImageIcon,
-  User,
   X,
 } from 'lucide-react';
 import { useOwnerContext } from '../../context/ownerContext';
@@ -43,7 +41,6 @@ function Sidebar(props) {
   ];
 
   const manageItems = [
-    { label: 'Staff', icon: UserCheck, href: '#' },
     { label: 'Reviews', icon: Star, href: '#' },
   ];
 

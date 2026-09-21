@@ -1,5 +1,4 @@
 import {
-  Clock,
   ArrowRight,
   Mail,
   Check,

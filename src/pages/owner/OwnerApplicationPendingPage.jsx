@@ -12,7 +12,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import ownerRequestService from '../../services/ownerRequestService';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 const STEPS = [
   { title: 'Application received', desc: 'Your arena details and documents are in our queue.' },

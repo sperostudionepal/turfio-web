@@ -55,7 +55,6 @@ export function transformTurf(turf) {
   const matchTypes = Array.isArray(turf.matchTypes) && turf.matchTypes.length > 0
     ? turf.matchTypes
     : [turf.size || '5v5'];
-  const size = matchTypes.join(', ');
 
   // Ground surface type (Indoor, Outdoor, Rooftop)
   const groundType = turf.groundType || turf.type || null;

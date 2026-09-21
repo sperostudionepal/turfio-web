@@ -3,9 +3,7 @@ import {
   Users,
   Car,
   Search,
-  Filter,
   MapPin,
-  Calendar,
   Clock,
   ChevronDown,
   ChevronLeft,
@@ -14,27 +12,13 @@ import {
   X,
   SlidersHorizontal,
   Compass,
-  ArrowRight,
-  RotateCcw,
   Check,
-  Wifi,
-  Utensils,
-  Bath,
-  Wind,
-  Shirt,
-  ShieldAlert,
-  Dumbbell,
   Sun,
   Building2,
   CloudSun,
   Map,
   Grid,
-  Maximize2,
-  Minimize2,
-  ExternalLink,
   Navigation,
-  Plus,
-  Minus,
   ChevronUp,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
@@ -309,7 +293,6 @@ export const dummyTurfs = [
   },
 ];
 */
-export const initialTurfs = [];
 
 const amenitiesList = [
   'Parking',
@@ -336,12 +319,6 @@ const TIME_SLOT_OPTIONS = [
   { value: '09:00 PM', label: '09:00 PM' },
 ];
 
-const PLAYERS_OPTIONS = [
-  { value: 'Any Size', label: 'Any Size' },
-  { value: '5v5', label: '5v5 Match' },
-  { value: '7v7', label: '7v7 Match' },
-  { value: '9v9', label: '9v9 Match' },
-];
 
 export default function TurfListingPage({
   user,
@@ -361,8 +338,6 @@ export default function TurfListingPage({
 
   // Applied search parameters (only updated when Search button clicked or form submitted)
   const [appliedLocation, setAppliedLocation] = useState('');
-  const [appliedDate, setAppliedDate] = useState(() => getTodayNepalString());
-  const [appliedTime, setAppliedTime] = useState('07:00 PM');
   const [appliedPlayers, setAppliedPlayers] = useState('Any Size');
 
   // Sidebar filters
@@ -394,8 +369,7 @@ export default function TurfListingPage({
   const handleApplySearch = (e) => {
     if (e) e.preventDefault();
     setAppliedLocation(locationInput.trim());
-    setAppliedDate(dateInput);
-    setAppliedTime(timeInput);
+    // The date and time inputs don't filter results yet: that needs an availability search on the server.
     setAppliedPlayers(playersInput);
     setCurrentPage(1);
   };
@@ -409,7 +383,7 @@ export default function TurfListingPage({
 
   // Real turfs state fetched from backend API
   const [turfs, setTurfs] = useState([]);
-  const [fetchError, setFetchError] = useState(null);
+  const [, setFetchError] = useState(null);
 
   // Fetch real turfs from backend on mount
   useEffect(() => {

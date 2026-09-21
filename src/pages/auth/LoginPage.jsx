@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 import Navbar from '../../components/Navbar';
 import useAuthStore from '../../store/useAuthStore';
 
-function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs }) {
+function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

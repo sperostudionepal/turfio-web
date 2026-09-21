@@ -7,9 +7,7 @@ import {
   RefreshCw,
   X,
   Check,
-  Mail,
   MessageSquare,
-  PhoneCall,
 } from 'lucide-react';
 import ownerApplicationService from '../../services/ownerApplicationService';
 import Navbar from '../../components/Navbar';
@@ -83,17 +81,6 @@ export default function ApplicationStatusPage({
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
 
-  // Extract token from URL on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    if (urlToken) {
-      setToken(urlToken);
-      setInputToken(urlToken);
-      fetchStatus(urlToken);
-    }
-  }, []);
-
   // Smooth YouTube-style progress simulation
   useEffect(() => {
     let interval;
@@ -136,6 +123,17 @@ export default function ApplicationStatusPage({
       setRefreshing(false);
     }
   };
+
+  // Extract token from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      setToken(urlToken);
+      setInputToken(urlToken);
+      fetchStatus(urlToken);
+    }
+  }, []);
 
   const handleManualLookup = (e) => {
     e.preventDefault();

@@ -5,27 +5,19 @@ import {
   Star,
   Smile,
   MessageCircle,
-  Clock,
   Search,
-  Calendar,
-  ChevronDown,
   Download,
   ChevronLeft,
   ChevronRight,
   CornerUpLeft,
-  MoreVertical,
-  CheckCircle2,
   X,
   ArrowUpRight,
-  MoreHorizontal,
-  Eye,
-  MessageSquare
+  MoreHorizontal
 } from 'lucide-react';
 
 function ReviewsPage({ activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState('All Ratings');
-  const [statusFilter, setStatusFilter] = useState('All Status');
   const [selectedReview, setSelectedReview] = useState(null);
   const [replyText, setReplyText] = useState('');
 

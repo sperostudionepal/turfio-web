@@ -2,25 +2,16 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
-  ArrowLeft,
-  ArrowRight,
   Car,
   Bike,
   Footprints,
   Navigation,
   MapPin,
-  Clock,
   Compass,
-  Layers,
-  Maximize2,
-  Minimize2,
   Plus,
   Minus,
-  RotateCcw,
-  Sparkles,
   Search,
   CheckCircle2,
-  Calendar,
   Star,
   Menu,
   Bookmark,
@@ -29,15 +20,12 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Share2,
-  Info,
   CornerUpRight,
   CornerUpLeft,
   ArrowUp,
   RotateCw,
   Locate,
   AlertCircle,
-  Shield,
   Loader2,
   X,
   MapPinOff,
@@ -58,7 +46,6 @@ import {
   TRANSPORT_MODES,
   formatDistance,
   formatDuration,
-  formatArrivalTime,
 } from '../../services/routeService';
 import turfService from '../../services/turfService';
 
@@ -85,7 +72,6 @@ export default function TurfRoutePage({
   allTurfs: propTurfs = null,
   onBack,
   onBookTurf,
-  onViewTurfDetails,
 }) {
   const [fetchedTurfs, setFetchedTurfs] = useState([]);
 
@@ -129,7 +115,7 @@ export default function TurfRoutePage({
   const [userGpsCoord, setUserGpsCoord] = useState(null);
 
   // Permission state: 'granted' | 'prompt' | 'denied' | 'unknown'
-  const [permissionState, setPermissionState] = useState('unknown');
+  const [, setPermissionState] = useState('unknown');
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionDeniedBanner, setPermissionDeniedBanner] = useState(false);
 
@@ -146,11 +132,10 @@ export default function TurfRoutePage({
 
   // Route calculation state
   const [routeData, setRouteData] = useState(null);
-  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const [, setIsLoadingRoute] = useState(false);
   const [isLocatingUser, setIsLocatingUser] = useState(false);
   const [routeError, setRouteError] = useState(null);
   const [hoveredStepIndex, setHoveredStepIndex] = useState(null);
-  const [isGuidanceExpanded, setIsGuidanceExpanded] = useState(false);
 
   // Map state & markers refs
   const mapContainerRef = useRef(null);
@@ -598,7 +583,11 @@ export default function TurfRoutePage({
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: initialStyle,
-      center: [destinationCoords.lon, destinationCoords.lat] || DEFAULT_MAP_CENTER,
+      // An array is always truthy, so check the coordinates themselves before falling back.
+      // parseFloat turns missing values (undefined, null, '') into NaN rather than 0.
+      center: Number.isFinite(parseFloat(destinationCoords?.lon)) && Number.isFinite(parseFloat(destinationCoords?.lat))
+        ? [parseFloat(destinationCoords.lon), parseFloat(destinationCoords.lat)]
+        : DEFAULT_MAP_CENTER,
       zoom: 13,
       pitch: 20,
       bearing: 0,
@@ -850,7 +839,7 @@ export default function TurfRoutePage({
     const map = mapRef.current;
     if (!map || !routeData?.geometry) return;
 
-    let coord = null;
+    let coord;
     if (step.beginShapeIndex !== null && routeData.geometry[step.beginShapeIndex]) {
       coord = routeData.geometry[step.beginShapeIndex];
     } else {

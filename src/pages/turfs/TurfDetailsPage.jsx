@@ -1,19 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  Calendar,
   Check,
   CheckCircle2,
   ChevronRight,
-  Clock,
   Compass,
   Droplets,
   Heart,
   MapPin,
-  Mail,
   MessageCircle,
   Phone,
   Share2,
@@ -25,22 +20,13 @@ import {
   Zap,
   X,
   ChevronLeft,
-  ChevronDown,
   Maximize2,
-  ImageIcon,
   Grip,
   Trophy,
-  Tag,
-  Sparkles,
-  Navigation,
   Info,
-  Award,
-  Layers,
   ThumbsUp,
   Flag,
   Coffee,
-  Copy,
-  ExternalLink,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -49,7 +35,7 @@ import CustomDatePicker from '../../components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
 import turfService from '../../services/turfService';
 import { getTodayNepalString, getNepalCurrentDateTime } from '../../utils/dateTime';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 /* ─── Amenity Icon Mapping ─── */
 const amenityIconMap = {
@@ -309,7 +295,6 @@ export default function TurfDetailsPage({
   onHome,
   onLogin,
   onLogout,
-  onBack,
   onFindTurfs,
   onListTurf,
   onDashboard,
@@ -336,7 +321,7 @@ export default function TurfDetailsPage({
   const [selectedDate, setSelectedDate] = useState(() => getTodayNepalString());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [duration, setDuration] = useState(1);
-  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [, setCopiedAddress] = useState(false);
   const [isHoldingSlot, setIsHoldingSlot] = useState(false);
 
   // Courts State & Selection
@@ -345,7 +330,7 @@ export default function TurfDetailsPage({
 
   // Dynamic slot engine state
   const [availabilityData, setAvailabilityData] = useState(null);
-  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [, setIsLoadingAvailability] = useState(false);
 
   // Scroll to top on load
   useEffect(() => {
@@ -520,22 +505,6 @@ export default function TurfDetailsPage({
   const totalAmount = subtotal;
 
   // Calculate End Time
-  const endTimeStr = useMemo(() => {
-    if (!selectedTimeSlot) return '';
-    const [time, period] = selectedTimeSlot.split(' ');
-    let [hour, min] = time.split(':').map(Number);
-    if (period === 'PM' && hour !== 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-
-    const totalMinutes = hour * 60 + min + duration * 60;
-    const endHour24 = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    const endPeriod = endHour24 >= 12 ? 'PM' : 'AM';
-    let endHour12 = endHour24 % 12;
-    if (endHour12 === 0) endHour12 = 12;
-
-    return `${String(endHour12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
-  }, [selectedTimeSlot, duration]);
 
   // Toast Notification helper mapped to global ToastProvider
   const triggerToast = (msg, type) => {
@@ -665,7 +634,7 @@ export default function TurfDetailsPage({
           text: `Check out ${turf.title} on Turfio!`,
           url,
         });
-      } catch (err) {
+      } catch {
         navigator.clipboard?.writeText(url);
         triggerToast('Link copied to clipboard!');
       }
@@ -696,20 +665,7 @@ export default function TurfDetailsPage({
     setLightboxIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1));
   };
 
-  if (!turf) return null;
-
-  const amenities = turf.amenities || [
-    'Parking',
-    'WiFi',
-    'Washrooms',
-    'Changing Rooms',
-    'Canteen',
-    'First Aid',
-    'Floodlights',
-    'Drinking Water',
-    'Spectator Seating',
-  ];
-
+  // Hooks must run on every render, so they come before the early return below.
   // Similar turfs state from backend
   const [similarTurfs, setSimilarTurfs] = useState([]);
 
@@ -736,6 +692,20 @@ export default function TurfDetailsPage({
       lng: turf.lng || turf.lon || 85.36209,
     };
   }, [turf]);
+
+  if (!turf) return null;
+
+  const amenities = turf.amenities || [
+    'Parking',
+    'WiFi',
+    'Washrooms',
+    'Changing Rooms',
+    'Canteen',
+    'First Aid',
+    'Floodlights',
+    'Drinking Water',
+    'Spectator Seating',
+  ];
 
   const displayedSimilarTurfs = similarTurfs.length > 0 ? similarTurfs : allTurfs.filter((t) => t.id !== turf?.id);
 

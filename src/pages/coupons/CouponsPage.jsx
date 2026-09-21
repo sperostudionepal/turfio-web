@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
-import { Ticket, Search, Plus, Download, ChevronLeft, ChevronRight, CheckCircle2, Clock, DollarSign, Tag, TrendingUp } from 'lucide-react';
+import { Ticket, Search, Plus, DollarSign, Tag, TrendingUp } from 'lucide-react';
 
 function CouponsPage({ activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
   // Top Stat Cards Data
@@ -57,7 +57,6 @@ function CouponsPage({ activeTab, setActiveTab }) {
     (statusFilter === 'All' || c.status === statusFilter)
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 

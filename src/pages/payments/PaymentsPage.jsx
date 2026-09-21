@@ -2,20 +2,17 @@ import { useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import {
-  CreditCard,
   Search,
   Download,
   Plus,
   DollarSign,
   CheckCircle2,
   AlertCircle,
-  XCircle,
   ChevronLeft,
   ChevronRight,
   X,
   RefreshCw,
-  Wallet,
-  TrendingUp
+  Wallet
 } from 'lucide-react';
 
 function PaymentsPage({ activeTab, setActiveTab }) {

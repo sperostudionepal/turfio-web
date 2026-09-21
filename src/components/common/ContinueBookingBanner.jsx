@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Clock, Calendar, ArrowRight, X, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, Calendar, ArrowRight, AlertCircle, X } from 'lucide-react';
 
 import turfService from '../../services/turfService';
 import useAuthStore from '../../store/useAuthStore';
@@ -289,6 +289,16 @@ const ContinueBookingBanner = ({ onResume }) => {
           <ArrowRight size={18} className="stroke-[2.2] group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
+
+      {/* 4. Dismiss: hides the banner and releases a held slot so others can book it */}
+      <button
+        type="button"
+        onClick={handleDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
 };
