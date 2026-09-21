@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -7,10 +7,6 @@ import {
   Minimize2,
   Plus,
   Minus,
-  Navigation,
-  Compass,
-  Layers,
-  MapPin,
 } from 'lucide-react';
 import {
   MAPTILER_KEY,
@@ -48,7 +44,6 @@ export default function TurfMap({
 
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
 
   // Helper to get active style spec / URL
   const getActiveStyle = useCallback(
@@ -81,7 +76,7 @@ export default function TurfMap({
             west: bounds.getWest(),
           });
         }
-      } catch (err) {
+      } catch {
         // Handle unmounted or transitioning state safely
       }
     }, 150);
@@ -678,37 +673,7 @@ export default function TurfMap({
   const handleZoomIn = () => mapRef.current?.zoomIn();
   const handleZoomOut = () => mapRef.current?.zoomOut();
 
-  const handleFitAll = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    const validTurfs = turfs.filter((t) => t.lat && t.lng);
-    if (validTurfs.length === 0) {
-      map.flyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, duration: 800 });
-      return;
-    }
-    const bounds = new maplibregl.LngLatBounds();
-    validTurfs.forEach((t) => bounds.extend([t.lng, t.lat]));
-    map.fitBounds(bounds, { padding: 55, maxZoom: 14.5, duration: 900 });
-  };
 
-  const handleGeolocate = () => {
-    if (!navigator.geolocation) return;
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false);
-        mapRef.current?.flyTo({
-          center: [pos.coords.longitude, pos.coords.latitude],
-          zoom: 14,
-          duration: 900,
-          essential: true,
-        });
-      },
-      () => {
-        setIsLocating(false);
-      }
-    );
-  };
 
   const toggleFullscreen = () => {
     if (!wrapperRef.current) return;

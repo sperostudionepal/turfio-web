@@ -22,8 +22,6 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
   const [actionFilter, setActionFilter] = useState('All Actions');
   const [userFilter, setUserFilter] = useState('All Users');
   const [selectedLog, setSelectedLog] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(8);
 
   // Top Stat Cards Data
   const stats = [

@@ -173,7 +173,7 @@ const turfs = [
 ];
 */
 
-export default function TurfSection({ onBookNow, onViewDetails, isLoading: propLoading = false, turfsData = null }) {
+export default function TurfSection({ onViewDetails, isLoading: propLoading = false, turfsData = null }) {
   const [fetchedTurfs, setFetchedTurfs] = useState([]);
   const [loadingRealTurfs, setLoadingRealTurfs] = useState(!turfsData);
 

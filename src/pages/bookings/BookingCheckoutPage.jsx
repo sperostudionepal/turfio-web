@@ -4,49 +4,34 @@ import {
   Clock,
   MapPin,
   Copy,
-  MessageCircle,
   ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   Users,
   User,
   Wallet,
   Banknote,
-  Share2,
-  Zap,
-  FileText,
-  Shield,
-  Headphones,
   Calendar,
   Info,
   Lock,
   Sparkles,
   Check,
-  ExternalLink,
   QrCode,
   Download,
   AlertCircle,
   ArrowRight,
   Compass,
-  Phone,
   Mail,
-  CreditCard,
-  Building,
   CheckCheck,
-  Star,
-  RotateCcw,
   ShieldCheck,
   Loader2,
   Navigation,
-  Car,
-  Shirt,
   PhoneCall,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 function WhatsAppIcon({ className = 'h-4 w-4' }) {
   return (
@@ -381,7 +366,7 @@ export default function BookingCheckoutPage({
             year: 'numeric',
           });
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
       return turf.selectedDate;
@@ -528,8 +513,10 @@ export default function BookingCheckoutPage({
     try {
       const pending = JSON.parse(sessionStorage.getItem('turfio_pending_booking') || '{}');
       if (pending?.bookingId) return pending.bookingId;
-    } catch (e) {}
-    return turf?.id ? `BKG-${turf.id}` : 'BKG-demo';
+    } catch {
+      // Ignore unreadable saved booking data and fall back below.
+    }
+    return turf?.id ? `BKG-${turf.id}` : '';
   }, [turf?.bookingId, turf?.id, formData?.bookingId]);
 
   const paymentShareUrl = `${window.location.origin}/pay/${activeBookingId}`;
@@ -647,8 +634,9 @@ export default function BookingCheckoutPage({
           }
 
           // Initiate eSewa payment directly using active hold token/id or booking payload
-          const effectiveHoldToken = turf?.holdToken || searchParams.get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
-          const effectiveBookingId = turf?.bookingId || turf?.id || searchParams.get('bookingId');
+          const urlParams = new URLSearchParams(window.location.search);
+          const effectiveHoldToken = turf?.holdToken || urlParams.get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
+          const effectiveBookingId = turf?.bookingId || turf?.id || urlParams.get('bookingId');
           const holdIdentifier = effectiveHoldToken || turf?.holdId || effectiveBookingId;
 
           const initRes = await turfService.initiateEsewaPayment(
@@ -736,10 +724,8 @@ export default function BookingCheckoutPage({
     }
   };
 
-  const mockBookingId = useMemo(
-    () => `TRF-${Math.floor(100000 + Math.random() * 900000)}`,
-    []
-  );
+  // Only ever show the real booking ID: players show it (and its QR code) at the venue.
+  const confirmedBookingId = confirmedBooking?.bookingId || turf?.bookingId || '';
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900 pb-28">
@@ -887,7 +873,7 @@ export default function BookingCheckoutPage({
                   <div className="text-right">
                     <p className="text-[11px] font-semibold text-slate-500">Booking ID</p>
                     <p className="font-mono text-sm font-extrabold text-slate-900">
-                      {confirmedBooking?.bookingId || turf?.bookingId || mockBookingId}
+                      {confirmedBookingId || 'See My Bookings'}
                     </p>
                   </div>
                 </div>
@@ -926,12 +912,14 @@ export default function BookingCheckoutPage({
                 <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
                   <div className="flex items-center gap-3.5">
                     <div className="h-16 w-16 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 border border-slate-100 shadow-2xs">
-                      <QRCodeSVG
-                        value={confirmedBooking?.bookingId || turf?.bookingId || mockBookingId || 'TURFIO-PASS-2026'}
-                        size={54}
-                        level="M"
-                        marginSize={0}
-                      />
+                      {confirmedBookingId && (
+                        <QRCodeSVG
+                          value={confirmedBookingId}
+                          size={54}
+                          level="M"
+                          marginSize={0}
+                        />
+                      )}
                     </div>
                     <div>
                       <p className="text-xs font-extrabold text-slate-900">Scan for Pitch Entry</p>
@@ -1874,7 +1862,7 @@ export default function BookingCheckoutPage({
                         Booking ID
                       </p>
                       <p className="font-mono text-sm font-extrabold text-slate-900">
-                        {confirmedBooking?.bookingId || turf?.bookingId || mockBookingId}
+                        {confirmedBookingId || 'See My Bookings'}
                       </p>
                     </div>
                   </div>
@@ -2334,11 +2322,10 @@ export default function BookingCheckoutPage({
 }
 
 export function PublicSplitPaymentPage({ bookingId, onHome }) {
+  const { showToast } = useToast();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [payerName, setPayerName] = useState('');
-  const [payerPhone, setPayerPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {

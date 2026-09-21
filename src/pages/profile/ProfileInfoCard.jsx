@@ -17,9 +17,9 @@ import {
   Heart,
   Star,
 } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
-export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar, isLoading }) {
+export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar }) {
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
 

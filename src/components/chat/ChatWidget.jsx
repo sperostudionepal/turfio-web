@@ -12,8 +12,7 @@ import {
   Paperclip, 
   Send, 
   Zap, 
-  RotateCcw,
-  User as UserIcon
+  RotateCcw
 } from 'lucide-react';
 
 import useChatStore, { WELCOME_MESSAGE } from '../../store/useChatStore';

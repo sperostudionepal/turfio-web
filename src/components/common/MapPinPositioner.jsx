@@ -9,7 +9,6 @@ import {
   Search,
   Loader2,
   Move,
-  ArrowLeft,
   Plus,
   Minus,
 } from 'lucide-react';
@@ -18,7 +17,7 @@ import {
   getTurfioLightStyle,
   FALLBACK_OSM_STYLE,
 } from '../../config/mapConfig';
-import { useToast } from './Toast';
+import { useToast } from './toastContext';
 
 export default function MapPinPositioner({
   initialPosition = { lat: 27.648385, lng: 85.338022 },

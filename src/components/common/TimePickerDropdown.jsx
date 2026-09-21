@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 export default function TimePickerDropdown({ value, onChange, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);

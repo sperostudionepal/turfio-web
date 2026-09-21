@@ -6,22 +6,17 @@ import {
   Search,
   Plus,
   Clock,
-  Calendar,
-  DollarSign,
   CheckCircle2,
-  AlertCircle,
   Download,
   ChevronLeft,
   ChevronRight,
   X,
   Sparkles,
   TrendingUp,
-  Sliders,
   ArrowUpRight,
   MoreHorizontal,
   Eye,
-  Edit2,
-  Power
+  Edit2
 } from 'lucide-react';
 
 function PricingPage({ activeTab, setActiveTab }) {
@@ -122,30 +117,6 @@ function PricingPage({ activeTab, setActiveTab }) {
     },
   ]);
 
-  const getPeakBadge = (status) => {
-    switch (status) {
-      case 'Peak':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-600 w-fit">
-            <Sparkles size={13} /> Peak
-          </span>
-        );
-      case 'Standard':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 w-fit">
-            Standard
-          </span>
-        );
-      case 'Off-Peak':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 w-fit">
-            Off-Peak
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
 
   const getStatusBadge = (status) => {
     return status === 'Active' ? (

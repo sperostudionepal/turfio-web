@@ -11,17 +11,16 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
 import { compressImageFile } from '../../utils/imageCompressor';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 
 export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, onLogout, onSwitchToPlayer }) {
   const { showToast } = useToast();
   const [currentVenue, setCurrentVenue] = useState(venue || null);
   const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -38,7 +37,7 @@ export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, o
           setCurrentVenue(turfs[0]);
           setImages(Array.isArray(turfs[0].images) ? turfs[0].images : []);
         }
-      } catch (err) {
+      } catch {
         showToast('Failed to load venue details.', 'error');
       } finally {
         setLoading(false);

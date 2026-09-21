@@ -29,7 +29,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import MapPinPositioner from '../../components/common/MapPinPositioner';
 import TimePickerDropdown from '../../components/common/TimePickerDropdown';
-import { useToast } from '../../components/common/Toast';
+import { useToast } from '../../components/common/toastContext';
 import ownerApplicationService from '../../services/ownerApplicationService';
 
 const DOC_KINDS = [
@@ -50,15 +50,8 @@ const DAY_KEYS = [
   'sunday',
 ];
 
-const REQUEST_STATUS_META = {
-  pending: { label: 'Under review', tone: 'amber', blurb: 'Our team is verifying your documents. This usually takes under 24 hours.' },
-  needs_changes: { label: 'Changes requested', tone: 'amber', blurb: 'The reviewer needs more information before approving.' },
-  approved: { label: 'Approved', tone: 'lime', blurb: 'Your arena is live. Manage it from your owner dashboard.' },
-  rejected: { label: 'Not approved', tone: 'rose', blurb: 'This request was not approved. You can submit a new one.' },
-  withdrawn: { label: 'Withdrawn', tone: 'slate', blurb: 'This request was withdrawn.' },
-};
 
-export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthReady, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted }) {
+export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted }) {
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
@@ -1223,12 +1216,6 @@ export default function ListTurfPage({ onLogin, user, onRegisterOwner, onAuthRea
   );
 }
 
-const TONE_CLASSES = {
-  amber: 'bg-amber-50 text-amber-700 border-amber-200',
-  lime: 'bg-lime-50 text-lime-700 border-lime-200',
-  rose: 'bg-rose-50 text-rose-700 border-rose-200',
-  slate: 'bg-slate-50 text-slate-600 border-slate-200',
-};
 
 function RequestStatusPanel({ data, onHome }) {
   const [copied, setCopied] = useState(false);

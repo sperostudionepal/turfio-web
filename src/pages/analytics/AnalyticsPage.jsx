@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
-import { BarChart3, TrendingUp, DollarSign, Calendar, Download, Users, CircleDot } from 'lucide-react';
+import { Download } from 'lucide-react';
 import StatCards from '../../components/dashboard/StatCards';
 import RevenueChart from '../../components/dashboard/RevenueChart';
 

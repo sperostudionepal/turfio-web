@@ -65,7 +65,6 @@ export default function AccessibilityModal() {
     resetDefaults();
   };
 
-  const hasChanges = draftFontTheme !== activeFontTheme || draftFontSize !== activeFontSize;
 
   const previewFont = FONT_OPTIONS.find((f) => f.id === draftFontTheme) || FONT_OPTIONS[0];
   const previewSize = FONT_SIZES.find((s) => s.id === draftFontSize) || FONT_SIZES[1];

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bell, MapPin, Sun, Globe, Check, Loader2 } from 'lucide-react';
-import { useToast } from '../../components/common/Toast';
+import { Bell, Check, Loader2 } from 'lucide-react';
+import { useToast } from '../../components/common/toastContext';
 
 export default function PreferencesForm({ user, onUpdatePreferences }) {
   const { showToast } = useToast();

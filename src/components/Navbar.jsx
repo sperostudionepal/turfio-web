@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell, CheckCircle2, ShieldAlert, ArrowRight, Globe, Clock, HelpCircle, LayoutDashboard } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell, ArrowRight, Globe, Clock, HelpCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
 function getDisplayName(user) {
@@ -28,7 +28,7 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [, setScrolled] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [selectedLang, setSelectedLang] = useState({ code: 'EN', label: 'English' });
