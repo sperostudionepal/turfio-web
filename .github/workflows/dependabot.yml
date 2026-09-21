@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+# Application dependencies
+- package-ecosystem: npm
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: "04:00"
+    timezone: "Asia/Kathmandu"
+
+  open-pull-requests-limit: 5
+
+  labels:
+  - dependencies
+
+  commit-message:
+    prefix: chore
+    include: scope
+
+  groups:
+    production-dependencies:
+      dependency-type: production
+      update-types:
+      - minor
+      - patch
+
+    development-dependencies:
+      dependency-type: development
+      update-types:
+      - minor
+      - patch
+
+# GitHub Actions used by CI
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: "04:30"
+    timezone: "Asia/Kathmandu"
+
+  open-pull-requests-limit: 3
+
+  labels:
+  - dependencies
+  - github-actions
+
+  commit-message:
+    prefix: ci
