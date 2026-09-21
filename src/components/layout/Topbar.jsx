@@ -212,7 +212,8 @@ function TopBar(props) {
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      window.location.href = '/list-turf';
+                      window.history.pushState({}, '', '/list-turf');
+                      window.dispatchEvent(new Event('popstate'));
                     }}
                     className="w-full flex items-center justify-start px-2.5 py-2 rounded-md text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-left"
                   >
@@ -223,24 +224,6 @@ function TopBar(props) {
                       <span>List New Turf</span>
                     </span>
                   </button>
-
-                  {onSwitchToPlayer && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        onSwitchToPlayer();
-                      }}
-                      className="w-full flex items-center justify-start px-2.5 py-2 rounded-md text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-left"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                          <Layers size={16} className="text-slate-500" />
-                        </div>
-                        <span>Switch to Player View</span>
-                      </span>
-                    </button>
-                  )}
                 </div>
               </div>
             )}

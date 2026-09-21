@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-import useAuthStore from './store/useAuthStore';
+import { usePlayerAuth, useOwnerAuth } from './store/useAuthStore';
 
 import {
   loadGsiScript,
@@ -34,22 +34,55 @@ import ChatWidget from './components/chat/ChatWidget';
 import useAccessibilityStore from './store/useAccessibilityStore';
 
 
+const USER_PORT = import.meta.env.VITE_USER_PORT || '5173';
+const ADMIN_PORT = import.meta.env.VITE_ADMIN_PORT || '5174';
+
+const getIsAdminPort = () => {
+  return window.location.port === String(ADMIN_PORT);
+};
+
+const checkIsAdminRoute = (pathname, searchParams) => {
+  const page = searchParams ? searchParams.get('page') : null;
+  return (
+    pathname.includes('/admin') ||
+    pathname.includes('/owner/login') ||
+    pathname.includes('/superadmin') ||
+    pathname.includes('/setup-dashboard') ||
+    pathname === '/dashboard' ||
+    page === 'admin-login' ||
+    page === 'superadmin-login' ||
+    page === 'setup-dashboard' ||
+    page === 'dashboard'
+  );
+};
+
+const redirectToPort = (targetPort, path = window.location.pathname, search = window.location.search, hash = window.location.hash) => {
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  window.location.href = `${protocol}//${hostname}:${targetPort}${path}${search}${hash}`;
+};
+
+
 function App() {
   const initializeAccessibility = useAccessibilityStore((s) => s.initialize);
+  const playerAuth = usePlayerAuth();
+  const ownerAuth = useOwnerAuth();
+
+  const user = playerAuth.user;
+  const ownerUser = ownerAuth.user;
+  const isInitializing = playerAuth.isInitializing;
+
   const {
-    user,
-    initialize,
     login,
-    loginAdmin,
-    loginSuperadmin,
-    signup,
     googleLogin,
-    registerOwner,
-    deleteAccount,
+    signup,
     updateProfile,
-    logout,
-    isInitializing,
-  } = useAuthStore();
+  } = playerAuth;
+
+  const {
+    loginAdmin,
+    registerOwner,
+  } = ownerAuth;
 
   const { showToast } = useToast();
   const [authMode, setAuthMode] = useState(null);
@@ -68,12 +101,29 @@ function App() {
    * ---------------------------------------------------------
    */
   useEffect(() => {
-    initialize();
+    usePlayerAuth.getState().initialize();
+    useOwnerAuth.getState().initialize();
     initializeAccessibility();
 
     // Check URL path or query params for direct links
     const pathname = window.location.pathname;
     const searchParams = new URLSearchParams(window.location.search);
+    const isAdminPort = getIsAdminPort();
+    const isAdminPath = checkIsAdminRoute(pathname, searchParams);
+
+    // Set page title based on port
+    document.title = isAdminPort ? 'Turfio - Admin Portal' : 'Turfio - Futsal Booking';
+
+    // Port Guard: enforce port separation
+    if (!isAdminPort && isAdminPath) {
+      window.history.replaceState({}, '', '/');
+      setCurrentPage('home');
+      return;
+    }
+
+    if (isAdminPort && !isAdminPath && pathname !== '/' && pathname !== '') {
+      window.history.replaceState({}, '', '/');
+    }
 
     // Check for booking route (e.g. /turfs/:id/book or ?page=book)
     const bookingMatch = pathname.match(/^\/turfs?\/([a-zA-Z0-9_-]+)\/book/);
@@ -231,12 +281,33 @@ function App() {
     } else if (pathname.includes('/dashboard') || searchParams.get('page') === 'dashboard') {
       setCurrentPage('dashboard');
     } else if (pathname === '/' || pathname === '') {
-      setCurrentPage('home');
+      if (isAdminPort) {
+        const currentOwner = useOwnerAuth.getState().user;
+        if (currentOwner) {
+          setCurrentPage('dashboard');
+        } else {
+          setCurrentPage('adminLogin');
+        }
+      } else {
+        setCurrentPage('home');
+      }
     }
 
     const handlePopState = () => {
       const path = window.location.pathname;
       const params = new URLSearchParams(window.location.search);
+      const isAdPort = getIsAdminPort();
+      const isAdPath = checkIsAdminRoute(path, params);
+
+      if (!isAdPort && isAdPath) {
+        window.history.replaceState({}, '', '/');
+        setCurrentPage('home');
+        return;
+      }
+      if (isAdPort && !isAdPath && path !== '/' && path !== '') {
+        window.history.replaceState({}, '', '/');
+      }
+
       const popBookingMatch = path.match(/^\/turfs?\/([a-zA-Z0-9_-]+)\/book/);
       const detailMatch = path.match(/^\/turfs?\/([a-zA-Z0-9_-]+)/);
       const popRouteMatch = path.match(/^\/(route|directions)/) || params.get('page') === 'route' || params.get('page') === 'directions';
@@ -310,13 +381,43 @@ function App() {
       } else if (path === '/' || path === '') {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
-        setCurrentPage('home');
+        if (isAdPort) {
+          const currentOwner = useOwnerAuth.getState().user;
+          if (currentOwner) {
+            setCurrentPage('dashboard');
+          } else {
+            setCurrentPage('adminLogin');
+          }
+        } else {
+          setCurrentPage('home');
+        }
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [initialize]);
+  }, []);
+
+  /**
+   * ---------------------------------------------------------
+   * Sync Admin Portal URL with auth state on port 5174
+   * ---------------------------------------------------------
+   */
+  useEffect(() => {
+    if (!getIsAdminPort()) return;
+
+    if (ownerUser) {
+      if (window.location.pathname.includes('/login') || window.location.pathname === '/') {
+        window.history.replaceState({}, '', '/dashboard');
+        setCurrentPage('dashboard');
+      }
+    } else {
+      if (window.location.pathname.includes('/dashboard')) {
+        window.history.replaceState({}, '', '/admin/login');
+        setCurrentPage('adminLogin');
+      }
+    }
+  }, [ownerUser]);
 
   /**
    * ---------------------------------------------------------
@@ -496,6 +597,12 @@ function App() {
    * ---------------------------------------------------------
    */
   useEffect(() => {
+    // Never show One Tap on Admin port (5174)
+    if (getIsAdminPort()) {
+      cancelOneTap();
+      return;
+    }
+
     const googleClientId =
       import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -656,27 +763,27 @@ function App() {
    * Logout
    * ---------------------------------------------------------
    */
-  const handleLogout = () => {
-    logout();
-
-    setAuthMode(null);
+  const handleLogout = (targetContext = 'player') => {
+    if (targetContext === 'owner') {
+      ownerAuth.logout();
+      if (!getIsAdminPort()) {
+        redirectToPort(ADMIN_PORT, '/admin/login');
+        return;
+      }
+      window.history.pushState({}, '', '/admin/login');
+      setAuthMode(null);
+      setCurrentPage('adminLogin');
+    } else {
+      playerAuth.logout();
+      if (getIsAdminPort()) {
+        redirectToPort(USER_PORT, '/login');
+        return;
+      }
+      window.history.pushState({}, '', '/login');
+      setAuthMode('login');
+      setCurrentPage('login');
+    }
     setShowOnboardingModal(false);
-    setCurrentPage('home');
-
-    /**
-     * Important:
-     *
-     * After logout, the user becomes unauthenticated.
-     *
-     * The `user` dependency above changes from:
-     *
-     *     user → null
-     *
-     * which causes the One Tap effect to run again.
-     *
-     * Therefore Google One Tap can automatically appear
-     * again after logout.
-     */
   };
 
   /**
@@ -685,6 +792,10 @@ function App() {
    * ---------------------------------------------------------
    */
   const handleOpenLogin = () => {
+    if (getIsAdminPort()) {
+      redirectToPort(USER_PORT, '/login');
+      return;
+    }
     window.history.pushState({}, '', '/login');
     setAuthMode('login');
   };
@@ -695,16 +806,38 @@ function App() {
    * ---------------------------------------------------------
    */
   const handleOpenSignUp = () => {
+    if (getIsAdminPort()) {
+      redirectToPort(USER_PORT, '/signup');
+      return;
+    }
     window.history.pushState({}, '', '/signup');
     setAuthMode('signup');
   };
 
   const handleCloseAuth = () => {
+    if (getIsAdminPort()) {
+      redirectToPort(USER_PORT, '/');
+      return;
+    }
     window.history.pushState({}, '', '/');
     setAuthMode(null);
   };
 
+  const handleNavigateHome = () => {
+    if (getIsAdminPort()) {
+      redirectToPort(USER_PORT, '/');
+      return;
+    }
+    window.history.pushState({}, '', '/');
+    setCurrentPage('home');
+  };
+
   const handleNavigateRoute = (turf) => {
+    if (getIsAdminPort()) {
+      const targetId = turf ? (turf.slug || turf.id || turf._id) : '';
+      redirectToPort(USER_PORT, '/route', targetId ? `?turfId=${targetId}` : '');
+      return;
+    }
     const target = turf || selectedTurf;
     setRouteTurf(target);
     setSelectedTurf(null);
@@ -714,6 +847,10 @@ function App() {
   };
 
   const handleOpenDashboard = () => {
+    if (!getIsAdminPort()) {
+      redirectToPort(ADMIN_PORT, '/dashboard');
+      return;
+    }
     setIsPlayerMode(false);
     window.history.pushState({}, '', '/dashboard');
     setCurrentPage('dashboard');
@@ -725,6 +862,62 @@ function App() {
    * ---------------------------------------------------------
    */
   const renderCurrentView = () => {
+    if (getIsAdminPort()) {
+      if (ownerUser && ownerUser.role === 'superadmin') {
+        return <SuperadminDashboard onLogout={() => handleLogout('owner')} />;
+      }
+
+      if (ownerUser && (ownerUser.role === 'owner' || ownerUser.role === 'admin' || ownerUser.isTurfAdmin)) {
+        return (
+          <>
+            <Dashboard user={ownerUser} onLogout={() => handleLogout('owner')} />
+            {showOnboardingModal && (
+              <OnboardingPage
+                userData={ownerUser || {}}
+                onComplete={handleOnboardingComplete}
+                onClose={() => setShowOnboardingModal(false)}
+              />
+            )}
+          </>
+        );
+      }
+
+      if (currentPage === 'setupDashboard') {
+        return (
+          <SetupDashboardPage
+            onHome={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPage('adminLogin');
+            }}
+            onSetupSuccess={(data) => {
+              if (data?.token && data?.user) {
+                ownerAuth.setOwnerSession(data.token, data.user);
+              }
+              window.history.pushState({}, '', '/dashboard');
+              setCurrentPage('dashboard');
+            }}
+          />
+        );
+      }
+
+      return (
+        <SuperadminLoginPage
+          onLogin={async (credentials) => {
+            const res = await loginAdmin(credentials);
+            if (res.success && res.user?.role !== 'superadmin') {
+              window.history.pushState({}, '', '/dashboard');
+              setCurrentPage('dashboard');
+            }
+            return res;
+          }}
+          onHome={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPage('adminLogin');
+          }}
+        />
+      );
+    }
+
     // Login screen
     if (authMode === 'login') {
       return (
@@ -792,7 +985,7 @@ function App() {
     }
 
     // Unified Admin / Superadmin Login Page (/admin/login, /owner/login, /superadmin/login)
-    if ((currentPage === 'adminLogin' || currentPage === 'superadminLogin') && !user) {
+    if ((currentPage === 'adminLogin' || currentPage === 'superadminLogin') && !ownerUser) {
       return (
         <SuperadminLoginPage
           onLogin={async (credentials) => {
@@ -803,10 +996,7 @@ function App() {
             }
             return res;
           }}
-          onHome={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentPage('home');
-          }}
+          onHome={handleNavigateHome}
         />
       );
     }
@@ -826,7 +1016,7 @@ function App() {
     }
 
     // Platform staff — the super admin console (turf verification queue, etc.)
-    if (user && user.role === 'superadmin') {
+    if (ownerUser && ownerUser.role === 'superadmin') {
       return (
         <>
           <div
@@ -834,7 +1024,7 @@ function App() {
             className="fixed top-16 right-6 z-[9999]"
           />
 
-          <SuperadminDashboard onLogout={handleLogout} />
+          <SuperadminDashboard onLogout={() => handleLogout('owner')} />
         </>
       );
     }
@@ -911,18 +1101,18 @@ function App() {
             setCurrentPage('home');
           }}
           onSetupSuccess={(data) => {
-            // Initialize auth state to hydrate the newly created user session
-            initialize().then(() => {
-              window.history.pushState({}, '', '/dashboard');
-              setCurrentPage('dashboard');
-            });
+            if (data?.token && data?.user) {
+              ownerAuth.setOwnerSession(data.token, data.user);
+            }
+            window.history.pushState({}, '', '/dashboard');
+            setCurrentPage('dashboard');
           }}
         />
       );
     }
 
     // Approved venue operator viewing their dashboard
-    if (currentPage === 'dashboard' && user && (user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin)) {
+    if (currentPage === 'dashboard' && ownerUser && (ownerUser.role === 'owner' || ownerUser.role === 'admin' || ownerUser.isTurfAdmin)) {
       return (
         <>
           <div
@@ -931,18 +1121,13 @@ function App() {
           />
 
           <Dashboard
-            user={user}
-            onLogout={handleLogout}
-            onSwitchToPlayer={() => {
-              setIsPlayerMode(true);
-              window.history.pushState({}, '', '/');
-              setCurrentPage('home');
-            }}
+            user={ownerUser}
+            onLogout={() => handleLogout('owner')}
           />
 
           {showOnboardingModal && (
             <OnboardingPage
-              userData={user || {}}
+              userData={ownerUser || {}}
               onComplete={handleOnboardingComplete}
               onClose={() =>
                 setShowOnboardingModal(false)
@@ -991,7 +1176,10 @@ function App() {
             onLogin={handleOpenLogin}
             user={user}
             onRegisterOwner={registerOwner}
-            onAuthReady={initialize}
+            onAuthReady={() => {
+              playerAuth.initialize();
+              ownerAuth.initialize();
+            }}
             onLogout={handleLogout}
             onHome={() => {
               window.history.pushState({}, '', '/');
