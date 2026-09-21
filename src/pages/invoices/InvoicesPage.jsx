@@ -25,6 +25,7 @@ import {
   Check
 } from 'lucide-react';
 import turfService from '../../services/turfService';
+import { getTodayNepalString } from '../../utils/dateTime';
 
 function InvoicesPage({ user, activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,124 +37,51 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
   const [venue, setVenue] = useState(null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
-  // Top Stat Cards Data (matching Dashboard StatCards format)
+  // Invoices are generated from real owner bookings.
+  const [invoices, setInvoices] = useState([]);
+  const formatNpr = (amount) => `NRs. ${Math.round(amount).toLocaleString('en-IN')}`;
+  const sumOutstanding = (list) => list.reduce((sum, inv) => sum + Math.max(0, inv.totalAmount - (inv.paidAmount || 0)), 0);
+  const todayNpt = getTodayNepalString();
+  const activeInvoices = invoices.filter((inv) => inv.status !== 'Cancelled');
+  const paidInvoices = activeInvoices.filter((inv) => inv.status === 'Paid');
+  const unpaidInvoices = activeInvoices.filter((inv) => inv.status !== 'Paid');
+  // An unpaid invoice is overdue once its match date has passed.
+  const overdueInvoices = unpaidInvoices.filter((inv) => /^\d{4}-\d{2}-\d{2}$/.test(inv.dueDate) && inv.dueDate < todayNpt);
+  const collectionRate = activeInvoices.length ? Math.round((paidInvoices.length / activeInvoices.length) * 100) : 0;
+
+  // Stat cards are worked out from the owner's real invoices.
   const stats = [
     {
       title: 'Total Invoiced Amount',
-      value: 'NRs. 1,62,800',
-      change: '14.2%',
-      period: 'from last month',
+      value: formatNpr(activeInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0)),
+      change: `${activeInvoices.length}`,
+      period: activeInvoices.length === 1 ? 'invoice' : 'invoices',
       icon: FileText,
       iconBg: 'bg-emerald-50 text-emerald-600',
     },
     {
       title: 'Paid Invoices',
-      value: '912',
-      change: '88.4%',
+      value: `${paidInvoices.length}`,
+      change: `${collectionRate}%`,
       period: 'collection rate',
       icon: CheckCircle2,
       iconBg: 'bg-blue-50 text-blue-600',
     },
     {
       title: 'Unpaid & Pending',
-      value: '48',
-      change: '3.1%',
+      value: `${unpaidInvoices.length}`,
+      change: formatNpr(sumOutstanding(unpaidInvoices)),
       period: 'awaiting settlement',
       icon: Clock,
       iconBg: 'bg-amber-50 text-amber-600',
     },
     {
       title: 'Overdue Invoices',
-      value: '12',
-      change: '1.2%',
-      period: 'requires follow-up',
+      value: `${overdueInvoices.length}`,
+      change: formatNpr(sumOutstanding(overdueInvoices)),
+      period: 'past the match date',
       icon: AlertCircle,
       iconBg: 'bg-rose-50 text-rose-600',
-    },
-  ];
-
-  // Invoices are generated from real owner bookings.
-  const [invoices, setInvoices] = useState([]);
-  const demoInvoices = [
-    {
-      invoiceId: 'INV-2026-001',
-      bookingId: 'BK-1082',
-      customerName: 'Rohan Shrestha',
-      customerPhone: '+977 9841234567',
-      customerEmail: 'rohan.s@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=80',
-      issueDate: '10 Jun 2026',
-      dueDate: '12 Jun 2026',
-      court: 'Main Pro Pitch',
-      slot: '09:00 AM - 10:00 AM',
-      subtotal: 60.0,
-      vat: 0.0,
-      totalAmount: 60.0,
-      status: 'Paid',
-    },
-    {
-      invoiceId: 'INV-2026-002',
-      bookingId: 'BK-1083',
-      customerName: 'Aman Tamang',
-      customerPhone: '+977 9818765432',
-      customerEmail: 'aman.tamang@hotmail.com',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&auto=format&fit=crop&q=80',
-      issueDate: '11 Jun 2026',
-      dueDate: '12 Jun 2026',
-      court: 'Standard Pitch',
-      slot: '10:00 AM - 11:00 AM',
-      subtotal: 50.0,
-      vat: 0.0,
-      totalAmount: 50.0,
-      status: 'Paid',
-    },
-    {
-      invoiceId: 'INV-2026-003',
-      bookingId: 'BK-1084',
-      customerName: 'Bikash Gurung',
-      customerPhone: '+977 9801122334',
-      customerEmail: 'bikash.g@yahoo.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
-      issueDate: '12 Jun 2026',
-      dueDate: '12 Jun 2026',
-      court: 'Rooftop Open Turf',
-      slot: '11:00 AM - 01:00 PM',
-      subtotal: 160.0,
-      vat: 0.0,
-      totalAmount: 160.0,
-      status: 'Unpaid',
-    },
-    {
-      invoiceId: 'INV-2026-004',
-      bookingId: 'BK-1085',
-      customerName: 'Sujan Magar',
-      customerPhone: '+977 9865432109',
-      customerEmail: 'sujan.magar@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
-      issueDate: '09 Jun 2026',
-      dueDate: '12 Jun 2026',
-      court: 'Main Pro Pitch',
-      slot: '01:00 PM - 02:00 PM',
-      subtotal: 60.0,
-      vat: 0.0,
-      totalAmount: 60.0,
-      status: 'Paid',
-    },
-    {
-      invoiceId: 'INV-2026-005',
-      bookingId: 'BK-1086',
-      customerName: 'Nabin Karki',
-      customerPhone: '+977 9849988776',
-      customerEmail: 'karki.nabin@outlook.com',
-      avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80',
-      issueDate: '11 Jun 2026',
-      dueDate: '15 Jun 2026',
-      court: 'Standard Pitch',
-      slot: '02:00 PM - 04:00 PM',
-      subtotal: 100.0,
-      vat: 0.0,
-      totalAmount: 100.0,
-      status: 'Overdue',
     },
   ];
 
@@ -169,20 +97,22 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
     if (!user?.id) return;
     turfService.getOwnerBookings().then((bookings) => {
       setInvoices(bookings.map((booking) => {
-        const venueName = booking.turf?.name || venue?.name || 'Ekantakuna Footsall';
-        const venueCity = booking.turf?.address?.city || venue?.address?.city || 'Lalitpur';
-        const venueArea = booking.turf?.address?.area || venue?.address?.area || 'Ekantakuna';
-        const venueAddress = `${venueArea}, ${venueCity}, Nepal`;
+        // Invoices only show real details. Anything missing is left out rather than filled with an example.
+        const venueName = booking.turf?.name || venue?.name || '';
+        const venueCity = booking.turf?.address?.city || venue?.address?.city || '';
+        const venueArea = booking.turf?.address?.area || venue?.address?.area || '';
+        const venueAddress = [venueArea, venueCity, 'Nepal'].filter(Boolean).join(', ');
         const companyName = venueName;
-        const panNumber = '609842113';
+        // Owners' PAN numbers aren't stored yet, so none is shown until they are.
+        const panNumber = '';
 
         return {
           invoiceId: booking.invoiceId || (booking.bookingId ? booking.bookingId.replace(/^BK-/, 'INV-') : 'INV-XXXXXX'),
           bookingId: booking.bookingId || booking._id,
           companyName,
           venueAddress,
-          venuePhone: user?.phone || '+977 9801234567',
-          venueEmail: user?.email || 'billing@turfio.com',
+          venuePhone: user?.phone || '',
+          venueEmail: user?.email || '',
           panNumber,
           customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
           customerPhone: booking.user?.phone || '—',
@@ -190,14 +120,15 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
           avatar: booking.user?.profilePicture || '/logo.png',
           issueDate: new Date(booking.createdAt).toLocaleDateString(),
           dueDate: booking.dateStr || new Date(booking.date).toLocaleDateString(),
-          court: booking.turf?.name || 'Main Pro Pitch',
+          court: booking.turf?.name || '—',
           slot: booking.timeSlot || '—',
           duration: '1 Hour',
           subtotal: Number(booking.totalAmount || 0),
           vat: 0,
           totalAmount: Number(booking.totalAmount || 0),
-          paymentMethod: booking.paymentMethod || 'eSewa',
-          paymentStatus: booking.paymentStatus || 'Paid',
+          paidAmount: Number(booking.totalPaidAmount || 0),
+          paymentMethod: booking.paymentMethod || '—',
+          paymentStatus: booking.paymentStatus || 'Pending',
           status: booking.paymentStatus === 'Paid' ? 'Paid' : booking.status === 'Cancelled' ? 'Cancelled' : 'Unpaid',
         };
       }));
@@ -219,11 +150,14 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
       const lightBg = [248, 250, 252];
       const borderGray = [226, 232, 240];
 
-      const companyName = invoice.companyName || invoice.court || 'Ekantakuna Footsall';
-      const venueAddress = invoice.venueAddress || 'Ekantakuna, Lalitpur, Nepal';
-      const venuePhone = invoice.venuePhone || user?.phone || '+977 9801234567';
-      const venueEmail = invoice.venueEmail || user?.email || 'billing@turfio.com';
-      const panNumber = invoice.panNumber || '609842113';
+      const companyName = invoice.companyName || invoice.court || 'Venue';
+      const venueAddress = invoice.venueAddress || '';
+      const venuePhone = invoice.venuePhone || user?.phone || '';
+      const venueEmail = invoice.venueEmail || user?.email || '';
+      const panNumber = invoice.panNumber || '';
+      const contactLine = [venuePhone && `Phone: ${venuePhone}`, venueEmail && `Email: ${venueEmail}`]
+        .filter(Boolean)
+        .join('  |  ');
 
       // Company Brand Banner Accent
       doc.setFillColor(...emerald);
@@ -237,9 +171,13 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...slate);
-      doc.text(venueAddress, 22, 28);
-      doc.text(`Phone: ${venuePhone}  |  Email: ${venueEmail}`, 22, 33);
-      doc.text(`PAN / VAT Reg No: ${panNumber}  |  Verified Turfio Sports Facility`, 22, 38);
+      if (venueAddress) doc.text(venueAddress, 22, 28);
+      if (contactLine) doc.text(contactLine, 22, 33);
+      doc.text(
+        panNumber ? `PAN / VAT Reg No: ${panNumber}  |  Verified Turfio Sports Facility` : 'Verified Turfio Sports Facility',
+        22,
+        38,
+      );
 
       // Top-Right Tax Invoice Title
       doc.setFontSize(16);
@@ -786,19 +724,28 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
                   <div className="flex items-center gap-2">
                     <Building2 size={18} className="text-emerald-600" />
                     <h3 className="font-black text-xl text-slate-900 tracking-tight uppercase">
-                      {selectedInvoice.companyName || selectedInvoice.court || 'Ekantakuna Footsall'}
+                      {selectedInvoice.companyName || selectedInvoice.court || 'Venue'}
                     </h3>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-1">
-                    {selectedInvoice.venueAddress || 'Ekantakuna, Lalitpur, Nepal'}
-                  </p>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Phone: {selectedInvoice.venuePhone || '+977 9801234567'} | Email: {selectedInvoice.venueEmail || 'billing@turfio.com'}
-                  </p>
+                  {selectedInvoice.venueAddress && (
+                    <p className="text-xs text-slate-500 font-medium mt-1">{selectedInvoice.venueAddress}</p>
+                  )}
+                  {(selectedInvoice.venuePhone || selectedInvoice.venueEmail) && (
+                    <p className="text-xs text-slate-500 font-medium">
+                      {[
+                        selectedInvoice.venuePhone && `Phone: ${selectedInvoice.venuePhone}`,
+                        selectedInvoice.venueEmail && `Email: ${selectedInvoice.venueEmail}`,
+                      ]
+                        .filter(Boolean)
+                        .join(' | ')}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      PAN No: {selectedInvoice.panNumber || '609842113'}
-                    </span>
+                    {selectedInvoice.panNumber && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                        PAN No: {selectedInvoice.panNumber}
+                      </span>
+                    )}
                     <span className="text-[11px] text-slate-400 font-medium">Verified Turfio Partner</span>
                   </div>
                 </div>
@@ -908,7 +855,7 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
                 </div>
                 <div className="text-right space-y-1">
                   <span className="text-xs font-bold text-slate-700 block">Authorized Signatory</span>
-                  <span className="text-xs font-black text-emerald-600 uppercase block">{selectedInvoice.companyName || selectedInvoice.court || 'Ekantakuna Footsall'}</span>
+                  <span className="text-xs font-black text-emerald-600 uppercase block">{selectedInvoice.companyName || selectedInvoice.court || 'Venue'}</span>
                   <span className="text-[10px] text-slate-400 font-medium block">Official Digital Stamp</span>
                 </div>
               </div>
