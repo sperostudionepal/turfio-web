@@ -1,33 +1,20 @@
-import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   Bell,
   Menu,
-  Settings,
   Search,
   Plus,
   Download,
-  CheckCircle2,
-  MapPin,
   Clock,
   ChevronDown,
   ChevronRight,
   Calendar,
-  Wallet,
-  CircleDot,
-  CreditCard,
   Tag,
-  Users,
-  Layers,
-  Edit2,
-  ArrowRight,
   ArrowUpRight,
-  TrendingUp,
 } from 'lucide-react';
 import { getTodayNepalString, parseSlotInterval } from '../../utils/dateTime';
 
-function MobileDashboard({ user, venue, bookings = [], setActiveTab, onLogout, onSwitchToPlayer }) {
-  const [revenueTimeframe, setRevenueTimeframe] = useState('Last 7 days');
+function MobileDashboard({ user, venue, bookings = [], setActiveTab }) {
 
   const todayStr = getTodayNepalString();
 
@@ -40,15 +27,10 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab, onLogout, o
   const todayBookings = bookings.filter(isToday);
 
   // Compute metric stats
-  const paidBookings = bookings.filter((b) => b.paymentStatus === 'Paid');
   const todayPaidRevenue = todayBookings
     .filter((b) => b.paymentStatus === 'Paid')
     .reduce((sum, b) => sum + Number(b.totalPaidAmount || b.totalAmount || 0), 0);
 
-  const totalRevenue = paidBookings.reduce(
-    (sum, b) => sum + Number(b.totalPaidAmount || b.totalAmount || 0),
-    0
-  );
 
   const dueAmount = bookings
     .filter((b) => b.paymentStatus !== 'Paid')
@@ -365,7 +347,7 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab, onLogout, o
         {/* 5. Quick Actions Grid */}
         <div>
           <h3 className="text-sm font-bold text-slate-900 mb-2.5 tracking-tight">Quick Actions</h3>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {/* Tile 1: Manage Bookings */}
             <button
               onClick={() => setActiveTab && setActiveTab('Bookings')}
@@ -401,16 +383,6 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab, onLogout, o
               <span className="text-[11px] font-bold text-slate-700 leading-tight">Pricing</span>
             </button>
 
-            {/* Tile 4: Staff */}
-            <button
-              onClick={() => setActiveTab && setActiveTab('Staff')}
-              className="bg-white p-3 rounded-lg flex flex-col items-center justify-center text-center shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-slate-100/80 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 mb-1.5">
-                <Users size={16} />
-              </div>
-              <span className="text-[11px] font-bold text-slate-700 leading-tight">Staff</span>
-            </button>
           </div>
         </div>
 

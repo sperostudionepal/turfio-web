@@ -14,8 +14,6 @@ import CustomersPage from '../customers/CustomersPage';
 import PaymentsPage from '../payments/PaymentsPage';
 import InvoicesPage from '../invoices/InvoicesPage';
 import PricingPage from '../pricing/PricingPage';
-import StaffPage from '../staff/StaffPage';
-import MembershipsPage from '../memberships/MembershipsPage';
 import CouponsPage from '../coupons/CouponsPage';
 import AnnouncementsPage from '../announcements/AnnouncementsPage';
 import AnalyticsPage from '../analytics/AnalyticsPage';
@@ -154,8 +152,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
     Payments: <PaymentsPage {...pageProps} />,
     Invoices: <InvoicesPage {...pageProps} />,
     Pricing: <PricingPage {...pageProps} />,
-    Staff: <StaffPage {...pageProps} />,
-    Memberships: <MembershipsPage {...pageProps} />,
     Coupons: <CouponsPage {...pageProps} />,
     Announcements: <AnnouncementsPage {...pageProps} />,
     Analytics: <AnalyticsPage {...pageProps} />,
