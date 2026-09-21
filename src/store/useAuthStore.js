@@ -1,22 +1,41 @@
 import { create } from 'zustand';
 import authService from '../services/authService';
 
-const TOKEN_KEY = 'turfio_token';
+const PLAYER_SESSION_KEY = 'turfio_player_session';
+const OWNER_SESSION_KEY = 'turfio_owner_session';
 
-export const useAuthStore = create((set) => ({
-  user: null,
-  token: localStorage.getItem(TOKEN_KEY) || null,
-  isAuthenticated: false,
+const getStoredSession = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { token: null, user: null };
+    if (raw.startsWith('{')) {
+      const parsed = JSON.parse(raw);
+      return { token: parsed.token || null, user: parsed.user || null };
+    }
+    return { token: raw, user: null };
+  } catch {
+    return { token: null, user: null };
+  }
+};
+
+const setStoredSession = (key, token, user) => {
+  if (token) {
+    localStorage.setItem(key, JSON.stringify({ token, user }));
+  } else {
+    localStorage.removeItem(key);
+  }
+};
+
+export const usePlayerAuth = create((set, get) => ({
+  user: getStoredSession(PLAYER_SESSION_KEY).user,
+  token: getStoredSession(PLAYER_SESSION_KEY).token,
+  isAuthenticated: Boolean(getStoredSession(PLAYER_SESSION_KEY).token),
   isLoading: false,
   isInitializing: true,
   error: null,
 
-  /**
-   * Initialize Auth State on app launch
-   * Hydrates current user if JWT token exists in localStorage
-   */
   initialize: async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const { token, user: cachedUser } = getStoredSession(PLAYER_SESSION_KEY);
     if (!token) {
       set({ user: null, token: null, isAuthenticated: false, isInitializing: false });
       return;
@@ -24,8 +43,9 @@ export const useAuthStore = create((set) => ({
 
     try {
       set({ isLoading: true, error: null });
-      const response = await authService.getCurrentUser();
-      const user = response.data?.user || response.data;
+      const response = await authService.getCurrentUser('player');
+      const user = response.data?.user || response.data || cachedUser;
+      setStoredSession(PLAYER_SESSION_KEY, token, user);
       set({
         user,
         token,
@@ -34,8 +54,8 @@ export const useAuthStore = create((set) => ({
         isInitializing: false,
       });
     } catch (err) {
-      console.warn('Auth initialization failed:', err.message);
-      localStorage.removeItem(TOKEN_KEY);
+      console.warn('Player auth initialization failed:', err.message);
+      setStoredSession(PLAYER_SESSION_KEY, null, null);
       set({
         user: null,
         token: null,
@@ -46,13 +66,9 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Player / Customer Login Action (Role: user)
-   */
   login: async ({ email, password, redirectTo }) => {
     try {
       set({ isLoading: true, error: null });
-      
       const response = await authService.login({ email, password, redirectTo });
       const { user, token, mfaRequired, tempToken, redirectTo: resRedirectTo } = response.data || {};
 
@@ -62,7 +78,7 @@ export const useAuthStore = create((set) => ({
       }
 
       if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
+        setStoredSession(PLAYER_SESSION_KEY, token, user);
       }
 
       set({
@@ -80,125 +96,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Arena Owner Login Action (Role: admin)
-   */
-  loginAdmin: async ({ email, password, redirectTo }) => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      const response = await authService.loginAdmin({ email, password, redirectTo });
-      const { user, token, redirectTo: resRedirectTo } = response.data || {};
-
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      }
-
-      set({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-
-      return { success: true, user, token, redirectTo: resRedirectTo || redirectTo };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Platform Staff Superadmin Login Action (Role: superadmin)
-   */
-  loginSuperadmin: async ({ email, password }) => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      const response = await authService.loginSuperadmin({ email, password });
-      const { user, token } = response.data || {};
-
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      }
-
-      set({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-
-      return { success: true, user, token };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Sign Up Action
-   */
-  signup: async ({ firstName, lastName, email, password, confirmPassword }) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authService.register({
-        firstName,
-        lastName,
-        email,
-        password,
-        confirmPassword,
-      });
-      const { user, token } = response.data || {};
-
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      }
-
-      set({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-
-      return { success: true, user, token };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Owner self-registration (from "List Your Turf" when logged out).
-   * Persists the token so subsequent requests are authenticated, but does
-   * NOT set `user` — the caller submits the listing request first, then
-   * calls `initialize()` to hydrate and trigger the pending-page redirect.
-   */
-  registerOwner: async ({ name, email, password }) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authService.registerOwner({ name, email, password });
-      const { user, token } = response.data || {};
-
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      }
-
-      set({ isLoading: false, error: null });
-      return { success: true, user, token };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Google Login Action with ID token
-   */
   googleLogin: async (idToken, redirectTo) => {
     try {
       set({ isLoading: true, error: null });
@@ -206,7 +103,7 @@ export const useAuthStore = create((set) => ({
       const { user, token, redirectTo: resRedirectTo } = response.data || {};
 
       if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
+        setStoredSession(PLAYER_SESSION_KEY, token, user);
       }
 
       set({
@@ -224,14 +121,41 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Complete Onboarding / Update Profile Action
-   */
+  signup: async (signupData) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.register(signupData);
+      const { user, token } = response.data || {};
+
+      if (token) {
+        setStoredSession(PLAYER_SESSION_KEY, token, user);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
   updateProfile: async (profileData) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authService.updateProfile(profileData);
       const updatedUser = response.data?.user || response.data;
+      const { token } = get();
+
+      if (token) {
+        setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
+      }
 
       set({
         user: updatedUser,
@@ -246,11 +170,13 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Logout Action
-   */
-  logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
+  logout: async () => {
+    try {
+      await authService.logoutPlayer();
+    } catch (err) {
+      console.warn('Player logout server error:', err.message);
+    }
+    setStoredSession(PLAYER_SESSION_KEY, null, null);
     set({
       user: null,
       token: null,
@@ -259,35 +185,14 @@ export const useAuthStore = create((set) => ({
     });
   },
 
-  /**
-   * Permanently delete the current account (pending_owner only), then clear
-   * local auth state.
-   */
-  deleteAccount: async () => {
-    try {
-      await authService.deleteAccount();
-      localStorage.removeItem(TOKEN_KEY);
-      set({ user: null, token: null, isAuthenticated: false, error: null });
-      return { success: true };
-    } catch (err) {
-      set({ error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Upload Profile Photo Action
-   */
   uploadAvatar: async (file) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authService.uploadAvatar(file);
       const updatedUser = response.data?.user || response.data;
-      set({
-        user: updatedUser,
-        isLoading: false,
-        error: null,
-      });
+      const { token } = get();
+      if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
+      set({ user: updatedUser, isLoading: false, error: null });
       return { success: true, user: updatedUser };
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -295,19 +200,14 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Change / Create Password Action
-   */
   changePassword: async (data) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authService.changePassword(data);
       const updatedUser = response.data?.user || response.user;
-      if (updatedUser) {
-        set({ user: updatedUser, isLoading: false, error: null });
-      } else {
-        set({ isLoading: false, error: null });
-      }
+      const { token } = get();
+      if (updatedUser && token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
+      set({ ...(updatedUser ? { user: updatedUser } : {}), isLoading: false, error: null });
       return { success: true, message: response.message };
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -315,19 +215,14 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Update Preferences Action
-   */
   updatePreferences: async (preferences) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authService.updatePreferences(preferences);
       const updatedUser = response.data?.user || response.data;
-      set({
-        user: updatedUser,
-        isLoading: false,
-        error: null,
-      });
+      const { token } = get();
+      if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
+      set({ user: updatedUser, isLoading: false, error: null });
       return { success: true, user: updatedUser };
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -335,19 +230,14 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Toggle 2FA Action
-   */
   toggleTwoFactor: async () => {
     try {
       set({ isLoading: true, error: null });
       const response = await authService.toggleTwoFactor();
       const updatedUser = response.data?.user || response.data;
-      set({
-        user: updatedUser,
-        isLoading: false,
-        error: null,
-      });
+      const { token } = get();
+      if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
+      set({ user: updatedUser, isLoading: false, error: null });
       return { success: true, twoFactorEnabled: updatedUser?.twoFactorEnabled };
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -355,9 +245,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Verify 2FA Login with TOTP code or backup code
-   */
   verifyMfaLogin: async ({ tempToken, code }) => {
     try {
       set({ isLoading: true, error: null });
@@ -365,7 +252,7 @@ export const useAuthStore = create((set) => ({
       const { user, token } = response.data || {};
 
       if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
+        setStoredSession(PLAYER_SESSION_KEY, token, user);
       }
 
       set({
@@ -383,9 +270,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Dismiss the turf approval notification banner for the current user
-   */
   dismissTurfBanner: async () => {
     try {
       await authService.dismissTurfBanner();
@@ -398,10 +282,147 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  /**
-   * Reset Error
-   */
   clearError: () => set({ error: null }),
 }));
 
+export const useOwnerAuth = create((set) => ({
+  user: getStoredSession(OWNER_SESSION_KEY).user,
+  token: getStoredSession(OWNER_SESSION_KEY).token,
+  isAuthenticated: Boolean(getStoredSession(OWNER_SESSION_KEY).token),
+  isLoading: false,
+  isInitializing: true,
+  error: null,
+
+  initialize: async () => {
+    const { token, user: cachedUser } = getStoredSession(OWNER_SESSION_KEY);
+    if (!token) {
+      set({ user: null, token: null, isAuthenticated: false, isInitializing: false });
+      return;
+    }
+
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.getCurrentUser('owner');
+      const user = response.data?.user || response.data || cachedUser;
+      setStoredSession(OWNER_SESSION_KEY, token, user);
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        isInitializing: false,
+      });
+    } catch (err) {
+      console.warn('Owner auth initialization failed:', err.message);
+      setStoredSession(OWNER_SESSION_KEY, null, null);
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isInitializing: false,
+      });
+    }
+  },
+
+  loginAdmin: async ({ email, password, redirectTo }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.loginAdmin({ email, password, redirectTo });
+      const { user, token, redirectTo: resRedirectTo } = response.data || {};
+
+      if (token) {
+        setStoredSession(OWNER_SESSION_KEY, token, user);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token, redirectTo: resRedirectTo || redirectTo };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  loginSuperadmin: async ({ email, password }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.loginSuperadmin({ email, password });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        setStoredSession(OWNER_SESSION_KEY, token, user);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  setOwnerSession: (token, user) => {
+    if (token) {
+      setStoredSession(OWNER_SESSION_KEY, token, user);
+    }
+    set({
+      user,
+      token,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+  },
+
+  registerOwner: async ({ name, email, password }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.registerOwner({ name, email, password });
+      const { user, token } = response.data || {};
+
+      if (token) {
+        setStoredSession(OWNER_SESSION_KEY, token, user);
+      }
+
+      set({ isLoading: false, error: null });
+      return { success: true, user, token };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  logout: async () => {
+    try {
+      await authService.logoutOwner();
+    } catch (err) {
+      console.warn('Owner logout server error:', err.message);
+    }
+    setStoredSession(OWNER_SESSION_KEY, null, null);
+    set({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      error: null,
+    });
+  },
+
+  clearError: () => set({ error: null }),
+}));
+
+export const useAuthStore = usePlayerAuth;
 export default useAuthStore;
