@@ -23,6 +23,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import turfService from '../../services/turfService';
+import { getTodayNepalString } from '../../utils/dateTime';
 
 function CustomersPage({ user, activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,12 +50,13 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
           tierBg: 'bg-emerald-50 text-emerald-700',
           totalBookings: 0,
           totalSpend: 0,
-          lastActive: booking.dateStr || '—',
+          lastActive: '',
           status: 'Active',
         };
         existing.totalBookings += 1;
         existing.totalSpend += Number(booking.totalPaidAmount || 0);
-        existing.lastActive = booking.dateStr || existing.lastActive;
+        // Bookings arrive newest first; keep the most recent date.
+        if (booking.dateStr && !(existing.lastActive > booking.dateStr)) existing.lastActive = booking.dateStr;
         grouped.set(customer._id, existing);
       });
       setCustomers([...grouped.values()]);
@@ -62,108 +64,50 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
   }, [user?.id]);
 
   // Top Stat Cards Data (matching Dashboard StatCards format)
+
+  // Real customers are loaded from bookings; keep the old fixture out of the rendered state.
+  const [customers, setCustomers] = useState([]);
+  // Stat cards are worked out from the owner's real customers.
+  const formatNpr = (amount) => `NRs. ${Math.round(amount).toLocaleString('en-IN')}`;
+  const percentOf = (count) => (customers.length ? Math.round((count / customers.length) * 100) : 0);
+  const thisMonth = getTodayNepalString().slice(0, 7);
+  const totalBookings = customers.reduce((sum, c) => sum + c.totalBookings, 0);
+  const totalSpend = customers.reduce((sum, c) => sum + c.totalSpend, 0);
+  const returningCount = customers.filter((c) => c.totalBookings > 1).length;
+  const activeThisMonth = customers.filter((c) => String(c.lastActive).startsWith(thisMonth)).length;
+
   const stats = [
     {
-      title: 'Total Registered Players',
-      value: '2,480',
-      change: '12.4%',
-      period: 'from last month',
+      title: 'Total Customers',
+      value: customers.length.toLocaleString('en-IN'),
+      change: totalBookings.toLocaleString('en-IN'),
+      period: totalBookings === 1 ? 'booking' : 'bookings',
       icon: Users,
       iconBg: 'bg-emerald-50 text-emerald-600',
     },
     {
-      title: 'VIP Platinum Members',
-      value: '142',
-      change: '5.7%',
-      period: 'of total player base',
+      title: 'Returning Players',
+      value: returningCount.toLocaleString('en-IN'),
+      change: `${percentOf(returningCount)}%`,
+      period: 'booked more than once',
       icon: Award,
       iconBg: 'bg-purple-50 text-purple-600',
     },
     {
-      title: 'Active Recurrent Players',
-      value: '1,890',
-      change: '76.2%',
-      period: 'active this month',
+      title: 'Active This Month',
+      value: activeThisMonth.toLocaleString('en-IN'),
+      change: `${percentOf(activeThisMonth)}%`,
+      period: 'played this month',
       icon: UserCheck,
       iconBg: 'bg-blue-50 text-blue-600',
     },
     {
       title: 'Avg Customer Spend',
-      value: 'NRs. 34,550',
-      change: '8.3%',
-      period: 'from last month',
+      value: formatNpr(customers.length ? totalSpend / customers.length : 0),
+      change: formatNpr(totalSpend),
+      period: 'collected in total',
       icon: DollarSign,
       iconBg: 'bg-amber-50 text-amber-600',
-    },
-  ];
-
-  // Real customers are loaded from bookings; keep the old fixture out of the rendered state.
-  const [customers, setCustomers] = useState([]);
-  const demoCustomers = [
-    {
-      id: 'CUS-101',
-      name: 'Rohan Shrestha',
-      phone: '+977 9841234567',
-      email: 'rohan.s@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=80',
-      membership: 'VIP Platinum',
-      tierBg: 'bg-purple-50 text-purple-700',
-      totalBookings: 24,
-      totalSpend: 1440.0,
-      lastActive: '12 Jun 2026',
-      status: 'Active',
-    },
-    {
-      id: 'CUS-102',
-      name: 'Aman Tamang',
-      phone: '+977 9818765432',
-      email: 'aman.tamang@hotmail.com',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&auto=format&fit=crop&q=80',
-      membership: 'Gold Member',
-      tierBg: 'bg-blue-50 text-blue-700',
-      totalBookings: 18,
-      totalSpend: 900.0,
-      lastActive: '12 Jun 2026',
-      status: 'Active',
-    },
-    {
-      id: 'CUS-103',
-      name: 'Bikash Gurung',
-      phone: '+977 9801122334',
-      email: 'bikash.g@yahoo.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
-      membership: 'Silver Club',
-      tierBg: 'bg-slate-100 text-slate-700',
-      totalBookings: 32,
-      totalSpend: 2560.0,
-      lastActive: '11 Jun 2026',
-      status: 'Active',
-    },
-    {
-      id: 'CUS-104',
-      name: 'Sujan Magar',
-      phone: '+977 9865432109',
-      email: 'sujan.magar@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
-      membership: 'Regular Player',
-      tierBg: 'bg-emerald-50 text-emerald-700',
-      totalBookings: 8,
-      totalSpend: 480.0,
-      lastActive: '10 Jun 2026',
-      status: 'Active',
-    },
-    {
-      id: 'CUS-105',
-      name: 'Nabin Karki',
-      phone: '+977 9849988776',
-      email: 'karki.nabin@outlook.com',
-      avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80',
-      membership: 'Gold Member',
-      tierBg: 'bg-blue-50 text-blue-700',
-      totalBookings: 15,
-      totalSpend: 750.0,
-      lastActive: '09 Jun 2026',
-      status: 'Active',
     },
   ];
 
@@ -354,7 +298,7 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                           </td>
                           <td className="py-3.5 pr-4 font-bold text-slate-900 text-sm whitespace-nowrap">{c.totalBookings} matches</td>
                           <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(c.totalSpend || 0).toLocaleString('en-NP')}</td>
-                          <td className="py-3.5 pr-4 font-medium text-slate-500 text-xs whitespace-nowrap">{c.lastActive}</td>
+                          <td className="py-3.5 pr-4 font-medium text-slate-500 text-xs whitespace-nowrap">{c.lastActive || '—'}</td>
                           <td className="py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               <a
@@ -518,7 +462,7 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
               <div className="p-4 rounded-2xl bg-white border border-slate-100 space-y-2 shadow-2xs">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 font-semibold">Last Active</span>
-                  <span className="font-bold text-slate-900">{selectedCustomer.lastActive}</span>
+                  <span className="font-bold text-slate-900">{selectedCustomer.lastActive || '—'}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm">
                   <span className="font-extrabold text-slate-900">Lifetime Spend</span>

@@ -25,7 +25,8 @@ import {
 import turfService from '../../services/turfService';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
-import { getTodayNepalString, processFutureSlots } from '../../utils/dateTime';
+import { getTodayNepalString, getNepalCurrentDateTime, parseSlotInterval, processFutureSlots } from '../../utils/dateTime';
+import { addDays } from '../../utils/dashboardStats';
 
 function SchedulePage({ user, activeTab, setActiveTab }) {
   const [selectedDate, setSelectedDate] = useState(getTodayNepalString());
@@ -45,101 +46,63 @@ function SchedulePage({ user, activeTab, setActiveTab }) {
   const [scheduleError, setScheduleError] = useState('');
   const [ownerTurf, setOwnerTurf] = useState(null);
 
-  const shiftDate = (days) => {
-    const next = new Date(`${selectedDate}T00:00:00`);
-    next.setDate(next.getDate() + days);
-    setSelectedDate(next.toISOString().slice(0, 10));
-  };
+  const shiftDate = (days) => setSelectedDate(addDays(selectedDate, days));
 
   // Top Stat Cards Data
+
+  const [scheduleItems, setScheduleItems] = useState([]);
+
+  // Stat cards are worked out from the selected day's real bookings.
+  const nowNpt = getNepalCurrentDateTime();
+  const isToday = selectedDate === nowNpt.date;
+  const activeItems = scheduleItems
+    .filter((item) => item.status !== 'Cancelled')
+    .map((item) => ({ ...item, ...parseSlotInterval(item.slot) }))
+    .sort((a, b) => a.startMinutes - b.startMinutes);
+  const ongoing = isToday
+    ? activeItems.find((item) => item.startMinutes <= nowNpt.minutes && nowNpt.minutes < item.endMinutes)
+    : null;
+  const upcoming = activeItems.filter((item) =>
+    isToday ? item.startMinutes > nowNpt.minutes : selectedDate > nowNpt.date
+  );
+  const paidCount = activeItems.filter((item) => item.paymentStatus === 'Paid').length;
+  const dayRevenue = activeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const slotsLabel = (count) => `${count} ${count === 1 ? 'Slot' : 'Slots'}`;
+
   const stats = [
     {
-      title: "Today's Occupancy",
-      value: '82%',
-      change: '14 of 17 slots filled',
+      title: 'Booked Slots',
+      value: slotsLabel(activeItems.length),
+      change: `${paidCount} paid`,
       isText: true,
       icon: Clock,
       iconBg: 'bg-emerald-50 text-emerald-600',
     },
     {
       title: 'Ongoing Match',
-      value: 'Slot 09:00 AM',
-      change: 'Main Pro Pitch',
+      value: ongoing ? `Slot ${ongoing.startTime}` : 'None',
+      change: ongoing ? ongoing.customer : isToday ? 'No match right now' : 'Only shown for today',
       isText: true,
       icon: CircleDot,
       iconBg: 'bg-blue-50 text-blue-600',
     },
     {
       title: 'Confirmed Upcoming',
-      value: '8 Slots',
-      change: 'Next: 10:00 AM',
+      value: slotsLabel(upcoming.length),
+      change: upcoming[0] ? `Next: ${upcoming[0].startTime}` : 'Nothing else booked',
       isText: true,
       icon: CheckCircle2,
       iconBg: 'bg-purple-50 text-purple-600',
     },
     {
       title: 'Estimated Daily Rev',
-      value: 'NRs. 24,500',
-      change: '+12% vs last Sunday',
-      isUp: true,
+      value: `NRs. ${dayRevenue.toLocaleString('en-IN')}`,
+      change: `${slotsLabel(activeItems.length).toLowerCase()} booked`,
+      isText: true,
       icon: DollarSign,
       iconBg: 'bg-amber-50 text-amber-600',
     },
   ];
-
-  // Single Arena Daily Schedule Dataset
-  const [scheduleItems, setScheduleItems] = useState([
-    {
-      id: 'BK-1081',
-      slot: '08:00 AM - 09:00 AM',
-      customer: 'Ramesh Adhikari',
-      phone: '+977 9841001122',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=80',
-      status: 'Completed',
-      amount: 60.0,
-      paymentStatus: 'Paid',
-    },
-    {
-      id: 'BK-1082',
-      slot: '09:00 AM - 10:00 AM',
-      customer: 'Rohan Shrestha',
-      phone: '+977 9841234567',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&auto=format&fit=crop&q=80',
-      status: 'Ongoing',
-      amount: 60.0,
-      paymentStatus: 'Paid',
-    },
-    {
-      id: 'BK-1083',
-      slot: '10:00 AM - 11:00 AM',
-      customer: 'Aman Tamang',
-      phone: '+977 9818765432',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
-      status: 'Confirmed',
-      amount: 50.0,
-      paymentStatus: 'Paid',
-    },
-    {
-      id: 'BK-1084',
-      slot: '11:00 AM - 12:00 PM',
-      customer: 'Bikash Gurung',
-      phone: '+977 9801122334',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
-      status: 'Pending',
-      amount: 80.0,
-      paymentStatus: 'Unpaid',
-    },
-    {
-      id: 'BK-1085',
-      slot: '01:00 PM - 02:00 PM',
-      customer: 'Sujan Magar',
-      phone: '+977 9865432109',
-      avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80',
-      status: 'Confirmed',
-      amount: 60.0,
-      paymentStatus: 'Paid',
-    },
-  ]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -151,7 +114,7 @@ function SchedulePage({ user, activeTab, setActiveTab }) {
         customer: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
         phone: booking.user?.phone || '—',
         avatar: booking.user?.profilePicture || '/logo.png',
-        status: booking.paymentStatus === 'Paid' ? booking.status : 'Pending',
+        status: booking.status === 'Cancelled' ? 'Cancelled' : booking.paymentStatus === 'Paid' ? booking.status : 'Pending',
         amount: Number(booking.totalAmount || 0),
         paymentStatus: booking.paymentStatus || 'Pending',
       })));

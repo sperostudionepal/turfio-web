@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { getTodayNepalString } from '../../utils/dateTime';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = [
@@ -63,11 +64,10 @@ export default function CustomDatePicker({
     }
   }, [isOpen]);
 
-  // Today normalized
+  // Today in Nepal, where every turf is, whatever timezone the browser is in.
   const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
+    const [y, m, d] = getTodayNepalString().split('-').map(Number);
+    return new Date(y, m - 1, d);
   }, []);
 
   const minDateObj = useMemo(() => {
