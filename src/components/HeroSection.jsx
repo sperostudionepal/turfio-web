@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ArrowRight,
-  Calendar,
   ChevronDown,
   Clock,
   Headphones,
@@ -21,30 +20,28 @@ import ReviewsSection from './ReviewsSection';
 import AboutUsSection from './AboutUsSection';
 import CtaBannerSection from './CtaBannerSection';
 import Footer from './Footer';
+import { getTodayNepalString } from '../utils/dateTime';
+import CustomDatePicker from './common/CustomDatePicker';
+import CustomDropdown from './common/CustomDropdown';
 
 const initialForm = {
   location: 'Hattiban, Lalitpur',
-  date: '2086-04-13',
-  time: '09:00',
+  date: getTodayNepalString(),
+  time: '09:00 AM',
   players: 'Random',
 };
 
-function formatDate(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function formatTime(t) {
-  if (!t) return '';
-  let [h, m] = t.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
-}
+const TIME_OPTIONS = [
+  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM',
+  '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
+].map((value) => ({ value, label: value }));
 
 export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard, onProfile, isInitializing = false }) {
   const [form, setForm] = useState(initialForm);
+
+  const submitSearch = () => {
+    onFindTurfs?.(form);
+  };
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -117,7 +114,7 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
+                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
                   className="inline-flex items-center gap-2 rounded-full bg-lime-400 px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-transform hover:-translate-y-0.5 hover:bg-lime-500"
                 >
                   Book a Turf
@@ -125,7 +122,7 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
                 </a>
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
+                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-slate-50"
                 >
                   Explore near me
@@ -214,10 +211,10 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
           </div>
 
           {/* Search panel (Fully rounded pill shape, shifted slightly higher) */}
-          <div className="relative z-10 mx-auto mt-2 w-full max-w-[1200px] sm:mt-3 lg:mt-4">
-            <div className="rounded-full bg-white shadow-[0_10px_25px_-10px_rgba(15,23,42,0.1)] ring-1 ring-slate-100 overflow-hidden">
+          <div className="relative z-50 mx-auto mt-2 w-full max-w-[1200px] sm:mt-3 lg:mt-4">
+            <div className="rounded-full bg-white shadow-[0_10px_25px_-10px_rgba(15,23,42,0.1)] ring-1 ring-slate-100">
               <form
-                onSubmit={(e) => { e.preventDefault(); onFindTurfs?.(); }}
+                onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
                 className="flex flex-col items-stretch divide-y divide-slate-100/90 lg:divide-y-0 lg:flex-row lg:items-center lg:gap-0"
               >
                 <label className="group flex flex-[1.3] items-center gap-2.5 rounded-full px-6 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
@@ -238,45 +235,28 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
-                <label className="group relative flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
-                    <Calendar className="h-4 w-4 stroke-[2.2]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-bold text-slate-900">Date</span>
-                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400 whitespace-nowrap">
-                      {formatDate(form.date)}
-                    </span>
-                    <input
-                      type="date"
-                      value={form.date}
-                      onChange={(event) => updateField('date', event.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
-                </label>
+                <div className="flex-1 min-w-0">
+                  <CustomDatePicker
+                    variant="searchPill"
+                    label="Date"
+                    value={form.date}
+                    onChange={(value) => updateField('date', value)}
+                    minDate={getTodayNepalString()}
+                  />
+                </div>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
-                <label className="group relative flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-950 transition-colors group-focus-within:bg-lime-100 group-focus-within:text-lime-700">
-                    <Clock className="h-4 w-4 stroke-[2.2]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-bold text-slate-900">Time</span>
-                    <span className="mt-0.5 block text-[15px] font-medium text-slate-400">
-                      {formatTime(form.time)}
-                    </span>
-                    <input
-                      type="time"
-                      value={form.time}
-                      onChange={(event) => updateField('time', event.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
-                </label>
+                <div className="flex-1 min-w-0">
+                  <CustomDropdown
+                    variant="searchPill"
+                    label="Time"
+                    icon={Clock}
+                    value={form.time}
+                    onChange={(value) => updateField('time', value)}
+                    options={TIME_OPTIONS}
+                  />
+                </div>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
 
@@ -294,7 +274,6 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
                       <option value="Random">Random</option>
                       <option value="5v5">5v5</option>
                       <option value="7v7">7v7</option>
-                      <option value="9v9">9v9</option>
                     </select>
                   </span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
