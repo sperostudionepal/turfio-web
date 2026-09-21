@@ -64,7 +64,6 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
     placeName: '',
     courtsCount: '1',
     priceRange: '1000-1500',
-    turfDescription: '',
     legalBusinessName: '',
     panNumber: '',
     amenities: ['Parking', 'WiFi'],
@@ -286,7 +285,6 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
       },
       arena: {
         name: formData.arenaName.trim(),
-        description: formData.turfDescription.trim(),
         courts: Math.max(1, parseInt(formData.courtsCount, 10) || 1),
         priceRange: formData.priceRange,
         amenities: formData.amenities,
@@ -303,40 +301,77 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
     };
   };
 
-  const validateBeforeSubmit = () => {
-    const ownerNameVal = (formData.ownerName || accountOwnerName).trim();
-    const emailVal = (formData.email || accountEmail).trim();
+  const getMissingFieldsForStep = (step) => {
+    if (step === 1) {
+      const missingFields = [];
+      const ownerNameVal = (formData.ownerName || accountOwnerName).trim();
+      const emailVal = (formData.email || accountEmail).trim();
 
-    if (!ownerNameVal) return 'Your name is required.';
-    if (!/^\S+@\S+\.\S+$/.test(emailVal))
-      return 'A valid email is required for confirmation and tracking.';
-    if (!formData.phone.trim())
-      return 'Phone number is required.';
-    if (!formData.arenaName.trim())
-      return 'Arena name is required.';
-    if (!formData.address.trim())
-      return 'Full address is required.';
-    if (!formData.city)
-      return 'Please select your city.';
-    if (!formData.latitude || !formData.longitude)
-      return 'Please pin your arena location on the map.';
-    if (!formData.documents.length)
-      return 'Please upload your registration and PAN documents.';
-    if (!formData.documents.some((d) => d.kind === 'registration'))
-      return 'Mark one document as the Company/Firm Registration Certificate.';
-    if (!formData.documents.some((d) => d.kind === 'pan'))
-      return 'Mark one document as the PAN / VAT Certificate.';
-    if (!formData.agreeTerms) return 'Please accept the Terms of Service.';
-    return null;
+      if (!formData.arenaName.trim()) missingFields.push('Arena Name');
+      if (!ownerNameVal) missingFields.push('Owner Name');
+      if (!emailVal) missingFields.push('Email Address');
+      if (emailVal && !/^\S+@\S+\.\S+$/.test(emailVal)) missingFields.push('a valid Email Address');
+      if (!/^\d{10}$/.test(formData.phone)) missingFields.push('Phone Number (10 digits)');
+      if (!formData.address.trim()) missingFields.push('Full Address');
+      if (!formData.city) missingFields.push('City / Region');
+      if (!formData.latitude || !formData.longitude) missingFields.push('Map Location');
+      if (!formData.courtsCount || parseInt(formData.courtsCount, 10) < 1) missingFields.push('Number of Courts');
+      if (!formData.priceRange) missingFields.push('Price Range');
+
+      return missingFields;
+    }
+
+    if (step === 3) {
+      const missingFields = [];
+      if (!formData.documents.length) {
+        missingFields.push('Registration and PAN Documents');
+      } else {
+        if (!formData.documents.some((document) => document.kind === 'registration')) {
+          missingFields.push('Company/Firm Registration Certificate');
+        }
+        if (!formData.documents.some((document) => document.kind === 'pan')) {
+          missingFields.push('PAN / VAT Certificate');
+        }
+      }
+      if (!formData.agreeTerms) missingFields.push('Terms of Service agreement');
+      return missingFields;
+    }
+
+    return [];
+  };
+
+  const validateBeforeSubmit = () => [
+    ...getMissingFieldsForStep(1),
+    ...getMissingFieldsForStep(3),
+  ];
+
+  const showMissingFieldsToast = (missingFields) => {
+    if (!missingFields.length) return;
+    if (missingFields.length > 1) {
+      showToast('Some of the fields are missing', 'error', 6000, missingFields.join(', '));
+      return;
+    }
+    showToast('A required field is missing', 'error', 5000, missingFields[0]);
+  };
+
+  const handleNextStep = (nextStep) => {
+    const missingFields = getMissingFieldsForStep(formStep);
+    if (missingFields.length) {
+      showMissingFieldsToast(missingFields);
+      return;
+    }
+
+    setFormStep(nextStep);
+    scrollToTop();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
 
-    const validationError = validateBeforeSubmit();
-    if (validationError) {
-      showToast(validationError, 'error');
+    const missingFields = validateBeforeSubmit();
+    if (missingFields.length) {
+      showMissingFieldsToast(missingFields);
       return;
     }
 
@@ -454,9 +489,12 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                       <Phone className="absolute left-4 h-4 w-4 text-slate-400 pointer-events-none" />
                       <input
                         type="tel"
-                        placeholder="+977 98XXXXXXXX"
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        maxLength={10}
+                        placeholder="98XXXXXXXX"
                         value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                         className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all"
                         required
                       />
@@ -571,19 +609,18 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                         <Minus className="h-4 w-4" />
                       </button>
                       <input
-                        type="number"
-                        min="1"
-                        max="30"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={2}
                         placeholder="1"
                         value={formData.courtsCount}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '') {
-                            handleInputChange('courtsCount', '');
-                          } else {
-                            const parsed = parseInt(val, 10);
-                            handleInputChange('courtsCount', Math.max(1, isNaN(parsed) ? 1 : parsed).toString());
-                          }
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          handleInputChange(
+                            'courtsCount',
+                            digits ? Math.min(30, parseInt(digits, 10)).toString() : '',
+                          );
                         }}
                         onBlur={() => {
                           if (!formData.courtsCount || parseInt(formData.courtsCount, 10) < 1) {
@@ -660,29 +697,11 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                   </div>
                 </div>
 
-                {/* About Your Arena / Turf Description */}
-                <div>
-                  <label className="block text-[13px] font-bold text-slate-700 tracking-wide mb-2">
-                    About Your Arena / Description <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Describe your turf (e.g. FIFA-grade synthetic grass, 500 Lux LED floodlights, hot showers, drinking water, spectator seating, parking, and rules)..."
-                    value={formData.turfDescription}
-                    onChange={(e) => handleInputChange('turfDescription', e.target.value)}
-                    className="w-full p-4 rounded-2xl bg-slate-50 text-slate-900 text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all resize-none"
-                    required
-                  />
-                </div>
-
                 {/* Navigation Buttons */}
                 <div className="flex gap-3 justify-end pt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormStep(2);
-                      scrollToTop();
-                    }}
+                    onClick={() => handleNextStep(2)}
                     className="px-8 py-3.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                   >
                     <span>Next Step</span>
@@ -813,10 +832,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setFormStep(3);
-                          scrollToTop();
-                        }}
+                        onClick={() => handleNextStep(3)}
                         className="px-8 py-3.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                       >
                         <span>Next Step</span>

@@ -362,9 +362,6 @@ function SuperadminVenuesPage() {
                 </div>
               </div>
 
-              {selected.arena?.description && (
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">{selected.arena.description}</p>
-              )}
 
               <div className="space-y-2">
                 <span className="text-xs font-black text-slate-900 block">Submitted Documents</span>
