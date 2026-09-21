@@ -41,7 +41,7 @@ export function buildBookingsCsv(bookings = [], range = null, options = {}) {
   const rows = getReportBookings(bookings, range, options).map((b) => {
     const paid = paidAmount(b);
     return [
-      b.shortCode || b.bookingId || b._id,
+      b.bookingId || b._id,
       getBookingDateStr(b),
       b.timeSlot,
       b.court?.name || 'Court 1',

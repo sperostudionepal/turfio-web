@@ -177,7 +177,7 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
         const panNumber = '609842113';
 
         return {
-          invoiceId: `INV-${String(booking.bookingId || booking._id).slice(-10)}`,
+          invoiceId: booking.invoiceId || (booking.bookingId ? booking.bookingId.replace(/^BK-/, 'INV-') : 'INV-XXXXXX'),
           bookingId: booking.bookingId || booking._id,
           companyName,
           venueAddress,

@@ -59,7 +59,9 @@ const formatDuration = (booking) => {
 };
 
 const mapServerBooking = (booking) => ({
-  id: booking.shortCode || booking.bookingId || booking._id,
+  id: booking.bookingId || booking._id,
+  bookingId: booking.bookingId || booking._id,
+  invoiceId: booking.invoiceId || '',
   rawId: booking._id,
   customerName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
   customerPhone: booking.user?.phone || '—',
