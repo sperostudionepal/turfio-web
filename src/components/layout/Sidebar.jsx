@@ -48,7 +48,6 @@ function Sidebar(props) {
   ];
 
   const generalItems = [
-    { label: 'Switch to Player View', icon: User, href: '#' },
     { label: 'Settings', icon: Settings, href: '#' },
     { label: 'Help & Support', icon: HelpCircle, href: '#' },
     { label: 'Log out', icon: LogOut, href: '#' },

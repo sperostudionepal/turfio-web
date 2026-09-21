@@ -316,80 +316,7 @@ export default function Navbar({
 
                 {/* Profile Dropdown Menu (Airbnb Style) */}
                 {profileDropdownOpen && (
-                  <div className={`absolute right-0 mt-2.5 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 animate-step-fade overflow-hidden transition-all ${
-                    user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin
-                      ? 'w-60 sm:w-64 py-2.5'
-                      : 'w-48 sm:w-52 py-1.5'
-                  }`}>
-                    {/* Become a host / List Your Turf card — shown ONLY for admins/owners/venue admins in dropdown */}
-                    {(user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin) && (
-                      <>
-                        <div className="px-3 py-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              if (onListTurf) onListTurf();
-                            }}
-                            className="relative overflow-hidden w-full text-left px-3.5 py-2.5 rounded-xl bg-gradient-to-br from-lime-100/50 via-lime-50/60 to-slate-50 hover:from-lime-100 hover:to-lime-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3"
-                          >
-                            <div className="relative z-10 space-y-0.5 max-w-[72%]">
-                              <p className="text-sm font-extrabold text-slate-900 group-hover:text-lime-950 transition-colors">
-                                List Your Turf
-                              </p>
-                              <p className="text-xs font-medium text-slate-600 truncate whitespace-nowrap">
-                                Earn extra income by hosting.
-                              </p>
-                            </div>
-
-                            {/* Blended Football Graphic */}
-                            <picture>
-                              <source srcSet="/football.webp" type="image/webp" />
-                              <img
-                                src="/football.png"
-                                alt="Football"
-                                className="absolute -right-11 top-1/2 -translate-y-1/2 h-[135%] max-h-[90px] w-auto object-contain pointer-events-none z-0 -scale-x-100 group-hover:-scale-x-105 transition-transform duration-300"
-                                loading="lazy"
-                                decoding="async"
-                              />
-                            </picture>
-                          </button>
-                        </div>
-
-                        <div className="border-t border-slate-100 my-1" />
-                      </>
-                    )}
-
-                    {/* Language Selector — shown ONLY for admin accounts in dropdown (non-admins use topbar) */}
-                    {(user?.role === 'owner' || user?.role === 'admin' || user?.isTurfAdmin) && (
-                      <>
-                        <div className="px-5 py-2.5 flex items-center justify-between">
-                          <div className="flex items-center gap-3 text-sm font-semibold text-slate-800">
-                            <Globe size={18} className="text-slate-700 shrink-0" />
-                            <span>Language</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-full">
-                            {languages.map((lang) => (
-                              <button
-                                key={lang.code}
-                                type="button"
-                                onClick={() => setSelectedLang(lang)}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                                  selectedLang.code === lang.code
-                                    ? 'bg-white text-slate-900 shadow-2xs'
-                                    : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                              >
-                                {lang.code}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="border-t border-slate-100 my-1" />
-                      </>
-                    )}
-
+                  <div className="absolute right-0 mt-2.5 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 animate-step-fade overflow-hidden transition-all w-48 sm:w-52 py-1.5">
                     {/* User Links */}
                     <div className="py-0.5">
                       <button
@@ -408,20 +335,6 @@ export default function Navbar({
                         <UserIcon size={18} className="text-slate-700 shrink-0" />
                         <span>My Profile</span>
                       </button>
-
-                      {(user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin) && onDashboard && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            onDashboard();
-                          }}
-                          className="w-full flex items-center gap-3 px-4.5 py-2 text-sm font-semibold text-lime-700 hover:bg-lime-50 transition-colors cursor-pointer text-left"
-                        >
-                          <LayoutDashboard size={18} className="text-lime-600 shrink-0" />
-                          <span>Turf Dashboard</span>
-                        </button>
-                      )}
 
                       {onLogout && (
                         <>
