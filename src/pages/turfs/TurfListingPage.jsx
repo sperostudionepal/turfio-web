@@ -43,6 +43,7 @@ import TurfMap from '../../components/turfs/TurfMap';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
 import turfService from '../../services/turfService';
+import { getTodayNepalString } from '../../utils/dateTime';
 
 /*
 // Hardcoded dummy turfs commented out in favor of real backend data fetching
@@ -354,13 +355,13 @@ export default function TurfListingPage({
 }) {
   // Search draft input parameters (user typing / selecting before clicking Search)
   const [locationInput, setLocationInput] = useState('');
-  const [dateInput, setDateInput] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dateInput, setDateInput] = useState(() => getTodayNepalString());
   const [timeInput, setTimeInput] = useState('07:00 PM');
   const [playersInput, setPlayersInput] = useState('Any Size');
 
   // Applied search parameters (only updated when Search button clicked or form submitted)
   const [appliedLocation, setAppliedLocation] = useState('');
-  const [appliedDate, setAppliedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [appliedDate, setAppliedDate] = useState(() => getTodayNepalString());
   const [appliedTime, setAppliedTime] = useState('07:00 PM');
   const [appliedPlayers, setAppliedPlayers] = useState('Any Size');
 
@@ -634,7 +635,7 @@ export default function TurfListingPage({
                     label="Date"
                     value={dateInput}
                     onChange={setDateInput}
-                    minDate={new Date().toISOString().split('T')[0]}
+                    minDate={getTodayNepalString()}
                   />
                 </div>
 

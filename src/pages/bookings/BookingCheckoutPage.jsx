@@ -45,6 +45,7 @@ import {
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import turfService from '../../services/turfService';
+import { getTodayNepalString } from '../../utils/dateTime';
 import { useToast } from '../../components/common/Toast';
 
 function WhatsAppIcon({ className = 'h-4 w-4' }) {
@@ -594,7 +595,7 @@ export default function BookingCheckoutPage({
 
           let bookingDate = turf?.selectedDate;
           if (!bookingDate) {
-            bookingDate = new Date().toISOString().split('T')[0];
+            bookingDate = getTodayNepalString();
           }
 
           // Build booking payload with hold linkage and idempotency key
@@ -686,7 +687,7 @@ export default function BookingCheckoutPage({
 
         const bookingPayload = {
           turf: turf?.id || turf?._id,
-          date: turf?.selectedDate || new Date().toISOString().split('T')[0],
+          date: turf?.selectedDate || getTodayNepalString(),
           timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
           matchType,
           teamSize: formData.expectedPlayers || 10,

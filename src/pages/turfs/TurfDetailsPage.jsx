@@ -48,6 +48,7 @@ import CustomDropdown from '../../components/common/CustomDropdown';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
 import turfService from '../../services/turfService';
+import { getTodayNepalString, getNepalCurrentDateTime } from '../../utils/dateTime';
 import { useToast } from '../../components/common/Toast';
 
 /* ─── Amenity Icon Mapping ─── */
@@ -332,10 +333,7 @@ export default function TurfDetailsPage({
   const { showToast } = useToast();
 
   // Booking Card State
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getTodayNepalString());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [duration, setDuration] = useState(1);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -477,9 +475,7 @@ export default function TurfDetailsPage({
     const openMin = parseToMin(openStr);
     const closeMin = parseToMin(closeStr);
     const generated = [];
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const currentMinutes = today.getHours() * 60 + today.getMinutes();
+    const { date: todayStr, minutes: currentMinutes } = getNepalCurrentDateTime();
     for (let m = openMin; m < closeMin; m += 60) {
       const formatted = to12(m);
       const disabled = selectedDate < todayStr || (selectedDate === todayStr && m + 60 <= currentMinutes);
@@ -1376,7 +1372,7 @@ export default function TurfDetailsPage({
                       label="Match Date"
                       value={selectedDate}
                       onChange={setSelectedDate}
-                      minDate={new Date().toISOString().split('T')[0]}
+                      minDate={getTodayNepalString()}
                       availableDays={effectiveAvailableDays}
                       variant="cell"
                       buttonClassName="rounded-t-2xl"

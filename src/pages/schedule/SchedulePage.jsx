@@ -26,6 +26,7 @@ import turfService from '../../services/turfService';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
 import { getTodayNepalString, processFutureSlots } from '../../utils/dateTime';
+import { addDays } from '../../utils/dashboardStats';
 
 function SchedulePage({ user, activeTab, setActiveTab }) {
   const [selectedDate, setSelectedDate] = useState(getTodayNepalString());
@@ -45,11 +46,7 @@ function SchedulePage({ user, activeTab, setActiveTab }) {
   const [scheduleError, setScheduleError] = useState('');
   const [ownerTurf, setOwnerTurf] = useState(null);
 
-  const shiftDate = (days) => {
-    const next = new Date(`${selectedDate}T00:00:00`);
-    next.setDate(next.getDate() + days);
-    setSelectedDate(next.toISOString().slice(0, 10));
-  };
+  const shiftDate = (days) => setSelectedDate(addDays(selectedDate, days));
 
   // Top Stat Cards Data
   const stats = [
