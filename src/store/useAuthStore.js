@@ -237,6 +237,31 @@ export const usePlayerAuth = create((set, get) => ({
     }
   },
 
+  deleteAccount: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.deleteAccount();
+      setStoredSession(PLAYER_SESSION_KEY, null, null);
+      localStorage.removeItem('turfio_token');
+      localStorage.removeItem('turfio_player_session');
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+      return { success: true, message: response.data?.message || 'Account deleted successfully' };
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to delete account.';
+      set({ isLoading: false, error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
+  },
+
   clearError: () => set({ error: null }),
 }));
 
@@ -374,6 +399,31 @@ export const useOwnerAuth = create((set) => ({
       isAuthenticated: false,
       error: null,
     });
+  },
+
+  deleteAccount: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.deleteAccount();
+      setStoredSession(OWNER_SESSION_KEY, null, null);
+      localStorage.removeItem('turfio_token');
+      localStorage.removeItem('turfio_owner_session');
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+      return { success: true, message: response.data?.message || 'Account deleted successfully' };
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to delete account.';
+      set({ isLoading: false, error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
   },
 
   clearError: () => set({ error: null }),

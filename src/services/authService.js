@@ -124,7 +124,7 @@ export const authService = {
   },
 
   /**
-   * Self-delete the current account (only permitted for a pending_owner).
+   * Self-delete the current user account
    */
   async deleteAccount() {
     return apiClient.delete('/auth/me');
