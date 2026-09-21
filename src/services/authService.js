@@ -217,49 +217,6 @@ export const authService = {
     const response = await apiClient.post('/auth/sessions/logout-others');
     return response;
   },
-
-  /**
-   * Toggle 2FA setting
-   */
-  async toggleTwoFactor() {
-    const response = await apiClient.post('/auth/2fa/toggle');
-    return response;
-  },
-
-  /**
-   * Generate temporary TOTP secret and QR code for MFA setup
-   */
-  async generateMfaSecret() {
-    const response = await apiClient.post('/auth/mfa/generate');
-    return response;
-  },
-
-  /**
-   * Verify initial 6-digit TOTP code and enable 2FA
-   * @param {string} code
-   */
-  async verifyMfaSetup(code) {
-    const response = await apiClient.post('/auth/mfa/verify', { code });
-    return response;
-  },
-
-  /**
-   * Disable 2FA with password or TOTP re-authentication
-   * @param {{ password, code }} data
-   */
-  async disableMfa(data) {
-    const response = await apiClient.post('/auth/mfa/disable', data);
-    return response;
-  },
-
-  /**
-   * Verify TOTP code or backup code during login flow
-   * @param {{ tempToken, code }} data
-   */
-  async verifyMfaLogin({ tempToken, code }) {
-    const response = await apiClient.post('/auth/mfa/verify-login', { tempToken, code });
-    return response;
-  },
 };
 
 export default authService;

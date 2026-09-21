@@ -70,12 +70,7 @@ export const usePlayerAuth = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authService.login({ email, password, redirectTo });
-      const { user, token, mfaRequired, tempToken, redirectTo: resRedirectTo } = response.data || {};
-
-      if (mfaRequired) {
-        set({ isLoading: false, error: null });
-        return { success: true, mfaRequired: true, tempToken };
-      }
+      const { user, token, redirectTo: resRedirectTo } = response.data || {};
 
       if (token) {
         setStoredSession(PLAYER_SESSION_KEY, token, user);
@@ -224,46 +219,6 @@ export const usePlayerAuth = create((set, get) => ({
       if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
       set({ user: updatedUser, isLoading: false, error: null });
       return { success: true, user: updatedUser };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  toggleTwoFactor: async () => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authService.toggleTwoFactor();
-      const updatedUser = response.data?.user || response.data;
-      const { token } = get();
-      if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
-      set({ user: updatedUser, isLoading: false, error: null });
-      return { success: true, twoFactorEnabled: updatedUser?.twoFactorEnabled };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  verifyMfaLogin: async ({ tempToken, code }) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authService.verifyMfaLogin({ tempToken, code });
-      const { user, token } = response.data || {};
-
-      if (token) {
-        setStoredSession(PLAYER_SESSION_KEY, token, user);
-      }
-
-      set({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-
-      return { success: true, user, token };
     } catch (err) {
       set({ isLoading: false, error: err.message });
       return { success: false, error: err.message };

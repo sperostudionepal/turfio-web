@@ -83,7 +83,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
 
   // 5. Security & Access Control State
   const [managerPin, setManagerPin] = useState('4412');
-  const [twoFactor, setTwoFactor] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState('30 Minutes');
   const {
     fontTheme: activeFontTheme,

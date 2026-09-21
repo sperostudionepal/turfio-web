@@ -48,7 +48,6 @@ export default function ProfilePage({
     uploadAvatar,
     changePassword,
     updatePreferences,
-    toggleTwoFactor,
     deleteAccount,
   } = useAuthStore();
 
@@ -78,7 +77,7 @@ export default function ProfilePage({
     { id: 'savedTurfs', label: 'Saved Turfs', icon: Heart },
     { id: 'playerProfile', label: 'Skill Set & Style', icon: Trophy },
     { id: 'preferences', label: 'App Preferences', icon: Bell },
-    { id: 'security', label: 'Security & 2FA', icon: Shield },
+    { id: 'security', label: 'Security ', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: AlertTriangle, danger: true },
   ];
 
@@ -358,7 +357,6 @@ export default function ProfilePage({
                   <SecuritySettings
                     user={user}
                     onChangePassword={changePassword}
-                    onToggleTwoFactor={toggleTwoFactor}
                   />
                 )}
 

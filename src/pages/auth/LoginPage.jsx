@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
 import Navbar from '../../components/Navbar';
-import useAuthStore from '../../store/useAuthStore';
 
 function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs }) {
   const [email, setEmail] = useState('');
@@ -10,15 +9,8 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // 2FA Login Gate state
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [tempToken, setTempToken] = useState(null);
-  const [mfaCode, setMfaCode] = useState('');
-  const [useBackupCode, setUseBackupCode] = useState(false);
 
   const { showToast } = useToast();
-  const verifyMfaLogin = useAuthStore((s) => s.verifyMfaLogin);
 
   const handleGoogleClick = () => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -50,11 +42,7 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
         const searchParams = new URLSearchParams(window.location.search);
         const redirectTo = searchParams.get('redirectTo') || undefined;
         const res = await onLogin({ email, password, redirectTo });
-        if (res && res.mfaRequired) {
-          setMfaRequired(true);
-          setTempToken(res.tempToken);
-          showToast('Two-factor authentication required.', 'info');
-        } else if (res && res.success === false) {
+        if (res && res.success === false) {
           showToast(res.error || 'Login failed. Please check your credentials.', 'error');
         } else {
           showToast('Welcome back! Logged in successfully.', 'success');
@@ -62,28 +50,6 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
       }
     } catch (err) {
       showToast(err.message || 'Login failed.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMfaSubmit = async (e) => {
-    e.preventDefault();
-    if (!mfaCode.trim()) {
-      showToast(useBackupCode ? 'Please enter a backup code.' : 'Please enter your 6-digit authenticator code.', 'error');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await verifyMfaLogin({ tempToken, code: mfaCode.trim() });
-      if (res && res.success) {
-        showToast('Welcome back! Logged in successfully.', 'success');
-      } else {
-        showToast(res.error || 'Invalid 2FA code. Please try again.', 'error');
-      }
-    } catch (err) {
-      showToast(err.message || 'Verification failed.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -106,86 +72,15 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
         <div className="w-full max-w-[430px] bg-white rounded-3xl p-7 sm:p-9 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
           
-          {mfaRequired ? (
-            /* 2FA Verification View */
-            <div className="space-y-6">
-              <div className="space-y-1 text-left">
-                <div className="w-12 h-12 rounded-2xl bg-lime-100 flex items-center justify-center text-lime-700 mb-3">
-                  <ShieldCheck size={24} />
-                </div>
-                <h1 className="text-[24px] font-black tracking-tight text-slate-900 leading-tight">
-                  Two-Factor Authentication
-                </h1>
-                <p className="text-[13.5px] font-medium text-slate-500 leading-relaxed">
-                  {useBackupCode
-                    ? 'Enter one of your emergency 8-character backup codes.'
-                    : 'Enter the 6-digit code from your authenticator app to complete login.'}
-                </p>
-              </div>
-
-              <form onSubmit={handleMfaSubmit} className="space-y-4">
-                <div>
-                  <div className="relative">
-                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={mfaCode}
-                      onChange={(e) => setMfaCode(e.target.value)}
-                      placeholder={useBackupCode ? 'e.g. A1B2C3D4' : 'e.g. 123456'}
-                      maxLength={useBackupCode ? 8 : 6}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-slate-900 text-sm font-semibold tracking-wider focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition-all placeholder:text-slate-400 placeholder:font-normal"
-                      autoFocus
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3.5 px-6 rounded-full bg-lime-400 hover:bg-lime-500 active:scale-[0.99] text-slate-900 font-extrabold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
-                >
-                  <span>{isLoading ? 'Verifying…' : 'Verify & Continue'}</span>
-                  <ArrowRight size={16} />
-                </button>
-              </form>
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseBackupCode(!useBackupCode);
-                    setMfaCode('');
-                  }}
-                  className="text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline cursor-pointer"
-                >
-                  {useBackupCode ? 'Use Authenticator Code' : 'Use Emergency Backup Code'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMfaRequired(false);
-                    setTempToken(null);
-                    setMfaCode('');
-                  }}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer flex items-center gap-1"
-                >
-                  <ArrowLeft size={12} /> Back to Log In
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Regular Login View */
-            <>
-              {/* Headline */}
-              <div className="space-y-1 text-left">
-                <h1 className="text-[26px] font-black tracking-tight text-slate-900 leading-tight">
-                  Welcome back!
-                </h1>
-                <p className="text-[13.5px] font-medium text-slate-500 leading-relaxed">
-                  Log in to continue booking turfs, finding matches and playing your way.
-                </p>
-              </div>
+          {/* Headline */}
+          <div className="space-y-1 text-left">
+            <h1 className="text-[26px] font-black tracking-tight text-slate-900 leading-tight">
+              Welcome back!
+            </h1>
+            <p className="text-[13.5px] font-medium text-slate-500 leading-relaxed">
+              Log in to continue booking turfs, finding matches and playing your way.
+            </p>
+          </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 
@@ -286,8 +181,6 @@ function LoginPage({ onLogin, onGoogleLogin, onSwitchToSignUp, onClose, onHome, 
                   </button>
                 </p>
               </div>
-            </>
-          )}
 
         </div>
 
