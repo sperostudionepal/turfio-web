@@ -92,6 +92,7 @@ function App() {
   const [selectedTurf, setSelectedTurf] = useState(null);
   const [routeTurf, setRouteTurf] = useState(null);
   const [selectedTurfForBooking, setSelectedTurfForBooking] = useState(null);
+  const [turfSearch, setTurfSearch] = useState(null);
   const [splitBookingId, setSplitBookingId] = useState(null);
   const [submittedApplication, setSubmittedApplication] = useState(null);
 
@@ -1257,6 +1258,7 @@ function App() {
 
           <TurfListingPage
             user={user}
+            initialSearch={turfSearch}
             onLogin={handleOpenLogin}
             onLogout={handleLogout}
             onListTurf={() => {
@@ -1269,8 +1271,13 @@ function App() {
             }}
             onDashboard={handleOpenDashboard}
             onSelectTurf={(turf) => {
-              setSelectedTurf(turf);
-              const turfId = turf.slug || turf.id || turf._id;
+              const selected = {
+                ...turf,
+                selectedDate: turf.selectedDate || turfSearch?.date,
+                selectedTime: turf.selectedTime || turfSearch?.time,
+              };
+              setSelectedTurf(selected);
+              const turfId = selected.slug || selected.id || selected._id;
               window.history.pushState({}, '', `/turfs/${turfId}`);
               setCurrentPage('turfDetails');
             }}
@@ -1437,7 +1444,8 @@ function App() {
             window.history.pushState({}, '', `/turfs/${turfId}`);
             setCurrentPage('turfDetails');
           }}
-          onFindTurfs={() => {
+          onFindTurfs={(search) => {
+            setTurfSearch(search || null);
             window.history.pushState({}, '', '/turfs');
             setCurrentPage('turfListing');
           }}

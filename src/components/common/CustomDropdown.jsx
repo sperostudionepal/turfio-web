@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
 export default function CustomDropdown({
@@ -15,10 +16,16 @@ export default function CustomDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const popoverRef = useRef(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0, width: 180 });
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        !popoverRef.current?.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -38,6 +45,27 @@ export default function CustomDropdown({
     }
   }, [isOpen]);
 
+  useLayoutEffect(() => {
+    if (!isOpen || !dropdownRef.current) return undefined;
+
+    const updatePosition = () => {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      setPopoverPosition({
+        top: rect.bottom + 8,
+        left: Math.max(12, rect.left),
+        width: Math.max(180, rect.width),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen]);
+
   const selectedOption = options.find((opt) =>
     (typeof opt === 'object' ? opt.value : opt) === value
   );
@@ -49,7 +77,7 @@ export default function CustomDropdown({
     : placeholder;
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative z-50 ${className}`} ref={dropdownRef}>
       {variant === 'searchPill' ? (
         <button
           type="button"
@@ -135,8 +163,12 @@ export default function CustomDropdown({
         </button>
       )}
 
-      {isOpen && (
-        <div className={`absolute top-full left-0 min-w-[180px] w-full mt-2 z-[9999] bg-white rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-2 py-2 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none ${popoverClassName}`}>
+      {isOpen && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ top: popoverPosition.top, left: popoverPosition.left, width: popoverPosition.width }}
+          className={`fixed z-[100000] min-w-[180px] rounded-2xl border border-slate-100 bg-white px-2 py-2 shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none ${popoverClassName}`}
+        >
           {options.length === 0 ? (
             <div className="px-3 py-3 text-xs font-bold text-slate-400 text-center">
               No options available
@@ -189,7 +221,8 @@ export default function CustomDropdown({
               );
             })
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

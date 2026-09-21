@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { getTodayNepalString } from '../../utils/dateTime';
 
@@ -20,6 +21,8 @@ export default function CustomDatePicker({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const popoverRef = useRef(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
 
   // Parse current selected date safely
   const selectedDateObj = useMemo(() => {
@@ -44,7 +47,11 @@ export default function CustomDatePicker({
   // Outside click and Escape key dismissal
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target) &&
+        !popoverRef.current?.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -62,6 +69,28 @@ export default function CustomDatePicker({
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !containerRef.current) return undefined;
+
+    const updatePosition = () => {
+      const rect = containerRef.current.getBoundingClientRect();
+      const popoverWidth = 310;
+      const left = Math.min(
+        Math.max(12, rect.left),
+        window.innerWidth - popoverWidth - 12,
+      );
+      setPopoverPosition({ top: rect.bottom + 8, left });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
   }, [isOpen]);
 
   // Today in Nepal, where every turf is, whatever timezone the browser is in.
@@ -131,7 +160,7 @@ export default function CustomDatePicker({
   }, [value, variant]);
 
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div className={`relative z-50 ${className}`} ref={containerRef}>
       {/* Trigger Button */}
       {variant === 'searchPill' ? (
         <button
@@ -199,9 +228,13 @@ export default function CustomDatePicker({
         </button>
       )}
 
-      {/* Calendar Popover */}
-      {isOpen && (
-        <div className="absolute top-full left-0 z-[9999] mt-2 w-[310px] rounded-2xl bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 animate-in fade-in zoom-in-95 duration-150 select-none">
+      {/* Calendar Popover: rendered outside page stacking contexts */}
+      {isOpen && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          className="fixed z-[100000] w-[310px] rounded-2xl bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 animate-in fade-in zoom-in-95 duration-150 select-none"
+        >
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
             <button
@@ -318,7 +351,8 @@ export default function CustomDatePicker({
               Close
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

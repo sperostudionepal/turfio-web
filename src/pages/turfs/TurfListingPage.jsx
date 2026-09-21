@@ -15,11 +15,11 @@ import {
   Check,
   Sun,
   Building2,
-  CloudSun,
   Map,
   Grid,
   Navigation,
   ChevronUp,
+  Eraser,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -80,22 +80,6 @@ export const dummyTurfs = [
     location: 'Kalanki, Kathmandu',
     lat: 27.70091,
     lng: 85.28280,
-  },
-  {
-    id: 4,
-    title: 'Royal Futsal',
-    type: 'Rooftop',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 3.5,
-    reviews: 82,
-    price: 'NPR 900/hr',
-    priceVal: 900,
-    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Washrooms', 'Changing Rooms'],
-    location: 'Maitidevi, Kathmandu',
-    lat: 27.69295,
-    lng: 85.33004,
   },
   {
     id: 5,
@@ -260,22 +244,6 @@ export const dummyTurfs = [
     lng: 85.33483,
   },
   {
-    id: 15,
-    title: 'Kick Futsal Lalitpur',
-    type: 'Rooftop',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 3.7,
-    reviews: 145,
-    price: 'NPR 1,150/hr',
-    priceVal: 1150,
-    image: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'First Aid'],
-    location: 'Patan, Lalitpur',
-    lat: 27.67832,
-    lng: 85.32926,
-  },
-  {
     id: 16,
     title: 'Elite Sports Training Center',
     type: 'Outdoor',
@@ -311,17 +279,77 @@ const TIME_SLOT_OPTIONS = [
   { value: '08:00 AM', label: '08:00 AM' },
   { value: '09:00 AM', label: '09:00 AM' },
   { value: '10:00 AM', label: '10:00 AM' },
+  { value: '11:00 AM', label: '11:00 AM' },
+  { value: '12:00 PM', label: '12:00 PM' },
+  { value: '01:00 PM', label: '01:00 PM' },
+  { value: '02:00 PM', label: '02:00 PM' },
+  { value: '03:00 PM', label: '03:00 PM' },
   { value: '04:00 PM', label: '04:00 PM' },
   { value: '05:00 PM', label: '05:00 PM' },
   { value: '06:00 PM', label: '06:00 PM' },
   { value: '07:00 PM', label: '07:00 PM' },
   { value: '08:00 PM', label: '08:00 PM' },
   { value: '09:00 PM', label: '09:00 PM' },
+  { value: '10:00 PM', label: '10:00 PM' },
 ];
+
+const normalizePlayersFilter = (players) => players === 'Random' ? 'Any Size' : (players || 'Any Size');
+
+const parseTimeToMinutes = (value) => {
+  if (!value) return null;
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hours < 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
+const addDaysToDate = (dateValue, days) => {
+  const date = new Date(`${dateValue}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const getDayName = (dateValue) => {
+  if (!dateValue) return '';
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' })
+    .format(new Date(`${dateValue}T12:00:00Z`))
+    .toLowerCase();
+};
+
+const isTurfAvailableAt = (turf, day, requestedMinutes) => {
+  if (!day || requestedMinutes === null) return true;
+  const hours = Object.keys(turf.operatingHoursByDay || {}).length
+    ? turf.operatingHoursByDay
+    : (turf.openingHours || {});
+  const dayHours = hours[day] || hours[day.slice(0, 3)] || null;
+  if (dayHours) {
+    if (dayHours.isClosed) return false;
+    const openingMinutes = parseTimeToMinutes(dayHours.open || dayHours.start);
+    const closingMinutes = parseTimeToMinutes(dayHours.close || dayHours.end);
+    if (openingMinutes !== null && closingMinutes !== null) {
+      return requestedMinutes >= openingMinutes && requestedMinutes < closingMinutes;
+    }
+  }
+  const openingMinutes = parseTimeToMinutes(hours.start || hours.open);
+  const closingMinutes = parseTimeToMinutes(hours.end || hours.close);
+  if (openingMinutes !== null && closingMinutes !== null) {
+    return requestedMinutes >= openingMinutes && requestedMinutes < closingMinutes;
+  }
+  if (Array.isArray(turf.availableDays) && turf.availableDays.length) {
+    const shortDay = day.slice(0, 3).toLowerCase();
+    return turf.availableDays.some((availableDay) => String(availableDay).toLowerCase().startsWith(shortDay));
+  }
+  return true;
+};
 
 
 export default function TurfListingPage({
   user,
+  initialSearch,
   onLogin,
   onLogout,
   onListTurf,
@@ -331,14 +359,19 @@ export default function TurfListingPage({
   onNavigateRoute,
 }) {
   // Search draft input parameters (user typing / selecting before clicking Search)
-  const [locationInput, setLocationInput] = useState('');
-  const [dateInput, setDateInput] = useState(() => getTodayNepalString());
-  const [timeInput, setTimeInput] = useState('07:00 PM');
-  const [playersInput, setPlayersInput] = useState('Any Size');
+  const [locationInput, setLocationInput] = useState(initialSearch?.location || '');
+  const [dateInput, setDateInput] = useState(initialSearch?.date || getTodayNepalString());
+  const [timeInput, setTimeInput] = useState(initialSearch?.time || '07:00 PM');
+  const [playersInput, setPlayersInput] = useState(initialSearch?.players || 'Any Size');
 
   // Applied search parameters (only updated when Search button clicked or form submitted)
-  const [appliedLocation, setAppliedLocation] = useState('');
-  const [appliedPlayers, setAppliedPlayers] = useState('Any Size');
+  const [appliedLocation, setAppliedLocation] = useState(initialSearch?.location || '');
+  const [appliedDate, setAppliedDate] = useState(initialSearch?.date || getTodayNepalString());
+  const [appliedTime, setAppliedTime] = useState(initialSearch?.time || '07:00 PM');
+  const [appliedPlayers, setAppliedPlayers] = useState(normalizePlayersFilter(initialSearch?.players));
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Sidebar filters
   const [selectedTypes, setSelectedTypes] = useState([]);
@@ -354,6 +387,8 @@ export default function TurfListingPage({
 
   // Loading state (Airbnb style skeleton loading) - defaults to true for initial mount
   const [isLoading, setIsLoading] = useState(true);
+  const [availabilityByTurf, setAvailabilityByTurf] = useState({});
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   // View mode: 'split' (side-by-side on desktop), 'grid' (cards only), 'map' (map full on mobile)
   const [showMap, setShowMap] = useState(true);
@@ -369,10 +404,68 @@ export default function TurfListingPage({
   const handleApplySearch = (e) => {
     if (e) e.preventDefault();
     setAppliedLocation(locationInput.trim());
-    // The date and time inputs don't filter results yet: that needs an availability search on the server.
-    setAppliedPlayers(playersInput);
+    setAppliedDate(dateInput);
+    setAppliedTime(timeInput);
+    setAppliedPlayers(normalizePlayersFilter(playersInput));
     setCurrentPage(1);
   };
+
+  const findDefaultSearchSlot = async () => {
+    const today = getTodayNepalString();
+    const datesToCheck = Array.from({ length: 14 }, (_, index) => addDaysToDate(today, index));
+
+    for (const date of datesToCheck) {
+      const entries = date === appliedDate && Object.keys(availabilityByTurf).length
+        ? Object.entries(availabilityByTurf)
+        : await Promise.all(turfs.map(async (turf) => {
+          try {
+            return [turf.id, await turfService.getTurfAvailability(turf.id, date)];
+          } catch {
+            return [turf.id, null];
+          }
+        }));
+
+      const availableSlot = entries
+        .flatMap(([, availability]) => (availability?.slots || []).filter((slot) => slot.isAvailable && slot.state === 'available'))
+        .sort((first, second) => first.startMinutes - second.startMinutes)[0];
+
+      if (availableSlot) return { date, time: availableSlot.time };
+    }
+
+    return { date: today, time: '07:00 PM' };
+  };
+
+  const handleClearSearch = async () => {
+    const defaultSlot = await findDefaultSearchSlot();
+    setLocationInput('');
+    setDateInput(defaultSlot.date);
+    setTimeInput(defaultSlot.time);
+    setPlayersInput('Any Size');
+    setAppliedLocation('');
+    setAppliedDate(defaultSlot.date);
+    setAppliedTime(defaultSlot.time);
+    setAppliedPlayers('Any Size');
+    setSelectedTypes([]);
+    setSelectedSizes([]);
+    setMaxPrice(2500);
+    setSelectedAmenities([]);
+    setCurrentPage(1);
+    setMapBounds(null);
+    setResetMapKey((previous) => previous + 1);
+  };
+
+  useEffect(() => {
+    if (!initialSearch) return;
+    setLocationInput(initialSearch.location || '');
+    setDateInput(initialSearch.date || getTodayNepalString());
+    setTimeInput(initialSearch.time || '07:00 PM');
+    setPlayersInput(initialSearch.players || 'Any Size');
+    setAppliedLocation(initialSearch.location || '');
+    setAppliedDate(initialSearch.date || getTodayNepalString());
+    setAppliedTime(initialSearch.time || '07:00 PM');
+    setAppliedPlayers(normalizePlayersFilter(initialSearch.players));
+    setCurrentPage(1);
+  }, [initialSearch]);
 
   // Helper to reset map to original state and clear location filters
   const handleResetMap = () => {
@@ -415,6 +508,34 @@ export default function TurfListingPage({
     };
   }, []);
 
+  useEffect(() => {
+    if (isLoading || !turfs.length || !appliedDate) return undefined;
+
+    let isMounted = true;
+    setIsCheckingAvailability(true);
+    setAvailabilityByTurf({});
+
+    Promise.all(
+      turfs.map(async (turf) => {
+        try {
+          const availability = await turfService.getTurfAvailability(turf.id, appliedDate);
+          return [turf.id, availability];
+        } catch (error) {
+          console.warn(`Unable to check availability for ${turf.title}:`, error.message);
+          return [turf.id, null];
+        }
+      }),
+    ).then((entries) => {
+      if (!isMounted) return;
+      setAvailabilityByTurf(Object.fromEntries(entries));
+      setIsCheckingAvailability(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [turfs, appliedDate, isLoading]);
+
   // Calculate if the hovered turf card is currently above or below the scroll viewport
   useEffect(() => {
     if (!hoveredFromMapId || !listScrollContainerRef.current) {
@@ -452,8 +573,6 @@ export default function TurfListingPage({
   }, [hoveredFromMapId]);
 
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = showMap ? 8 : 15;
 
   // Filter modal visibility toggle
@@ -501,6 +620,17 @@ export default function TurfListingPage({
 
   // 1. Search & Filter criteria across all turfs (passed to Map for pins)
   const searchFilteredTurfs = useMemo(() => {
+    const requestedMinutes = parseTimeToMinutes(appliedTime);
+    const requestedDay = getDayName(appliedDate);
+    const hasRequestedSlot = (turf) => {
+      const availability = availabilityByTurf[turf.id];
+      if (!availability || availability.isClosed || availability.isAvailable === false) return false;
+      const requestedSlot = (availability.slots || []).find((slot) => slot.startMinutes === requestedMinutes);
+      return Boolean(requestedSlot?.isAvailable && requestedSlot.state === 'available');
+    };
+
+    if (isCheckingAvailability || !Object.keys(availabilityByTurf).length) return [];
+
     return turfs
       .filter((turf) => {
         const locMatch =
@@ -515,13 +645,16 @@ export default function TurfListingPage({
           (selectedSizes.length === 0 || (turf.size && selectedSizes.includes(turf.size))) &&
           (appliedPlayers === 'Any Size' || turf.size === appliedPlayers);
 
+        const availabilityMatch = isTurfAvailableAt(turf, requestedDay, requestedMinutes);
+        const slotAvailabilityMatch = hasRequestedSlot(turf);
+
         const priceMatch = turf.priceVal ? turf.priceVal <= maxPrice : true;
 
         const amenitiesMatch =
           selectedAmenities.length === 0 ||
           (Array.isArray(turf.amenities) && selectedAmenities.every((amenity) => turf.amenities.includes(amenity)));
 
-        return locMatch && typeMatch && sizeMatch && priceMatch && amenitiesMatch;
+        return locMatch && typeMatch && sizeMatch && availabilityMatch && slotAvailabilityMatch && priceMatch && amenitiesMatch;
       })
       .sort((a, b) => {
         if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
@@ -530,7 +663,9 @@ export default function TurfListingPage({
         if (sortBy === 'price-high') return (b.priceVal || 0) - (a.priceVal || 0);
         return 0;
       });
-  }, [turfs, appliedLocation, selectedTypes, selectedSizes, appliedPlayers, maxPrice, selectedAmenities, sortBy]);
+  }, [turfs, availabilityByTurf, isCheckingAvailability, appliedLocation, appliedDate, appliedTime, selectedTypes, selectedSizes, appliedPlayers, maxPrice, selectedAmenities, sortBy]);
+
+  const listingLoading = isLoading || isCheckingAvailability;
 
   // 2. Viewport-filtered turfs: The map bounding box is the source of truth for the list
   const filteredTurfs = useMemo(() => {
@@ -558,6 +693,16 @@ export default function TurfListingPage({
   const activeLocationQuery = appliedLocation
     ? `${appliedLocation}, Nepal`
     : 'Kathmandu, Nepal';
+  const hasActiveSearch = Boolean(
+    appliedLocation ||
+    appliedPlayers !== 'Any Size' ||
+    appliedDate !== getTodayNepalString() ||
+    appliedTime !== '07:00 PM' ||
+    selectedTypes.length ||
+    selectedSizes.length ||
+    selectedAmenities.length ||
+    maxPrice < 2500
+  );
 
   return (
     <div className="bg-white min-h-screen text-slate-900 font-sans flex flex-col justify-between">
@@ -649,21 +794,32 @@ export default function TurfListingPage({
                     <option value="Any Size">Random</option>
                     <option value="5v5">5v5</option>
                     <option value="7v7">7v7</option>
-                    <option value="9v9">9v9</option>
                   </select>
                 </label>
 
                 {/* Action Buttons: Search Icon Only */}
                 <div className="flex items-center p-2 lg:p-2 lg:pl-1">
-                  <button
-                    type="submit"
-                    title="Search Turfs"
-                    aria-label="Search Turfs"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
-                  >
-                    <Search className="h-4 w-4 stroke-[2.5]" />
-                  </button>
-                </div>
+  {hasActiveSearch ? (
+    <button
+      type="button"
+      onClick={handleClearSearch}
+      title="Clear search"
+      aria-label="Clear search"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
+    >
+      <X className="h-4 w-4 stroke-[2.5]" />
+    </button>
+  ) : (
+    <button
+      type="submit"
+      title="Search Turfs"
+      aria-label="Search Turfs"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
+    >
+      <Search className="h-4 w-4 stroke-[2.5]" />
+    </button>
+  )}
+</div>
               </form>
             </div>
 
@@ -766,7 +922,7 @@ export default function TurfListingPage({
               >
                 {/* Header Bar on Top of Turf List */}
                 <div className="pb-3 mb-2 shrink-0">
-                  {isLoading ? (
+                  {listingLoading ? (
                     <div className="space-y-1.5 animate-pulse select-none">
                       <div className="h-6 w-64 max-w-[80%] rounded-lg bg-slate-200" />
                       <div className="h-4 w-44 max-w-[60%] rounded-md bg-slate-200/80" />
@@ -826,7 +982,7 @@ export default function TurfListingPage({
                         : 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
                     }`}
                   >
-                    {isLoading ? (
+                    {listingLoading ? (
                       /* Airbnb-Style Card Skeletons matching exact layout */
                       Array.from({ length: showMap ? 6 : 10 }).map((_, index) => (
                         <div key={`skeleton-${index}`} className="flex flex-col justify-between animate-pulse select-none">
@@ -872,7 +1028,7 @@ export default function TurfListingPage({
                           />
                         </div>
                         <div className="space-y-2.5">
-                          <h3 className="text-base font-bold text-slate-900">No Futsal Arenas in This Area</h3>
+                          <h3 className="text-base font-bold text-slate-900">No Futsal Arenas Available for This Time</h3>
                           <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
                             Pan the map or adjust filters to explore available arenas in Kathmandu & Lalitpur.
                           </p>
@@ -896,7 +1052,7 @@ export default function TurfListingPage({
                             data-turf-id={turf.id}
                             onClick={() => {
                               setSelectedMapTurf(turf);
-                              onSelectTurf?.(turf);
+                              onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                             }}
                             onMouseEnter={() => setHoveredFromListId(turf.id)}
                             onMouseLeave={() => setHoveredFromListId(null)}
@@ -987,7 +1143,7 @@ export default function TurfListingPage({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onSelectTurf?.(turf);
+                                  onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                                 }}
                                 className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
                               >
@@ -1082,7 +1238,7 @@ export default function TurfListingPage({
         {/* Backdrop */}
         <div
           onClick={() => setFilterModalOpen(false)}
-          className={`fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+          className={`fixed inset-0 z-[60] bg-slate-950/20 transition-opacity duration-300 ${
             filterModalOpen
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none'
@@ -1091,7 +1247,7 @@ export default function TurfListingPage({
 
         {/* Sidebar Drawer Container */}
         <aside
-          className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out border-l border-slate-100 ${
+          className={`fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out border-l border-slate-100 ${
             filterModalOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
           aria-label="Filter sidebar"
@@ -1123,11 +1279,10 @@ export default function TurfListingPage({
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Court Type
               </h3>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { name: 'Indoor', icon: Building2 },
                   { name: 'Outdoor', icon: Sun },
-                  { name: 'Rooftop', icon: CloudSun },
                 ].map(({ name, icon: Icon }) => {
                   const active = selectedTypes.includes(name);
                   return (
@@ -1154,8 +1309,8 @@ export default function TurfListingPage({
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Match Format
               </h3>
-              <div className="grid grid-cols-3 gap-2.5">
-                {['5v5', '7v7', '9v9'].map((size) => {
+              <div className="grid grid-cols-2 gap-2.5">
+                {['5v5', '7v7'].map((size) => {
                   const active = selectedSizes.includes(size);
                   return (
                     <button
@@ -1235,18 +1390,19 @@ export default function TurfListingPage({
           </div>
 
           {/* Footer Actions (Sticky at bottom of sidebar) */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/70 shrink-0">
+          <div className="flex items-center gap-3 px-5 py-4 border-t border-slate-100 bg-slate-50/70 shrink-0">
             <button
               type="button"
               onClick={clearAllFilters}
-              className="text-xs font-bold text-slate-600 hover:text-slate-900 underline underline-offset-4 cursor-pointer"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
             >
+              <Eraser className="h-3.5 w-3.5" />
               Clear all
             </button>
             <button
               type="button"
               onClick={() => setFilterModalOpen(false)}
-              className="rounded-full bg-lime-400 hover:bg-lime-500 px-6 py-2.5 text-xs font-black text-slate-950 transition-all active:scale-95 cursor-pointer shadow-xs"
+              className="min-w-0 flex-1 rounded-full bg-lime-400 hover:bg-lime-500 px-3 py-2.5 text-[11px] font-black text-slate-950 whitespace-nowrap transition-all active:scale-95 cursor-pointer shadow-xs"
             >
               Show {filteredTurfs.length} {filteredTurfs.length === 1 ? 'Arena' : 'Arenas'}
             </button>
