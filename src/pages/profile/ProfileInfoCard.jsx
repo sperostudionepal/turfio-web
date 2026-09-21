@@ -179,10 +179,7 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar,
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{displayName}</h2>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
-                  <ShieldCheck className="h-3 w-3 text-lime-700" />
-                  Verified
-                </span>
+                
               </div>
               <p className="text-xs sm:text-sm font-bold text-lime-600 mt-0.5">@{user?.username || 'saugatshahi2083'}</p>
               <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">{user?.email || 'shahi.codespace@gmail.com'}</p>
