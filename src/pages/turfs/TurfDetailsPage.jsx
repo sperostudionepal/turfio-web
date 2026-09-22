@@ -188,7 +188,8 @@ function AmenitiesModal({ isOpen, onClose, amenities }) {
 
         <div className="mt-4 space-y-6">
           {amenityCategories.map((group) => {
-            const activeItems = group.items.filter((item) => amenities.includes(item) || true);
+            const activeItems = group.items.filter((item) => amenities.includes(item));
+            if (activeItems.length === 0) return null;
             return (
               <div key={group.category} className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{group.category}</h4>
