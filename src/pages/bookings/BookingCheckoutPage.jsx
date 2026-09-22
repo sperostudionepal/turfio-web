@@ -106,6 +106,10 @@ export default function BookingCheckoutPage({
   onBack,
   onViewTurfDetails,
   onNavigateRoute,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   // Persist and restore step and form data across reloads
   const storageKey = turf?.id ? `turfio_checkout_state_${turf.id}` : 'turfio_checkout_state';
@@ -737,6 +741,10 @@ export default function BookingCheckoutPage({
         onListTurf={onViewTurfDetails}
         onHome={onHome}
         onDashboard={onDashboard}
+        onHowItWorks={onHowItWorks}
+        onFeatures={onFeatures}
+        onPricing={onPricing}
+        onAboutUs={onAboutUs}
       />
 
       {/* ── Sticky Progress Stepper Header (Pure White Background) ── */}

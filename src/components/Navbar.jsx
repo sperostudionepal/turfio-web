@@ -22,6 +22,10 @@ export default function Navbar({
   onFindTurfs,
   onDashboard,
   onProfile,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
   isInitializing = false,
 }) {
   const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
@@ -203,16 +207,32 @@ export default function Navbar({
           >
             Find Turfs
           </a>
-          <a href="#" className="transition-colors hover:text-slate-900">
+          <a
+            href="#popular-turfs"
+            onClick={(e) => { e.preventDefault(); onHowItWorks?.(); }}
+            className="transition-colors hover:text-slate-900"
+          >
             How It Works
           </a>
-          <a href="#" className="transition-colors hover:text-slate-900">
+          <a
+            href="#pricing"
+            onClick={(e) => { e.preventDefault(); onFeatures?.(); }}
+            className="transition-colors hover:text-slate-900"
+          >
             Features
           </a>
-          <a href="#" className="transition-colors hover:text-slate-900">
+          <a
+            href="#pricing"
+            onClick={(e) => { e.preventDefault(); onPricing?.(); }}
+            className="transition-colors hover:text-slate-900"
+          >
             Pricing
           </a>
-          <a href="#" className="transition-colors hover:text-slate-900">
+          <a
+            href="#about-us"
+            onClick={(e) => { e.preventDefault(); onAboutUs?.(); }}
+            className="transition-colors hover:text-slate-900"
+          >
             About Us
           </a>
         </nav>
@@ -404,25 +424,48 @@ export default function Navbar({
               Find Turfs
             </a>
             <a
-              href="#"
-              onClick={() => setMobileMenuOpen(false)}
+              href="#popular-turfs"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                onHowItWorks?.();
+              }}
               className="py-1 transition-colors hover:text-lime-600"
             >
               How It Works
             </a>
             <a
-              href="#"
-              onClick={() => setMobileMenuOpen(false)}
+              href="#pricing"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                onFeatures?.();
+              }}
               className="py-1 transition-colors hover:text-lime-600"
             >
               Features
             </a>
             <a
-              href="#"
-              onClick={() => setMobileMenuOpen(false)}
+              href="#pricing"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                onPricing?.();
+              }}
               className="py-1 transition-colors hover:text-lime-600"
             >
               Pricing
+            </a>
+            <a
+              href="#about-us"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                onAboutUs?.();
+              }}
+              className="py-1 transition-colors hover:text-lime-600"
+            >
+              About Us
             </a>
 
             {/* Log In & Sign Up / Logout Buttons inside Mobile Popup */}

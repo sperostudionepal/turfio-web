@@ -36,7 +36,23 @@ const TIME_OPTIONS = [
   '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
 ].map((value) => ({ value, label: value }));
 
-export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListTurf, onHome, onViewTurfDetails, onFindTurfs, onDashboard, onProfile, isInitializing = false }) {
+export default function HeroSection({
+  onLogin,
+  onSignUp,
+  user,
+  onLogout,
+  onListTurf,
+  onHome,
+  onViewTurfDetails,
+  onFindTurfs,
+  onDashboard,
+  onProfile,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
+  isInitializing = false,
+}) {
   const [form, setForm] = useState(initialForm);
 
   const submitSearch = () => {
@@ -45,6 +61,15 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id) || 
+      (id === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
+      (id === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const hasAdminAccess = user && (user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin);
@@ -64,6 +89,10 @@ export default function HeroSection({ onLogin, onSignUp, user, onLogout, onListT
         onFindTurfs={onFindTurfs}
         onDashboard={onDashboard}
         onProfile={onProfile}
+        onHowItWorks={onHowItWorks || (() => scrollToSection('popular-turfs'))}
+        onFeatures={onFeatures || (() => scrollToSection('pricing'))}
+        onPricing={onPricing || (() => scrollToSection('pricing'))}
+        onAboutUs={onAboutUs || (() => scrollToSection('about-us'))}
       />
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}

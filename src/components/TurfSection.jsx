@@ -200,7 +200,7 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
   const activeTurfs = turfsData || fetchedTurfs;
   const isLoading = propLoading || (loadingRealTurfs && activeTurfs.length === 0);
   return (
-    <section id="features" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16">
+    <section id="popular-turfs" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16 scroll-mt-20">
       <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-8">
           {/* Left Column: Heading & Info */}

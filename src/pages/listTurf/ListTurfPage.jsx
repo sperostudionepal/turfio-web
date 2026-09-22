@@ -51,7 +51,7 @@ const DAY_KEYS = [
 ];
 
 
-export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted }) {
+export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted, onHowItWorks, onFeatures, onPricing, onAboutUs }) {
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
@@ -406,7 +406,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
   return (
     <div className="bg-white min-h-screen text-slate-900 font-sans">
       {/* Top Navbar */}
-      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} onDashboard={onDashboard} />
+      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} onDashboard={onDashboard} onHowItWorks={onHowItWorks} onFeatures={onFeatures} onPricing={onPricing} onAboutUs={onAboutUs} />
 
       {/* 1. Main Registration Form & How It Works Column */}
       <section className="pt-6 md:pt-10 pb-16 md:pb-24">

@@ -34,6 +34,10 @@ export default function ProfilePage({
   onLogin,
   onLogout,
   onDashboard,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   const {
     user,
@@ -89,6 +93,10 @@ export default function ProfilePage({
         onFindTurfs={onFindTurfs}
         onListTurf={onListTurf}
         onDashboard={onDashboard}
+        onHowItWorks={onHowItWorks}
+        onFeatures={onFeatures}
+        onPricing={onPricing}
+        onAboutUs={onAboutUs}
       />
 
       {/* Main Content Area */}

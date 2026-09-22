@@ -302,6 +302,10 @@ export default function TurfDetailsPage({
   onViewTurfDetails,
   onNavigateRoute,
   user,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   // Gallery state
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -719,6 +723,10 @@ export default function TurfDetailsPage({
         onHome={onHome}
         onFindTurfs={onFindTurfs}
         onDashboard={onDashboard}
+        onHowItWorks={onHowItWorks}
+        onFeatures={onFeatures}
+        onPricing={onPricing}
+        onAboutUs={onAboutUs}
       />
 
       {/* ─── BREADCRUMB (ABOVE GALLERY) ─── */}
