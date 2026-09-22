@@ -290,6 +290,8 @@ const DURATION_OPTIONS = [
   { value: 2, label: '2 Hours' },
   { value: 3, label: '3 Hours' },
   { value: 4, label: '4 Hours' },
+  { value: 5, label: '5 Hours' },
+  { value: 6, label: '6 Hours' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════
