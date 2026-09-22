@@ -16,10 +16,12 @@ import {
   Heart,
 } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
+import useWishlistStore from '../../store/useWishlistStore';
 
 export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar }) {
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
+  const savedTurfsCount = useWishlistStore((s) => s.items.length);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -246,7 +248,7 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
             <Heart className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-lg font-black text-slate-900 leading-none">5</p>
+            <p className="text-lg font-black text-slate-900 leading-none">{savedTurfsCount}</p>
             <p className="text-[11px] font-medium text-slate-500 mt-1">Saved Turfs</p>
           </div>
         </div>

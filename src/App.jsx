@@ -32,6 +32,7 @@ import AccessibilityTrigger from './components/common/AccessibilityTrigger';
 import ContinueBookingBanner from './components/common/ContinueBookingBanner';
 import ChatWidget from './components/chat/ChatWidget';
 import useAccessibilityStore from './store/useAccessibilityStore';
+import useWishlistStore from './store/useWishlistStore';
 
 
 const USER_PORT = import.meta.env.VITE_USER_PORT || '5173';
@@ -838,6 +839,7 @@ function App() {
       setCurrentPage('adminLogin');
     } else {
       playerAuth.logout();
+      useWishlistStore.getState().reset();
       if (getIsAdminPort()) {
         redirectToPort(USER_PORT, '/login');
         return;
@@ -1194,10 +1196,12 @@ function App() {
             onLogin={handleOpenLogin}
             onLogout={handleLogout}
             onDashboard={handleOpenDashboard}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
-            onAboutUs={() => handleNavigateToSection('about-us')}
+            onViewTurfDetails={(turf) => {
+              setSelectedTurf(turf);
+              const turfId = turf.slug || turf.id || turf._id;
+              window.history.pushState({}, '', `/turfs/${turfId}`);
+              setCurrentPage('turfDetails');
+            }}
           />
 
           {showOnboardingModal && (
