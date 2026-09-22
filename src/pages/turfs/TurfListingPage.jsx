@@ -357,6 +357,10 @@ export default function TurfListingPage({
   onDashboard,
   onSelectTurf,
   onNavigateRoute,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   // Search draft input parameters (user typing / selecting before clicking Search)
   const [locationInput, setLocationInput] = useState(initialSearch?.location || '');
@@ -716,6 +720,10 @@ export default function TurfListingPage({
           onDashboard={onDashboard}
           onToggleSearch={() => setShowSearchBar((prev) => !prev)}
           searchActive={showSearchBar}
+          onHowItWorks={onHowItWorks}
+          onFeatures={onFeatures}
+          onPricing={onPricing}
+          onAboutUs={onAboutUs}
         />
 
         {/* ─── FLOATING ALWAYS-VISIBLE SEARCH BAR WIDGET + CONTROLS ─── */}

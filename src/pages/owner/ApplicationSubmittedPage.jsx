@@ -16,6 +16,10 @@ export default function ApplicationSubmittedPage({
   onSignUp,
   onListTurf,
   onFindTurfs,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   const trackingUrl =
     data?.trackingUrl ||
@@ -52,6 +56,10 @@ export default function ApplicationSubmittedPage({
         onListTurf={onListTurf}
         onFindTurfs={onFindTurfs}
         user={null}
+        onHowItWorks={onHowItWorks}
+        onFeatures={onFeatures}
+        onPricing={onPricing}
+        onAboutUs={onAboutUs}
       />
 
       {/* Main Page Content */}

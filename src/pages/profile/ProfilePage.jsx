@@ -105,6 +105,10 @@ export default function ProfilePage({
         onFindTurfs={onFindTurfs}
         onListTurf={onListTurf}
         onDashboard={onDashboard}
+        onHowItWorks={onHowItWorks}
+        onFeatures={onFeatures}
+        onPricing={onPricing}
+        onAboutUs={onAboutUs}
       />
 
       {/* Main Content Area */}

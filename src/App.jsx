@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 import { usePlayerAuth, useOwnerAuth } from './store/useAuthStore';
 
@@ -96,6 +96,7 @@ function App() {
   const [turfSearch, setTurfSearch] = useState(null);
   const [splitBookingId, setSplitBookingId] = useState(null);
   const [submittedApplication, setSubmittedApplication] = useState(null);
+  const pendingSectionRef = useRef(null);
 
   /**
    * ---------------------------------------------------------
@@ -430,6 +431,68 @@ function App() {
       setShowOnboardingModal(true);
     }
   }, [user, isInitializing]);
+
+  /**
+   * ---------------------------------------------------------
+   * Fire any pending section scroll after landing page renders
+   * ---------------------------------------------------------
+   */
+  useEffect(() => {
+    if (currentPage !== 'home' || selectedTurf || selectedTurfForBooking) {
+      return;
+    }
+
+    let targetId = pendingSectionRef.current;
+    if (!targetId) {
+      try {
+        targetId = sessionStorage.getItem('turfio_scroll_section');
+      } catch (_) {}
+    }
+    if (!targetId && window.location.hash) {
+      targetId = window.location.hash.replace(/^#/, '');
+    }
+
+    if (!targetId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 30; // 30 * 50ms = 1.5s window for elements to mount
+
+    const scrollTimer = setInterval(() => {
+      if (cancelled) {
+        clearInterval(scrollTimer);
+        return;
+      }
+
+      attempts += 1;
+      const el =
+        document.getElementById(targetId) ||
+        (targetId === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
+        (targetId === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+
+      if (el) {
+        clearInterval(scrollTimer);
+        pendingSectionRef.current = null;
+        try {
+          sessionStorage.removeItem('turfio_scroll_section');
+        } catch (_) {}
+
+        // Scroll to section smoothly
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (attempts >= maxAttempts) {
+        clearInterval(scrollTimer);
+        pendingSectionRef.current = null;
+        try {
+          sessionStorage.removeItem('turfio_scroll_section');
+        } catch (_) {}
+      }
+    }, 50);
+
+    return () => {
+      cancelled = true;
+      clearInterval(scrollTimer);
+    };
+  }, [currentPage, selectedTurf, selectedTurfForBooking]);
 
   /**
    * ---------------------------------------------------------
@@ -834,6 +897,48 @@ function App() {
     setCurrentPage('home');
   };
 
+  /**
+   * Navigate to a specific section on the landing page.
+   * If already on home, scrolls immediately.
+   * If on another page, navigates home and sets a pending scroll.
+   */
+  const handleNavigateToSection = (sectionId) => {
+    if (getIsAdminPort()) {
+      redirectToPort(USER_PORT, `/#${sectionId}`);
+      return;
+    }
+
+    try {
+      sessionStorage.setItem('turfio_scroll_section', sectionId);
+    } catch (_) {}
+    pendingSectionRef.current = sectionId;
+    window.history.pushState({}, '', `/#${sectionId}`);
+
+    const scrollToEl = (id) => {
+      const el =
+        document.getElementById(id) ||
+        (id === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
+        (id === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        try {
+          sessionStorage.removeItem('turfio_scroll_section');
+        } catch (_) {}
+        return true;
+      }
+      return false;
+    };
+
+    if (currentPage === 'home' && !selectedTurf && !selectedTurfForBooking) {
+      scrollToEl(sectionId);
+    } else {
+      setSelectedTurf(null);
+      setSelectedTurfForBooking(null);
+      setCurrentPage('home');
+    }
+  };
+
   const handleNavigateRoute = (turf) => {
     if (getIsAdminPort()) {
       const targetId = turf ? (turf.slug || turf.id || turf._id) : '';
@@ -949,6 +1054,10 @@ function App() {
             handleCloseAuth();
             setCurrentPage('turfListing');
           }}
+          onHowItWorks={() => handleNavigateToSection('how-it-works')}
+          onFeatures={() => handleNavigateToSection('pricing')}
+          onPricing={() => handleNavigateToSection('pricing')}
+          onAboutUs={() => handleNavigateToSection('about-us')}
         />
       );
     }
@@ -982,6 +1091,10 @@ function App() {
             handleCloseAuth();
             setCurrentPage('turfListing');
           }}
+          onHowItWorks={() => handleNavigateToSection('how-it-works')}
+          onFeatures={() => handleNavigateToSection('pricing')}
+          onPricing={() => handleNavigateToSection('pricing')}
+          onAboutUs={() => handleNavigateToSection('about-us')}
         />
       );
     }
@@ -1051,6 +1164,10 @@ function App() {
             setCurrentPage('listTurf');
           }}
           onDashboard={handleOpenDashboard}
+          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onFeatures={() => handleNavigateToSection('pricing')}
+          onPricing={() => handleNavigateToSection('pricing')}
+          onAboutUs={() => handleNavigateToSection('about-us')}
         />
       );
     }
@@ -1168,6 +1285,10 @@ function App() {
           }}
           onListTurf={() => setCurrentPage('listTurf')}
           onFindTurfs={() => setCurrentPage('turfs')}
+          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onFeatures={() => handleNavigateToSection('pricing')}
+          onPricing={() => handleNavigateToSection('pricing')}
+          onAboutUs={() => handleNavigateToSection('about-us')}
         />
       );
     }
@@ -1202,6 +1323,10 @@ function App() {
               setSubmittedApplication(data);
               setCurrentPage('applicationSubmitted');
             }}
+            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onFeatures={() => handleNavigateToSection('pricing')}
+            onPricing={() => handleNavigateToSection('pricing')}
+            onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
           {showOnboardingModal && (
@@ -1290,6 +1415,10 @@ function App() {
               setCurrentPage('turfDetails');
             }}
             onNavigateRoute={handleNavigateRoute}
+            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onFeatures={() => handleNavigateToSection('pricing')}
+            onPricing={() => handleNavigateToSection('pricing')}
+            onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
           {showOnboardingModal && (
@@ -1343,6 +1472,10 @@ function App() {
               }
             }}
             onNavigateRoute={handleNavigateRoute}
+            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onFeatures={() => handleNavigateToSection('pricing')}
+            onPricing={() => handleNavigateToSection('pricing')}
+            onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
           {showOnboardingModal && (
@@ -1404,6 +1537,10 @@ function App() {
               setCurrentPage('turfListing');
             }}
             onNavigateRoute={handleNavigateRoute}
+            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onFeatures={() => handleNavigateToSection('pricing')}
+            onPricing={() => handleNavigateToSection('pricing')}
+            onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
           {showOnboardingModal && (
@@ -1462,6 +1599,10 @@ function App() {
             window.history.pushState({}, '', '/profile');
             setCurrentPage('profile');
           }}
+          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onFeatures={() => handleNavigateToSection('pricing')}
+          onPricing={() => handleNavigateToSection('pricing')}
+          onAboutUs={() => handleNavigateToSection('about-us')}
         />
 
         {showOnboardingModal && (
