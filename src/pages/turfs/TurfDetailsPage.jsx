@@ -171,8 +171,14 @@ function AmenitiesModal({ isOpen, onClose, amenities }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn">
-      <div className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl"
+      >
         <div className="flex items-center justify-between pb-5">
           <div>
             <h3 className="text-xl font-bold text-slate-900">All Venue Amenities & Facilities</h3>
