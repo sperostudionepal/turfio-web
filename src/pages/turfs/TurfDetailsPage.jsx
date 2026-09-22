@@ -36,6 +36,7 @@ import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap'
 import turfService from '../../services/turfService';
 import { getTodayNepalString, getNepalCurrentDateTime } from '../../utils/dateTime';
 import { useToast } from '../../components/common/toastContext';
+import useWishlistStore from '../../store/useWishlistStore';
 
 /* ─── Amenity Icon Mapping ─── */
 const amenityIconMap = {
@@ -314,8 +315,21 @@ export default function TurfDetailsPage({
   const [previewReviewImage, setPreviewReviewImage] = useState(null);
 
   // Favorites & Social Feedback
-  const [isFavorited, setIsFavorited] = useState(false);
   const { showToast } = useToast();
+  const wishlistItems = useWishlistStore((s) => s.items);
+  const isWishlistLoaded = useWishlistStore((s) => s.isLoaded);
+  const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
+  const addToWishlist = useWishlistStore((s) => s.addToWishlist);
+  const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  const turfId = turf?.id || turf?._id;
+  const isFavorited = wishlistItems.some((t) => (t.id || t._id) === turfId);
+
+  useEffect(() => {
+    if (user && !isWishlistLoaded) {
+      fetchWishlist();
+    }
+  }, [user, isWishlistLoaded, fetchWishlist]);
 
   // Booking Card State
   const [selectedDate, setSelectedDate] = useState(() => getTodayNepalString());
@@ -915,13 +929,27 @@ export default function TurfDetailsPage({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsFavorited(!isFavorited);
-                      triggerToast(!isFavorited ? 'Saved to your favorites!' : 'Removed from favorites');
+                    disabled={isTogglingFavorite}
+                    onClick={async () => {
+                      if (!user) {
+                        triggerToast('Log in to save turfs to your wishlist');
+                        return;
+                      }
+                      if (!turfId || isTogglingFavorite) return;
+                      setIsTogglingFavorite(true);
+                      const res = isFavorited
+                        ? await removeFromWishlist(turfId)
+                        : await addToWishlist(turfId);
+                      if (res.success) {
+                        triggerToast(!isFavorited ? 'Saved to your favorites!' : 'Removed from favorites');
+                      } else {
+                        triggerToast(res.error || 'Could not update your wishlist');
+                      }
+                      setIsTogglingFavorite(false);
                     }}
                     aria-label="Save to favorites"
                     title="Save to favorites"
-                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                       isFavorited
                         ? 'bg-rose-50 text-rose-600'
                         : 'bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-600'

@@ -7,6 +7,7 @@ import PreferencesForm from './PreferencesForm';
 import SecuritySettings from './SecuritySettings';
 import DangerZone from './DangerZone';
 import useAuthStore from '../../store/useAuthStore';
+import useWishlistStore from '../../store/useWishlistStore';
 import turfService from '../../services/turfService';
 import {
   User,
@@ -19,12 +20,12 @@ import {
   AlertTriangle,
   Loader2,
   LogIn,
-  Crown,
-  ArrowRight,
   ChevronRight,
   HelpCircle,
   Key,
   ShieldCheck,
+  MapPin,
+  X,
 } from 'lucide-react';
 
 export default function ProfilePage({
@@ -34,6 +35,7 @@ export default function ProfilePage({
   onLogin,
   onLogout,
   onDashboard,
+  onViewTurfDetails,
 }) {
   const {
     user,
@@ -51,6 +53,11 @@ export default function ProfilePage({
   const [activeTab, setActiveTab] = useState('profile');
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const wishlistItems = useWishlistStore((s) => s.items);
+  const wishlistLoading = useWishlistStore((s) => s.isLoading);
+  const isWishlistLoaded = useWishlistStore((s) => s.isLoaded);
+  const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
+  const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
 
   // Fetch current user data on mount
   useEffect(() => {
@@ -66,6 +73,13 @@ export default function ProfilePage({
       .catch(() => setBookings([]))
       .finally(() => setBookingsLoading(false));
   }, [activeTab, user]);
+
+  // Fetched on mount (not gated to the savedTurfs tab) since the saved-turfs count
+  // also shows in the stats card on the default Personal Info tab.
+  useEffect(() => {
+    if (!user || isWishlistLoaded) return;
+    fetchWishlist();
+  }, [user, isWishlistLoaded, fetchWishlist]);
 
   const tabs = [
     { id: 'profile', label: 'Personal Info', icon: User },
@@ -384,14 +398,57 @@ export default function ProfilePage({
                 )}
 
                 {activeTab === 'savedTurfs' && (
-                  <div className="bg-white rounded-3xl p-8 sm:p-12 text-center shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-                    <div className="w-14 h-14 rounded-2xl bg-lime-100 text-lime-700 flex items-center justify-center mx-auto mb-3 font-bold">
-                      <Trophy className="h-7 w-7" />
-                    </div>
-                    <h3 className="text-lg font-black text-slate-900 capitalize">savedTurfs Details</h3>
-                    <p className="text-xs font-medium text-slate-500 mt-1 max-w-sm mx-auto">
-                      View your detailed stats, match history, and saved turfs directly from your player profile dashboard.
-                    </p>
+                  <div className="bg-white rounded-3xl p-6 shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+                    <h3 className="text-lg font-black text-slate-900 mb-4">Saved Turfs</h3>
+                    {wishlistLoading ? (
+                      <p className="text-sm text-slate-500">Loading saved turfs...</p>
+                    ) : wishlistItems.length === 0 ? (
+                      <div className="text-center py-10">
+                        <div className="w-14 h-14 rounded-2xl bg-lime-100 text-lime-700 flex items-center justify-center mx-auto mb-3 font-bold">
+                          <Heart className="h-7 w-7" />
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900">No saved turfs yet</h4>
+                        <p className="text-xs font-medium text-slate-500 mt-1 max-w-sm mx-auto">
+                          Tap the heart icon on any turf's details page to save it here for later.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {wishlistItems.map((turf) => (
+                          <div
+                            key={turf.id}
+                            className="group relative flex gap-3.5 rounded-2xl bg-slate-50 p-3.5 cursor-pointer hover:bg-slate-100 transition-colors"
+                            onClick={() => onViewTurfDetails?.(turf)}
+                          >
+                            <img
+                              src={turf.image}
+                              alt={turf.title}
+                              className="h-20 w-20 rounded-xl object-cover shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-slate-900 truncate pr-6">{turf.title}</p>
+                              <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{turf.location}</span>
+                              </p>
+                              <p className="text-sm font-black text-slate-900 mt-1.5">{turf.price}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFromWishlist(turf.id);
+                              }}
+                              aria-label="Remove from saved turfs"
+                              title="Remove from saved turfs"
+                              className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
