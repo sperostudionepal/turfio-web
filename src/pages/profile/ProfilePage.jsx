@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Loader2,
   LogIn,
+  ArrowRight,
   ChevronRight,
   HelpCircle,
   Key,
@@ -37,6 +38,10 @@ export default function ProfilePage({
   onLogout,
   onDashboard,
   onViewTurfDetails,
+  onHowItWorks,
+  onFeatures,
+  onPricing,
+  onAboutUs,
 }) {
   const {
     user,

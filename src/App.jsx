@@ -446,7 +446,7 @@ function App() {
     if (!targetId) {
       try {
         targetId = sessionStorage.getItem('turfio_scroll_section');
-      } catch (_) {}
+      } catch { /* sessionStorage unavailable */ }
     }
     if (!targetId && window.location.hash) {
       targetId = window.location.hash.replace(/^#/, '');
@@ -475,7 +475,7 @@ function App() {
         pendingSectionRef.current = null;
         try {
           sessionStorage.removeItem('turfio_scroll_section');
-        } catch (_) {}
+        } catch { /* sessionStorage unavailable */ }
 
         // Scroll to section smoothly
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -484,7 +484,7 @@ function App() {
         pendingSectionRef.current = null;
         try {
           sessionStorage.removeItem('turfio_scroll_section');
-        } catch (_) {}
+        } catch { /* sessionStorage unavailable */ }
       }
     }, 50);
 
@@ -910,7 +910,7 @@ function App() {
 
     try {
       sessionStorage.setItem('turfio_scroll_section', sectionId);
-    } catch (_) {}
+    } catch { /* sessionStorage unavailable */ }
     pendingSectionRef.current = sectionId;
     window.history.pushState({}, '', `/#${sectionId}`);
 
@@ -924,7 +924,7 @@ function App() {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         try {
           sessionStorage.removeItem('turfio_scroll_section');
-        } catch (_) {}
+        } catch { /* sessionStorage unavailable */ }
         return true;
       }
       return false;
@@ -1202,6 +1202,10 @@ function App() {
               window.history.pushState({}, '', `/turfs/${turfId}`);
               setCurrentPage('turfDetails');
             }}
+            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onFeatures={() => handleNavigateToSection('pricing')}
+            onPricing={() => handleNavigateToSection('pricing')}
+            onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
           {showOnboardingModal && (
