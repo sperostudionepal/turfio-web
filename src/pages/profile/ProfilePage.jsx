@@ -69,7 +69,6 @@ export default function ProfilePage({
 
   const tabs = [
     { id: 'profile', label: 'Personal Info', icon: User },
-    { id: 'gameStats', label: 'Game Stats', icon: Users },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'savedTurfs', label: 'Saved Turfs', icon: Heart },
     { id: 'playerProfile', label: 'Skill Set & Style', icon: Trophy },
@@ -158,25 +157,6 @@ export default function ProfilePage({
                 </nav>
               </div>
 
-              {/* Upgrade Promo Card */}
-              <div className="bg-white rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] relative overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-3">
-                  <Crown className="h-4 w-4 fill-amber-500 text-amber-500" />
-                </div>
-                <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">Play More. Unlock More.</h4>
-                <p className="text-[11px] font-medium text-slate-500 mt-1 mb-4 leading-relaxed">
-                  Get early access to new features and exclusive perks.
-                </p>
-                <button
-                  type="button"
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-lime-400 text-xs font-bold text-slate-900 hover:bg-lime-500 transition-colors cursor-pointer shadow-xs"
-                >
-                  <span>Upgrade to Pro</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-                {/* Decorative background circle */}
-                <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full border-8 border-lime-100/50 pointer-events-none" />
-              </div>
             </div>
 
             {/* 2. Middle & Right Columns */}
@@ -403,12 +383,12 @@ export default function ProfilePage({
                   </div>
                 )}
 
-                {(activeTab === 'gameStats' || activeTab === 'savedTurfs') && (
+                {activeTab === 'savedTurfs' && (
                   <div className="bg-white rounded-3xl p-8 sm:p-12 text-center shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
                     <div className="w-14 h-14 rounded-2xl bg-lime-100 text-lime-700 flex items-center justify-center mx-auto mb-3 font-bold">
                       <Trophy className="h-7 w-7" />
                     </div>
-                    <h3 className="text-lg font-black text-slate-900 capitalize">{activeTab} Details</h3>
+                    <h3 className="text-lg font-black text-slate-900 capitalize">savedTurfs Details</h3>
                     <p className="text-xs font-medium text-slate-500 mt-1 max-w-sm mx-auto">
                       View your detailed stats, match history, and saved turfs directly from your player profile dashboard.
                     </p>

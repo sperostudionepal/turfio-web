@@ -6,7 +6,6 @@ import {
   Camera,
   Check,
   Edit2,
-  ShieldCheck,
   Loader2,
   Calendar,
   MapPin,
@@ -15,7 +14,6 @@ import {
   Users,
   Trophy,
   Heart,
-  Star,
 } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 
@@ -177,13 +175,7 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
 
             {/* Profile Info Text */}
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{displayName}</h2>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
-                  <ShieldCheck className="h-3 w-3 text-lime-700" />
-                  Verified
-                </span>
-              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{displayName}</h2>
               <p className="text-xs sm:text-sm font-bold text-lime-600 mt-0.5">@{user?.username || 'saugatshahi2083'}</p>
               <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">{user?.email || 'shahi.codespace@gmail.com'}</p>
               <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1 leading-snug">
@@ -228,7 +220,7 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
       </div>
 
       {/* 2. Stats Summary Row Card */}
-      <div className="bg-white rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] grid grid-cols-2 sm:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+      <div className="bg-white rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
         <div className="flex items-center gap-3.5 p-2">
           <div className="w-10 h-10 rounded-full bg-lime-100 text-lime-700 flex items-center justify-center shrink-0">
             <Users className="h-5 w-5" />
@@ -259,15 +251,6 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2 sm:pl-6">
-          <div className="w-10 h-10 rounded-full bg-lime-100 text-lime-700 flex items-center justify-center shrink-0">
-            <Star className="h-5 w-5 fill-lime-600 text-lime-600" />
-          </div>
-          <div>
-            <p className="text-lg font-black text-slate-900 leading-none">4.8</p>
-            <p className="text-[11px] font-medium text-slate-500 mt-1">Average Rating</p>
-          </div>
-        </div>
       </div>
 
       {/* 3. Personal Information Form Card */}
@@ -356,9 +339,8 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
                   type="email"
                   disabled
                   value={user?.email || 'shahi.codespace@gmail.com'}
-                  className="w-full rounded-2xl bg-slate-50 pl-11 pr-10 py-3 text-xs sm:text-sm font-medium text-slate-500 cursor-not-allowed"
+                  className="w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-500 cursor-not-allowed"
                 />
-                <ShieldCheck className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lime-600" />
               </div>
             </div>
 
