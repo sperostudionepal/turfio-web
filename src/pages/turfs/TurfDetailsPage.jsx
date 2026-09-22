@@ -287,9 +287,7 @@ const TIME_SLOT_OPTIONS = ALL_TIME_SLOTS.map((slot) => ({
 
 const DURATION_OPTIONS = [
   { value: 1, label: '1 Hour' },
-  { value: 1.5, label: '1.5 Hours' },
   { value: 2, label: '2 Hours' },
-  { value: 2.5, label: '2.5 Hours' },
   { value: 3, label: '3 Hours' },
   { value: 4, label: '4 Hours' },
 ];
