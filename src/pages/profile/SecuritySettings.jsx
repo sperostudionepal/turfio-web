@@ -360,54 +360,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
         </form>
       </div>
 
-      {/* 2. Two-Factor Authentication (2FA) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-50 border border-slate-100">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">Two-Factor Authentication (TOTP 2FA)</h4>
-            <span
-              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                user?.twoFactorEnabled
-                  ? 'bg-lime-100 text-lime-700'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              {user?.twoFactorEnabled ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
-          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-            Protect your account with Google Authenticator or Authy TOTP verification codes
-          </p>
-        </div>
-
-        {user?.twoFactorEnabled ? (
-          <button
-            type="button"
-            onClick={() => setIsDisableModalOpen(true)}
-            className="px-5 py-2.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer shrink-0"
-          >
-            Disable 2FA
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleOpenSetupMfa}
-            disabled={isGeneratingMfa}
-            className="px-5 py-2.5 rounded-full bg-lime-400 text-slate-900 hover:bg-lime-500 text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs flex items-center gap-2"
-          >
-            {isGeneratingMfa ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-900" />
-            ) : (
-              <>
-                <QrCode className="h-4 w-4 text-slate-900" />
-                Enable 2FA
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* 3. Active Sessions List */}
+      {/* 2. Active Sessions List */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
