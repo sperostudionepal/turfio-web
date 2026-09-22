@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, Smartphone, Laptop, LogOut, KeyRound, Loader2, Eye, EyeOff, QrCode, Copy } from 'lucide-react';
+import { Shield, Lock, Smartphone, Laptop, LogOut, KeyRound, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import authService from '../../services/authService';
-import useAuthStore from '../../store/useAuthStore';
 
 export default function SecuritySettings({ user, onChangePassword }) {
   const { showToast } = useToast();
-  const initialize = useAuthStore((state) => state.initialize);
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -24,22 +22,6 @@ export default function SecuritySettings({ user, onChangePassword }) {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isLogoutOtherModalOpen, setIsLogoutOtherModalOpen] = useState(false);
   const [isLoggingOutOthers, setIsLoggingOutOthers] = useState(false);
-
-  // Real 2FA Modal states
-  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
-  const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [totpSecret, setTotpSecret] = useState('');
-  const [totpCode, setTotpCode] = useState('');
-  const [backupCodes, setBackupCodes] = useState([]);
-  const [setupStep, setSetupStep] = useState(1); // 1: QR setup, 2: Backup codes
-  const [isGeneratingMfa, setIsGeneratingMfa] = useState(false);
-  const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
-
-  // Disable MFA state
-  const [disablePassword, setDisablePassword] = useState('');
-  const [disableCode, setDisableCode] = useState('');
-  const [isDisablingMfa, setIsDisablingMfa] = useState(false);
 
   const fetchSessions = async () => {
     try {
@@ -133,77 +115,6 @@ export default function SecuritySettings({ user, onChangePassword }) {
     } finally {
       setIsLoggingOutOthers(false);
     }
-  };
-
-  // 2FA Setup Handler
-  const handleOpenSetupMfa = async () => {
-    try {
-      setIsGeneratingMfa(true);
-      const res = await authService.generateMfaSecret();
-      if (res.data?.qrCodeUrl) {
-        setQrCodeUrl(res.data.qrCodeUrl);
-        setTotpSecret(res.data.secret);
-        setTotpCode('');
-        setSetupStep(1);
-        setIsSetupModalOpen(true);
-      }
-    } catch (err) {
-      showToast(err.message || 'Failed to generate 2FA QR code', 'error');
-    } finally {
-      setIsGeneratingMfa(false);
-    }
-  };
-
-  const handleVerifySetup = async (e) => {
-    e.preventDefault();
-    if (!totpCode || totpCode.length < 6 || isVerifyingMfa) return;
-
-    try {
-      setIsVerifyingMfa(true);
-      const res = await authService.verifyMfaSetup(totpCode);
-      if (res.data?.backupCodes) {
-        setBackupCodes(res.data.backupCodes);
-        setSetupStep(2);
-        showToast('Two-factor authentication verified and enabled!', 'success');
-        await initialize();
-      }
-    } catch (err) {
-      showToast(err.message || 'Invalid code. Please try again.', 'error');
-    } finally {
-      setIsVerifyingMfa(false);
-    }
-  };
-
-  const handleFinishSetup = async () => {
-    setIsSetupModalOpen(false);
-    await initialize();
-  };
-
-  // Disable 2FA Handler
-  const handleDisableMfaSubmit = async (e) => {
-    e.preventDefault();
-    if (isDisablingMfa) return;
-
-    try {
-      setIsDisablingMfa(true);
-      const res = await authService.disableMfa({ password: disablePassword, code: disableCode });
-      if (res.data?.success) {
-        showToast('Two-factor authentication disabled successfully.', 'success');
-        setIsDisableModalOpen(false);
-        setDisablePassword('');
-        setDisableCode('');
-        await initialize();
-      }
-    } catch (err) {
-      showToast(err.message || 'Failed to disable 2FA. Check credentials.', 'error');
-    } finally {
-      setIsDisablingMfa(false);
-    }
-  };
-
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    showToast(`${label} copied to clipboard!`, 'success');
   };
 
   return (
@@ -411,204 +322,6 @@ export default function SecuritySettings({ user, onChangePassword }) {
           </div>
         )}
       </div>
-
-      {/* MODAL 1: Real TOTP 2FA Setup Modal */}
-      {isSetupModalOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-lime-100 text-lime-700 flex items-center justify-center font-bold">
-                  <QrCode className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    {setupStep === 1 ? 'Set Up Two-Factor Authentication' : 'Save Backup Emergency Codes'}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-500">
-                    {setupStep === 1 ? 'Scan QR code with Google Authenticator or Authy' : 'Store these one-time backup codes in a safe place'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {setupStep === 1 ? (
-              <form onSubmit={handleVerifySetup} className="space-y-5">
-                <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  {qrCodeUrl ? (
-                    <img src={qrCodeUrl} alt="2FA QR Code" className="w-36 h-36 rounded-xl bg-white p-2 border border-slate-200 shrink-0" />
-                  ) : (
-                    <div className="w-36 h-36 rounded-xl bg-slate-200 animate-pulse shrink-0" />
-                  )}
-
-                  <div className="space-y-2 text-center sm:text-left">
-                    <p className="text-xs font-bold text-slate-900">1. Scan QR Code</p>
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      Open your authenticator app (Google Authenticator, Authy, 1Password) and scan this QR code.
-                    </p>
-                    <div className="pt-1">
-                      <span className="text-[10px] font-bold text-slate-400 block mb-1">Manual Secret Key</span>
-                      <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-800">
-                        <span>{totpSecret}</span>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(totpSecret, 'Secret key')}
-                          className="text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    2. Enter 6-Digit Verification Code <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="123456"
-                    className="w-full text-center text-xl font-mono font-bold tracking-widest rounded-2xl bg-slate-50 px-4 py-3 text-slate-900 focus:outline-none focus:bg-slate-100/80 transition-all border border-slate-200"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsSetupModalOpen(false)}
-                    className="px-5 py-2.5 rounded-full bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={totpCode.length < 6 || isVerifyingMfa}
-                    className="px-6 py-2.5 rounded-full bg-lime-400 text-xs font-bold text-slate-900 hover:bg-lime-500 transition-colors disabled:opacity-50 cursor-pointer shadow-xs inline-flex items-center gap-2"
-                  >
-                    {isVerifyingMfa ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      'Verify & Enable 2FA'
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-5">
-                <div className="p-4 rounded-2xl bg-lime-50 border border-lime-200 text-xs text-slate-700 space-y-2">
-                  <p className="font-bold text-lime-900">Important Emergency Backup Codes</p>
-                  <p className="text-[11px] text-slate-600 font-medium">
-                    If you lose access to your phone or authenticator app, these one-time codes are the ONLY way to regain access to your account.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 bg-slate-900 text-white p-4 rounded-2xl font-mono text-xs font-bold text-center tracking-wider">
-                  {backupCodes.map((code, idx) => (
-                    <div key={idx} className="bg-slate-800/80 py-2 rounded-xl border border-slate-700/60">
-                      {code}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(backupCodes.join('\n'), 'Backup codes')}
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:underline cursor-pointer"
-                  >
-                    <Copy className="h-4 w-4 text-slate-500" />
-                    Copy Codes
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleFinishSetup}
-                    className="px-6 py-2.5 rounded-full bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer shadow-xs"
-                  >
-                    I Have Saved My Codes
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: Disable 2FA Re-authentication Modal */}
-      {isDisableModalOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
-              <Shield className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-extrabold text-slate-900">Disable Two-Factor Authentication?</h3>
-              <p className="text-xs font-medium text-slate-500 mt-1">
-                For security, please enter your current password or a valid 6-digit 2FA code to confirm.
-              </p>
-            </div>
-
-            <form onSubmit={handleDisableMfaSubmit} className="space-y-4">
-              {!isGoogleOnly ? (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Current Password</label>
-                  <input
-                    type="password"
-                    value={disablePassword}
-                    onChange={(e) => setDisablePassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:bg-slate-100/80 transition-all border border-slate-200"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">6-Digit 2FA Code</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={disableCode}
-                    onChange={(e) => setDisableCode(e.target.value)}
-                    placeholder="123456"
-                    className="w-full text-center text-lg font-mono font-bold rounded-2xl bg-slate-50 px-4 py-3 text-slate-900 focus:outline-none focus:bg-slate-100/80 transition-all border border-slate-200"
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsDisableModalOpen(false)}
-                  className="px-5 py-2.5 rounded-full bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isDisablingMfa}
-                  className="px-5 py-2.5 rounded-full bg-rose-600 text-xs font-bold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer shadow-xs inline-flex items-center gap-2"
-                >
-                  {isDisablingMfa ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
-                      Disabling...
-                    </>
-                  ) : (
-                    'Confirm Disable'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Confirmation Modal for Logging Out Other Sessions */}
       {isLogoutOtherModalOpen && (

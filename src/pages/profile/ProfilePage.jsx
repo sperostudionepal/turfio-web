@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   Loader2,
   LogIn,
-  ArrowRight,
   ChevronRight,
   HelpCircle,
   Key,
