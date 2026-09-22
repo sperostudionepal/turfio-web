@@ -310,7 +310,6 @@ export default function TurfDetailsPage({
 
   // Modals
   const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
-  const [showFullAbout, setShowFullAbout] = useState(false);
   const [previewReviewImage, setPreviewReviewImage] = useState(null);
 
   // Favorites & Social Feedback
@@ -932,45 +931,6 @@ export default function TurfDetailsPage({
                 </div>
               </div>
             </div>
-
-            {/* ── OVERVIEW & QUICK HIGHLIGHTS ── */}
-            <section id="overview" className="space-y-3">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-3">About The Arena</h2>
-                <div className="text-[16px] leading-[28px] font-medium text-slate-800 text-justify">
-                  {showFullAbout ? (
-                    <>
-                      <span>
-                        {turf.description ||
-                          `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`}
-                      </span>
-                      {' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowFullAbout(false)}
-                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
-                      >
-                        Show less
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {(turf.description || `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`).slice(0, 220).trim()}...
-                      </span>
-                      {' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowFullAbout(true)}
-                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
-                      >
-                        Show more
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </section>
 
             {/* ── SECTION: AVAILABLE PITCHES & COURTS (PITCH SELECTOR) ── */}
             <section id="courts" className="space-y-4 pt-2">

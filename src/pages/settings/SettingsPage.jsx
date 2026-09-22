@@ -42,7 +42,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
 
   // 1. General & Venue Details State (seeded from the real venue/account; Dashboard remounts this page when the venue changes)
   const [arenaName, setArenaName] = useState(venue?.name || '');
-  const [arenaTagline, setArenaTagline] = useState(venue?.description || '');
   const email = user?.email || '';
   const phone = user?.phone || '';
   const [altPhone, setAltPhone] = useState('+977 01-4234567');
@@ -108,7 +107,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
       if (venueId) {
         await turfService.updateTurf(venueId, {
           name: arenaName.trim(),
-          description: arenaTagline.trim(),
           address: { city: city.trim(), area: address.trim() },
         });
         // Push the saved venue back to the dashboard so the top bar/sidebar show the new name.
@@ -252,16 +250,6 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             value={arenaName}
                             onChange={(e) => setArenaName(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs md:text-sm font-extrabold text-slate-700 block mb-1.5">Venue Description</label>
-                          <input
-                            type="text"
-                            value={arenaTagline}
-                            onChange={(e) => setArenaTagline(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                           />
                         </div>
 
