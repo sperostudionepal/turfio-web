@@ -45,25 +45,39 @@ export default function CustomDropdown({
     }
   }, [isOpen]);
 
+  const computePosition = () => {
+    if (!dropdownRef.current) return;
+    const rect = dropdownRef.current.getBoundingClientRect();
+    setPopoverPosition({
+      top: rect.bottom + 8,
+      left: Math.max(12, rect.left),
+      width: Math.max(180, rect.width),
+    });
+  };
+
+  const handleToggle = () => {
+    if (!isOpen) {
+      // Compute the anchor position in the same click that opens the popover, so
+      // the very first paint already has the right coordinates instead of the
+      // stale default (which used to flash at the top-left corner before jumping).
+      computePosition();
+    }
+    setIsOpen((prev) => !prev);
+  };
+
   useLayoutEffect(() => {
-    if (!isOpen || !dropdownRef.current) return undefined;
+    if (!isOpen) return undefined;
+    window.addEventListener('resize', computePosition);
+    return () => window.removeEventListener('resize', computePosition);
+  }, [isOpen]);
 
-    const updatePosition = () => {
-      const rect = dropdownRef.current.getBoundingClientRect();
-      setPopoverPosition({
-        top: rect.bottom + 8,
-        left: Math.max(12, rect.left),
-        width: Math.max(180, rect.width),
-      });
-    };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    // Anchored repositioning on every scroll tick lags a frame behind and looks
+    // glitchy; closing on scroll (like most anchored popovers) is simpler and robust.
+    const handleScroll = () => setIsOpen(false);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
   }, [isOpen]);
 
   const selectedOption = options.find((opt) =>
@@ -81,7 +95,7 @@ export default function CustomDropdown({
       {variant === 'searchPill' ? (
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={handleToggle}
           className={`group relative flex flex-1 items-center gap-2.5 rounded-full px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-within:bg-slate-50 cursor-pointer w-full select-none ${buttonClassName} ${
             isOpen ? 'bg-slate-50' : ''
           }`}
@@ -106,7 +120,7 @@ export default function CustomDropdown({
       ) : variant === 'cell' ? (
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={handleToggle}
           className={`w-full text-left p-3 sm:px-4 sm:py-3 transition-colors cursor-pointer select-none flex items-center justify-between gap-2 ${buttonClassName} ${
             isOpen ? 'bg-slate-50 ring-2 ring-slate-900 z-10 relative' : 'hover:bg-slate-50/80'
           }`}
@@ -128,7 +142,7 @@ export default function CustomDropdown({
       ) : (
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={handleToggle}
           className={`w-full h-[52px] rounded-xl px-4 bg-white border text-left flex items-center justify-between gap-2 transition-all cursor-pointer select-none ${buttonClassName} ${
             isOpen
               ? 'border-slate-400 ring-2 ring-slate-900/5'

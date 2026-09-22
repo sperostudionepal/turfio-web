@@ -171,8 +171,14 @@ function AmenitiesModal({ isOpen, onClose, amenities }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn">
-      <div className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl"
+      >
         <div className="flex items-center justify-between pb-5">
           <div>
             <h3 className="text-xl font-bold text-slate-900">All Venue Amenities & Facilities</h3>
@@ -188,7 +194,8 @@ function AmenitiesModal({ isOpen, onClose, amenities }) {
 
         <div className="mt-4 space-y-6">
           {amenityCategories.map((group) => {
-            const activeItems = group.items.filter((item) => amenities.includes(item) || true);
+            const activeItems = group.items.filter((item) => amenities.includes(item));
+            if (activeItems.length === 0) return null;
             return (
               <div key={group.category} className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{group.category}</h4>
@@ -280,11 +287,11 @@ const TIME_SLOT_OPTIONS = ALL_TIME_SLOTS.map((slot) => ({
 
 const DURATION_OPTIONS = [
   { value: 1, label: '1 Hour' },
-  { value: 1.5, label: '1.5 Hours' },
   { value: 2, label: '2 Hours' },
-  { value: 2.5, label: '2.5 Hours' },
   { value: 3, label: '3 Hours' },
   { value: 4, label: '4 Hours' },
+  { value: 5, label: '5 Hours' },
+  { value: 6, label: '6 Hours' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════
@@ -310,7 +317,6 @@ export default function TurfDetailsPage({
 
   // Modals
   const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
-  const [showFullAbout, setShowFullAbout] = useState(false);
   const [previewReviewImage, setPreviewReviewImage] = useState(null);
 
   // Favorites & Social Feedback
@@ -932,45 +938,6 @@ export default function TurfDetailsPage({
                 </div>
               </div>
             </div>
-
-            {/* ── OVERVIEW & QUICK HIGHLIGHTS ── */}
-            <section id="overview" className="space-y-3">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-3">About The Arena</h2>
-                <div className="text-[16px] leading-[28px] font-medium text-slate-800 text-justify">
-                  {showFullAbout ? (
-                    <>
-                      <span>
-                        {turf.description ||
-                          `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`}
-                      </span>
-                      {' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowFullAbout(false)}
-                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
-                      >
-                        Show less
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {(turf.description || `${turf.title} is one of Kathmandu valley's top-tier futsal and football destinations, built with FIFA-grade artificial grass, optimal shock-absorption cushioning, and professional LED floodlights for seamless day and night gameplay. The arena features full changing rooms, high-pressure hot/cold showers, drinking water filtration, and spectator seating.`).slice(0, 220).trim()}...
-                      </span>
-                      {' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowFullAbout(true)}
-                        className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-0.5 ml-1"
-                      >
-                        Show more
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </section>
 
             {/* ── SECTION: AVAILABLE PITCHES & COURTS (PITCH SELECTOR) ── */}
             <section id="courts" className="space-y-4 pt-2">
