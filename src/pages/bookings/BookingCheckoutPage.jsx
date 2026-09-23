@@ -389,6 +389,9 @@ export default function BookingCheckoutPage({
   // Max players
   const maxPlayersAllowed = venueSize.includes('5') ? 10 : 14;
 
+  const depositAmount = Math.ceil(totalAmount * 0.2);
+  const remainingBalance = totalAmount - depositAmount;
+
   const paymentMethods = [
     {
       id: 'full',
@@ -401,8 +404,8 @@ export default function BookingCheckoutPage({
     {
       id: 'venue',
       label: 'Pay at Venue',
-      badge: 'On Arrival',
-      description: 'Pay directly at counter before kickoff',
+      badge: '20% Deposit',
+      description: `Pay NPR ${depositAmount.toLocaleString()} deposit now, NPR ${remainingBalance.toLocaleString()} at venue`,
       icon: Banknote,
       available: true,
     },
@@ -492,13 +495,18 @@ export default function BookingCheckoutPage({
         return;
       }
 
-      // If eSewa is selected and online payment
-      if (formData.paymentType !== 'venue' && formData.selectedPaymentMethod === 'esewa') {
+      // If eSewa payment is selected (for both full payment and venue deposit)
+      if (formData.selectedPaymentMethod === 'esewa') {
         try {
           setIsProcessingPayment(true);
-          triggerToast('Connecting to eSewa payment gateway...');
+          
+          const isVenueDeposit = formData.paymentType === 'venue';
+          const payAmount = isVenueDeposit ? depositAmount : totalAmount;
+          
+          triggerToast(isVenueDeposit 
+            ? `Processing NPR ${depositAmount.toLocaleString()} deposit payment...`
+            : 'Connecting to eSewa payment gateway...');
 
-          const payAmount = totalAmount;
           let matchType = '7v7';
           if (venueSize.includes('5')) matchType = '5v5';
           else if (venueSize.includes('11')) matchType = '11v11';
@@ -519,10 +527,12 @@ export default function BookingCheckoutPage({
             timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
             matchType,
             teamSize: formData.expectedPlayers || 10,
-            totalAmount: totalAmount, // Master total amount for venue booking
+            totalAmount: totalAmount,
             totalPaidAmount: 0,
+            depositAmount: isVenueDeposit ? depositAmount : 0,
+            remainingBalance: isVenueDeposit ? remainingBalance : 0,
             paymentType: formData.paymentType || 'full',
-            paymentMethod: 'eSewa',
+            paymentMethod: isVenueDeposit ? 'Pay at Venue' : 'eSewa',
             paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
@@ -544,6 +554,9 @@ export default function BookingCheckoutPage({
               formData,
               bookingPayload,
               totalAmount: payAmount,
+              depositAmount: isVenueDeposit ? depositAmount : 0,
+              remainingBalance: isVenueDeposit ? remainingBalance : 0,
+              isVenueDeposit,
               selectedDateStr,
               selectedTimeStr,
               endTimeStr,
@@ -566,6 +579,7 @@ export default function BookingCheckoutPage({
               holdToken: effectiveHoldToken,
               bookingId: effectiveBookingId,
               bookingData: bookingPayload,
+              isVenueDeposit,
             }
           );
 
@@ -1344,12 +1358,15 @@ export default function BookingCheckoutPage({
                   {formData.paymentType === 'venue' ? (
                     <div className="rounded-2xl bg-amber-50 p-4 text-xs sm:text-sm font-medium text-amber-950 flex items-start gap-3">
                       <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-slate-900">Pay at Turf Policy</p>
-                        <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                          Your reservation will be held. Please arrive at least 15 minutes before
-                          kickoff to clear the payment at the arena counter via Cash or Fonepay QR.
-                        </p>
+                      <div className="space-y-2">
+                        <p className="font-bold text-slate-900">Pay at Venue with 20% Deposit</p>
+                        <div className="space-y-1 text-xs text-amber-900 leading-relaxed">
+                          <p>• <span className="font-bold">Pay Now:</span> NPR {depositAmount.toLocaleString()} deposit (20% of total)</p>
+                          <p>• <span className="font-bold">Pay at Venue:</span> NPR {remainingBalance.toLocaleString()} remaining balance</p>
+                          <p className="mt-2 pt-2 border-t border-amber-200">
+                            Please arrive at least 15 minutes before kickoff to clear the remaining payment at the counter via Cash or Fonepay QR.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ) : null}
@@ -1425,19 +1442,22 @@ export default function BookingCheckoutPage({
 
                 <div className="h-px bg-slate-100 my-8" />
 
-                {/* Payment Gateway Selection */}
-                {formData.paymentType !== 'venue' ? (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                        Select Payment Method
-                      </h2>
-                      <p className="text-sm font-medium text-slate-500 mt-1">
-                        Secure instant checkout powered by verified Nepali payment gateways.
-                      </p>
-                    </div>
+                {/* Payment Gateway Selection - Show for both full and venue deposit */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                      {formData.paymentType === 'venue' 
+                        ? 'Pay Deposit via eSewa'
+                        : 'Select Payment Method'}
+                    </h2>
+                    <p className="text-sm font-medium text-slate-500 mt-1">
+                      {formData.paymentType === 'venue'
+                        ? `Secure your booking with NPR ${depositAmount.toLocaleString()} deposit payment`
+                        : 'Secure instant checkout powered by verified Nepali payment gateways.'}
+                    </p>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       {paymentGateways.map((gw) => {
                         const isSelected = formData.selectedPaymentMethod === gw.id;
                         return (
@@ -1484,24 +1504,20 @@ export default function BookingCheckoutPage({
                         );
                       })}
                     </div>
+                    
+                    {formData.paymentType === 'venue' && (
+                      <div className="rounded-2xl bg-lime-50 p-4 text-xs sm:text-sm font-medium text-lime-950 flex items-start gap-3">
+                        <Info className="h-5 w-5 text-lime-700 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-slate-900">Deposit Payment Required</p>
+                          <p className="text-xs text-lime-900 mt-0.5 leading-relaxed">
+                            You'll pay NPR {depositAmount.toLocaleString()} deposit now to secure your booking. 
+                            Pay the remaining NPR {remainingBalance.toLocaleString()} at the venue before kickoff.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      Pay on Arrival
-                    </h2>
-                    <div className="rounded-2xl bg-slate-50 p-5 space-y-2">
-                      <p className="font-extrabold text-base text-slate-900">
-                        No online transaction needed right now!
-                      </p>
-                      <p className="text-xs sm:text-[13px] text-slate-500 font-medium leading-relaxed">
-                        Your slot reservation will be confirmed upon clicking the button below. You
-                        will receive a digital Match Pass on your phone which you will present at
-                        the arena reception to pay via Cash or Mobile Banking.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Terms Agreement */}
                 <div className="pt-1">
@@ -1938,7 +1954,7 @@ export default function BookingCheckoutPage({
                     <Lock className="h-4 w-4" />
                     <span>
                       {formData.paymentType === 'venue'
-                        ? 'Confirm Booking & Pay at Venue'
+                        ? `Pay NPR ${depositAmount.toLocaleString()} Deposit & Confirm`
                         : `Pay NPR ${totalAmount.toLocaleString()} & Confirm`}
                     </span>
                     <ArrowRight className="h-4 w-4 stroke-[2.5]" />
