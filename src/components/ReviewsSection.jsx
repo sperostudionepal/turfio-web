@@ -62,7 +62,7 @@ export default function ReviewsSection({ isLoading = false, reviewsData = review
 
   return (
     <section className="bg-white pt-12 pb-10 lg:pt-16 lg:pb-12 border-t border-slate-100">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">
           <span className="text-sm font-semibold text-lime-500">

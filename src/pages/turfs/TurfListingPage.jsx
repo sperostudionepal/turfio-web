@@ -26,272 +26,9 @@ import Footer from '../../components/Footer';
 import TurfMap from '../../components/turfs/TurfMap';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
+import LocationAutocomplete from '../../components/common/LocationAutocomplete';
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
-
-/*
-// Hardcoded dummy turfs commented out in favor of real backend data fetching
-export const dummyTurfs = [
-  // Kathmandu Venues
-  {
-    id: 1,
-    title: 'Futsal Arena Boudha',
-    type: 'Indoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 4.2,
-    reviews: 164,
-    price: 'NPR 1,200/hr',
-    priceVal: 1200,
-    image: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'Changing Rooms', 'Canteen'],
-    location: 'Boudha, Kathmandu',
-    lat: 27.71585,
-    lng: 85.36209,
-  },
-  {
-    id: 2,
-    title: 'Dhanyentari Futsal',
-    type: 'Outdoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 4.0,
-    reviews: 98,
-    price: 'NPR 1,100/hr',
-    priceVal: 1100,
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'First Aid'],
-    location: 'Hadigaun, Kathmandu',
-    lat: 27.71986,
-    lng: 85.34077,
-  },
-  {
-    id: 3,
-    title: 'United Futsal',
-    type: 'Indoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 4.0,
-    reviews: 215,
-    price: 'NPR 1,000/hr',
-    priceVal: 1000,
-    image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'First Aid'],
-    location: 'Kalanki, Kathmandu',
-    lat: 27.70091,
-    lng: 85.28280,
-  },
-  {
-    id: 5,
-    title: 'Shantinagar Futsal',
-    type: 'Indoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 3.9,
-    reviews: 140,
-    price: 'NPR 1,300/hr',
-    priceVal: 1300,
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'Canteen'],
-    location: 'Shantinagar, Kathmandu',
-    lat: 27.69197,
-    lng: 85.34780,
-  },
-  {
-    id: 6,
-    title: 'Shankhamul Futsal',
-    type: 'Outdoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 3.9,
-    reviews: 230,
-    price: 'NPR 1,200/hr',
-    priceVal: 1200,
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'Changing Rooms', 'First Aid'],
-    location: 'Shankhamul, Kathmandu',
-    lat: 27.68260,
-    lng: 85.33232,
-  },
-  {
-    id: 7,
-    title: 'Prime Futsal Gyaneshwor',
-    type: 'Indoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 3.9,
-    reviews: 310,
-    price: 'NPR 1,400/hr',
-    priceVal: 1400,
-    image: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'Canteen', 'Sports Equipment'],
-    location: 'Gyaneshwor, Kathmandu',
-    lat: 27.71035,
-    lng: 85.33472,
-  },
-
-  // Lalitpur Venues
-  {
-    id: 8,
-    title: 'Kathmandu Futsal (Bagdol)',
-    type: 'Outdoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 3.5,
-    reviews: 75,
-    price: 'NPR 950/hr',
-    priceVal: 950,
-    image: 'https://images.unsplash.com/photo-1524015368236-bbf6f72545b6?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'First Aid'],
-    location: 'Bagdol, Lalitpur',
-    lat: 27.67043,
-    lng: 85.30391,
-  },
-  {
-    id: 9,
-    title: 'GxG Arena',
-    type: 'Indoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 4.8,
-    reviews: 420,
-    price: 'NPR 1,600/hr',
-    priceVal: 1600,
-    image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'AC', 'Canteen', 'Sports Equipment'],
-    location: 'Gwarko, Lalitpur',
-    lat: 27.65688,
-    lng: 85.33443,
-  },
-  {
-    id: 10,
-    title: 'TURF PARK',
-    type: 'Outdoor',
-    size: '9v9',
-    parking: 'Parking',
-    rating: 4.9,
-    reviews: 580,
-    price: 'NPR 1,800/hr',
-    priceVal: 1800,
-    image: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'Canteen', 'Sports Equipment'],
-    location: 'Khumaltar, Lalitpur',
-    lat: 27.64234,
-    lng: 85.31521,
-  },
-  {
-    id: 11,
-    title: 'Creation Futsal',
-    type: 'Indoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 4.5,
-    reviews: 190,
-    price: 'NPR 1,250/hr',
-    priceVal: 1250,
-    image: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'Changing Rooms'],
-    location: 'Imadol, Lalitpur',
-    lat: 27.65809,
-    lng: 85.34068,
-  },
-  {
-    id: 12,
-    title: 'Elite Futsal',
-    type: 'Outdoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 4.4,
-    reviews: 165,
-    price: 'NPR 1,300/hr',
-    priceVal: 1300,
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'Washrooms', 'Changing Rooms', 'First Aid'],
-    location: 'Tikathali, Lalitpur',
-    lat: 27.65356,
-    lng: 85.35731,
-  },
-  {
-    id: 13,
-    title: 'Lalitpur 5A Side',
-    type: 'Indoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 3.6,
-    reviews: 112,
-    price: 'NPR 1,000/hr',
-    priceVal: 1000,
-    image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Washrooms', 'Changing Rooms'],
-    location: 'Sanepa, Lalitpur',
-    lat: 27.68981,
-    lng: 85.30390,
-  },
-  {
-    id: 14,
-    title: 'R Squared Gamestation',
-    type: 'Indoor',
-    size: '5v5',
-    parking: 'Parking',
-    rating: 5.0,
-    reviews: 350,
-    price: 'NPR 1,500/hr',
-    priceVal: 1500,
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'AC', 'Canteen', 'Sports Equipment'],
-    location: 'Lagankhel, Lalitpur',
-    lat: 27.67424,
-    lng: 85.33483,
-  },
-  {
-    id: 16,
-    title: 'Elite Sports Training Center',
-    type: 'Outdoor',
-    size: '7v7',
-    parking: 'Parking',
-    rating: 4.1,
-    reviews: 205,
-    price: 'NPR 1,450/hr',
-    priceVal: 1450,
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80',
-    amenities: ['Parking', 'WiFi', 'Washrooms', 'Changing Rooms', 'Canteen', 'Sports Equipment'],
-    location: 'Dhapakhel, Lalitpur',
-    lat: 27.64704,
-    lng: 85.30972,
-  },
-];
-*/
-
-const amenitiesList = [
-  'Parking',
-  'WiFi',
-  'Canteen',
-  'Washrooms',
-  'AC',
-  'Changing Rooms',
-  'First Aid',
-  'Sports Equipment',
-];
-
-const TIME_SLOT_OPTIONS = [
-  { value: '06:00 AM', label: '06:00 AM' },
-  { value: '07:00 AM', label: '07:00 AM' },
-  { value: '08:00 AM', label: '08:00 AM' },
-  { value: '09:00 AM', label: '09:00 AM' },
-  { value: '10:00 AM', label: '10:00 AM' },
-  { value: '11:00 AM', label: '11:00 AM' },
-  { value: '12:00 PM', label: '12:00 PM' },
-  { value: '01:00 PM', label: '01:00 PM' },
-  { value: '02:00 PM', label: '02:00 PM' },
-  { value: '03:00 PM', label: '03:00 PM' },
-  { value: '04:00 PM', label: '04:00 PM' },
-  { value: '05:00 PM', label: '05:00 PM' },
-  { value: '06:00 PM', label: '06:00 PM' },
-  { value: '07:00 PM', label: '07:00 PM' },
-  { value: '08:00 PM', label: '08:00 PM' },
-  { value: '09:00 PM', label: '09:00 PM' },
-  { value: '10:00 PM', label: '10:00 PM' },
-];
 
 const normalizePlayersFilter = (players) => players === 'Random' ? 'Any Size' : (players || 'Any Size');
 
@@ -346,6 +83,31 @@ const isTurfAvailableAt = (turf, day, requestedMinutes) => {
   return true;
 };
 
+// Available time slots for search and filtering
+const ALL_TIME_SLOTS = [
+  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
+  '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM', '10:00 PM', '11:00 PM',
+];
+
+const TIME_SLOT_OPTIONS = ALL_TIME_SLOTS.map((slot) => ({
+  value: slot,
+  label: slot,
+}));
+
+// Available amenities for filtering
+const amenitiesList = [
+  'Parking',
+  'WiFi',
+  'Washrooms',
+  'Changing Rooms',
+  'Canteen',
+  'First Aid',
+  'Floodlights',
+  'Drinking Water',
+  'Spectator Seating',
+];
+
 
 export default function TurfListingPage({
   user,
@@ -364,14 +126,21 @@ export default function TurfListingPage({
 }) {
   // Search draft input parameters (user typing / selecting before clicking Search)
   const [locationInput, setLocationInput] = useState(initialSearch?.location || '');
-  const [dateInput, setDateInput] = useState(initialSearch?.date || getTodayNepalString());
-  const [timeInput, setTimeInput] = useState(initialSearch?.time || '07:00 PM');
+  const [dateInput, setDateInput] = useState(initialSearch?.date || '');
+  const [timeInput, setTimeInput] = useState(initialSearch?.time || '');
   const [playersInput, setPlayersInput] = useState(initialSearch?.players || 'Any Size');
+  const lastSelectedLocationCoordsRef = useRef(null);
+  // Name of the location that was picked from autocomplete (has coordinates).
+  // Used to decide whether a typed search should keep or drop the stored coords.
+  const selectedLocationNameRef = useRef(
+    initialSearch?.coords ? (initialSearch?.location || '') : ''
+  );
 
   // Applied search parameters (only updated when Search button clicked or form submitted)
   const [appliedLocation, setAppliedLocation] = useState(initialSearch?.location || '');
-  const [appliedDate, setAppliedDate] = useState(initialSearch?.date || getTodayNepalString());
-  const [appliedTime, setAppliedTime] = useState(initialSearch?.time || '07:00 PM');
+  const [appliedLocationCoords, setAppliedLocationCoords] = useState(initialSearch?.coords || null);
+  const [appliedDate, setAppliedDate] = useState(initialSearch?.date || '');
+  const [appliedTime, setAppliedTime] = useState(initialSearch?.time || '');
   const [appliedPlayers, setAppliedPlayers] = useState(normalizePlayersFilter(initialSearch?.players));
 
   // Pagination
@@ -407,7 +176,17 @@ export default function TurfListingPage({
   // Apply search execution when Search button is clicked or form submitted
   const handleApplySearch = (e) => {
     if (e) e.preventDefault();
-    setAppliedLocation(locationInput.trim());
+    const trimmedLocation = locationInput.trim();
+
+    // If the text no longer matches the location picked from autocomplete,
+    // the stored coordinates are stale — drop them so text filtering applies.
+    if (trimmedLocation !== selectedLocationNameRef.current) {
+      selectedLocationNameRef.current = '';
+      lastSelectedLocationCoordsRef.current = null;
+      setAppliedLocationCoords(null);
+    }
+
+    setAppliedLocation(trimmedLocation);
     setAppliedDate(dateInput);
     setAppliedTime(timeInput);
     setAppliedPlayers(normalizePlayersFilter(playersInput));
@@ -440,14 +219,16 @@ export default function TurfListingPage({
   };
 
   const handleClearSearch = async () => {
-    const defaultSlot = await findDefaultSearchSlot();
     setLocationInput('');
-    setDateInput(defaultSlot.date);
-    setTimeInput(defaultSlot.time);
+    setDateInput('');
+    setTimeInput('');
     setPlayersInput('Any Size');
     setAppliedLocation('');
-    setAppliedDate(defaultSlot.date);
-    setAppliedTime(defaultSlot.time);
+    setAppliedLocationCoords(null);
+    lastSelectedLocationCoordsRef.current = null;
+    selectedLocationNameRef.current = '';
+    setAppliedDate('');
+    setAppliedTime('');
     setAppliedPlayers('Any Size');
     setSelectedTypes([]);
     setSelectedSizes([]);
@@ -461,12 +242,14 @@ export default function TurfListingPage({
   useEffect(() => {
     if (!initialSearch) return;
     setLocationInput(initialSearch.location || '');
-    setDateInput(initialSearch.date || getTodayNepalString());
-    setTimeInput(initialSearch.time || '07:00 PM');
+    setDateInput(initialSearch.date || '');
+    setTimeInput(initialSearch.time || '');
     setPlayersInput(initialSearch.players || 'Any Size');
     setAppliedLocation(initialSearch.location || '');
-    setAppliedDate(initialSearch.date || getTodayNepalString());
-    setAppliedTime(initialSearch.time || '07:00 PM');
+    setAppliedLocationCoords(initialSearch.coords || null);
+    selectedLocationNameRef.current = initialSearch.coords ? (initialSearch.location || '') : '';
+    setAppliedDate(initialSearch.date || '');
+    setAppliedTime(initialSearch.time || '');
     setAppliedPlayers(normalizePlayersFilter(initialSearch.players));
     setCurrentPage(1);
   }, [initialSearch]);
@@ -475,6 +258,9 @@ export default function TurfListingPage({
   const handleResetMap = () => {
     setLocationInput('');
     setAppliedLocation('');
+    setAppliedLocationCoords(null);
+    lastSelectedLocationCoordsRef.current = null;
+    selectedLocationNameRef.current = '';
     setResetMapKey((prev) => prev + 1);
   };
 
@@ -582,6 +368,41 @@ export default function TurfListingPage({
   // Filter modal visibility toggle
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
+  // Helper: Get availability status display for a turf card
+  const getAvailabilityStatus = (turf) => {
+    if (filteringTier === 'no-date') {
+      return { label: 'Check availability', color: 'text-slate-500' };
+    }
+
+    if (filteringTier === 'date-only') {
+      const requestedDay = getDayName(appliedDate);
+      const isOpenOnDay = isTurfAvailableAt(turf, requestedDay, null);
+      return isOpenOnDay
+        ? { label: 'Open on this day', color: 'text-green-600' }
+        : { label: 'Closed on this day', color: 'text-red-600' };
+    }
+
+    // filteringTier === 'date-and-time'
+    const requestedMinutes = parseTimeToMinutes(appliedTime);
+    const requestedDay = getDayName(appliedDate);
+    const availability = availabilityByTurf[turf.id];
+
+    if (!availability) {
+      return { label: 'Loading...', color: 'text-slate-500' };
+    }
+
+    if (availability.isClosed || availability.isAvailable === false) {
+      return { label: 'Not available', color: 'text-red-600' };
+    }
+
+    const requestedSlot = (availability.slots || []).find((slot) => slot.startMinutes === requestedMinutes);
+    if (requestedSlot?.isAvailable && requestedSlot.state === 'available') {
+      return { label: 'Available at this time', color: 'text-green-600' };
+    }
+
+    return { label: 'Fully booked', color: 'text-red-600' };
+  };
+
   // Toggle filter lists
   const handleTypeToggle = (type) => {
     setSelectedTypes((prev) =>
@@ -613,6 +434,9 @@ export default function TurfListingPage({
     setSelectedAmenities([]);
     setLocationInput('');
     setAppliedLocation('');
+    setAppliedLocationCoords(null);
+    lastSelectedLocationCoordsRef.current = null;
+    selectedLocationNameRef.current = '';
     setCurrentPage(1);
   };
 
@@ -622,10 +446,29 @@ export default function TurfListingPage({
     selectedAmenities.length +
     (maxPrice < 2500 ? 1 : 0);
 
+  // Helper: Determine which filtering tier is active
+  const filteringTier = useMemo(() => {
+    if (!appliedDate) return 'no-date'; // Tier 1: No date selected
+    if (!appliedTime) return 'date-only'; // Tier 2: Date selected, no time
+    return 'date-and-time'; // Tier 3: Both date and time selected
+  }, [appliedDate, appliedTime]);
+
+  // Text used to filter turfs by title/location.
+  // When the location was picked from autocomplete (or "Nearby location"), we have
+  // coordinates and the MAP VIEWPORT handles proximity — so we must NOT filter the
+  // list by the display name. Otherwise the turf list changes at the same moment the
+  // map is asked to pan, and the map's turfs-change handling overrides the pan.
+  const textLocationFilter = appliedLocationCoords ? '' : appliedLocation;
+
   // 1. Search & Filter criteria across all turfs (passed to Map for pins)
+  // Tier 1 (no-date): Show all turfs matching location/type/size/price/amenities
+  // Tier 2 (date-only): Filter by day of operation + above filters
+  // Tier 3 (date-and-time): Filter by slot availability + above filters
   const searchFilteredTurfs = useMemo(() => {
     const requestedMinutes = parseTimeToMinutes(appliedTime);
     const requestedDay = getDayName(appliedDate);
+
+    // Helper: Check if turf has the requested slot available
     const hasRequestedSlot = (turf) => {
       const availability = availabilityByTurf[turf.id];
       if (!availability || availability.isClosed || availability.isAvailable === false) return false;
@@ -633,41 +476,63 @@ export default function TurfListingPage({
       return Boolean(requestedSlot?.isAvailable && requestedSlot.state === 'available');
     };
 
-    if (isCheckingAvailability || !Object.keys(availabilityByTurf).length) return [];
+    // Core filter predicate (location text, type, size, price, amenities)
+    const matchesCoreFilters = (turf) => {
+      const locMatch =
+        !textLocationFilter ||
+        (turf.title && turf.title.toLowerCase().includes(textLocationFilter.toLowerCase())) ||
+        (turf.location && turf.location.toLowerCase().includes(textLocationFilter.toLowerCase()));
 
-    return turfs
-      .filter((turf) => {
-        const locMatch =
-          !appliedLocation ||
-          (turf.title && turf.title.toLowerCase().includes(appliedLocation.toLowerCase())) ||
-          (turf.location && turf.location.toLowerCase().includes(appliedLocation.toLowerCase()));
+      const typeMatch =
+        selectedTypes.length === 0 || (turf.type && selectedTypes.includes(turf.type));
 
-        const typeMatch =
-          selectedTypes.length === 0 || (turf.type && selectedTypes.includes(turf.type));
+      const sizeMatch =
+        (selectedSizes.length === 0 || (turf.size && selectedSizes.includes(turf.size))) &&
+        (appliedPlayers === 'Any Size' || turf.size === appliedPlayers);
 
-        const sizeMatch =
-          (selectedSizes.length === 0 || (turf.size && selectedSizes.includes(turf.size))) &&
-          (appliedPlayers === 'Any Size' || turf.size === appliedPlayers);
+      const priceMatch = turf.priceVal ? turf.priceVal <= maxPrice : true;
 
-        const availabilityMatch = isTurfAvailableAt(turf, requestedDay, requestedMinutes);
-        const slotAvailabilityMatch = hasRequestedSlot(turf);
+      const amenitiesMatch =
+        selectedAmenities.length === 0 ||
+        (Array.isArray(turf.amenities) && selectedAmenities.every((amenity) => turf.amenities.includes(amenity)));
 
-        const priceMatch = turf.priceVal ? turf.priceVal <= maxPrice : true;
+      return locMatch && typeMatch && sizeMatch && priceMatch && amenitiesMatch;
+    };
 
-        const amenitiesMatch =
-          selectedAmenities.length === 0 ||
-          (Array.isArray(turf.amenities) && selectedAmenities.every((amenity) => turf.amenities.includes(amenity)));
-
-        return locMatch && typeMatch && sizeMatch && availabilityMatch && slotAvailabilityMatch && priceMatch && amenitiesMatch;
-      })
-      .sort((a, b) => {
+    // Apply tier-specific filtering
+    const applySorting = (results) => {
+      return results.sort((a, b) => {
         if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
         if (sortBy === 'reviews') return (b.reviews || 0) - (a.reviews || 0);
         if (sortBy === 'price-low') return (a.priceVal || 0) - (b.priceVal || 0);
         if (sortBy === 'price-high') return (b.priceVal || 0) - (a.priceVal || 0);
         return 0;
       });
-  }, [turfs, availabilityByTurf, isCheckingAvailability, appliedLocation, appliedDate, appliedTime, selectedTypes, selectedSizes, appliedPlayers, maxPrice, selectedAmenities, sortBy]);
+    };
+
+    if (filteringTier === 'no-date') {
+      // Tier 1: Show all turfs matching core filters, skip availability entirely
+      return applySorting(turfs.filter(matchesCoreFilters));
+    }
+
+    if (filteringTier === 'date-only') {
+      // Tier 2: Filter by day of operation + core filters
+      // Only show turfs open on the selected day
+      return applySorting(turfs.filter((turf) => {
+        return matchesCoreFilters(turf) && isTurfAvailableAt(turf, requestedDay, null);
+      }));
+    }
+
+    // Tier 3: date-and-time selected
+    // Wait for availability data and filter by exact slot
+    if (isCheckingAvailability || !Object.keys(availabilityByTurf).length) return [];
+
+    return applySorting(turfs.filter((turf) => {
+      const availabilityMatch = isTurfAvailableAt(turf, requestedDay, requestedMinutes);
+      const slotAvailabilityMatch = hasRequestedSlot(turf);
+      return matchesCoreFilters(turf) && availabilityMatch && slotAvailabilityMatch;
+    }));
+  }, [turfs, availabilityByTurf, isCheckingAvailability, textLocationFilter, appliedDate, appliedTime, selectedTypes, selectedSizes, appliedPlayers, maxPrice, selectedAmenities, sortBy, filteringTier]);
 
   const listingLoading = isLoading || isCheckingAvailability;
 
@@ -699,9 +564,9 @@ export default function TurfListingPage({
     : 'Kathmandu, Nepal';
   const hasActiveSearch = Boolean(
     appliedLocation ||
+    (appliedDate && appliedDate !== getTodayNepalString()) ||
+    (appliedTime && appliedTime !== '07:00 PM') ||
     appliedPlayers !== 'Any Size' ||
-    appliedDate !== getTodayNepalString() ||
-    appliedTime !== '07:00 PM' ||
     selectedTypes.length ||
     selectedSizes.length ||
     selectedAmenities.length ||
@@ -724,11 +589,12 @@ export default function TurfListingPage({
           onFeatures={onFeatures}
           onPricing={onPricing}
           onAboutUs={onAboutUs}
+          hideTopbar={true}
         />
 
         {/* ─── FLOATING ALWAYS-VISIBLE SEARCH BAR WIDGET + CONTROLS ─── */}
         <section className="relative z-40 bg-white/95 backdrop-blur-md pt-10 pb-8">
-          <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 flex flex-col lg:flex-row items-center justify-between gap-4">
+          <div className="mx-auto max-w-[1440px] px-6 lg:px-10 flex flex-col lg:flex-row items-center justify-between gap-4">
             {/* Search Pill */}
             <div className="w-full max-w-[860px] rounded-full bg-white ring-1 ring-slate-100/60 shadow-[0_0_25px_rgba(0,0,0,0.04)] overflow-visible relative z-50">
               <form
@@ -742,15 +608,42 @@ export default function TurfListingPage({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-bold text-slate-900 leading-tight">Location</span>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
                       value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
+                      onChange={setLocationInput}
+                      onSelect={(location) => {
+                        const lat = Number(location.lat);
+                        const lng = Number(location.lon ?? location.lng);
+                        const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+                        const displayName = location.display_name || '';
+
+                        setLocationInput(displayName);
+
+                        if (hasValidCoords) {
+                          // Fresh object + requestId on every selection so the map
+                          // always treats it as a NEW pan request, even when the
+                          // same location is picked again.
+                          const coords = { lat, lng, requestId: Date.now() };
+                          lastSelectedLocationCoordsRef.current = coords;
+                          selectedLocationNameRef.current = displayName;
+                          setAppliedLocationCoords(coords);
+                        } else {
+                          lastSelectedLocationCoordsRef.current = null;
+                          selectedLocationNameRef.current = '';
+                          setAppliedLocationCoords(null);
+                        }
+
+                        // Apply search immediately with the selected location
+                        setAppliedLocation(displayName);
+                        // Reset map bounds so viewport filter doesn't interfere with initial search
+                        setMapBounds(null);
+                        // Reset current page to show results from the beginning
+                        setCurrentPage(1);
+                      }}
                       placeholder="Search location"
-                      className="mt-0.5 w-full border-0 bg-transparent p-0 text-[14px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
+                      className="mt-0.5"
                     />
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-7 w-px shrink-0 self-center bg-slate-200 lg:block" />
@@ -777,6 +670,7 @@ export default function TurfListingPage({
                     value={timeInput}
                     onChange={setTimeInput}
                     options={TIME_SLOT_OPTIONS}
+                    placeholder="HH:MM"
                   />
                 </div>
 
@@ -807,27 +701,27 @@ export default function TurfListingPage({
 
                 {/* Action Buttons: Search Icon Only */}
                 <div className="flex items-center p-2 lg:p-2 lg:pl-1">
-  {hasActiveSearch ? (
-    <button
-      type="button"
-      onClick={handleClearSearch}
-      title="Clear search"
-      aria-label="Clear search"
-      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
-    >
-      <X className="h-4 w-4 stroke-[2.5]" />
-    </button>
-  ) : (
-    <button
-      type="submit"
-      title="Search Turfs"
-      aria-label="Search Turfs"
-      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
-    >
-      <Search className="h-4 w-4 stroke-[2.5]" />
-    </button>
-  )}
-</div>
+                  {hasActiveSearch ? (
+                    <button
+                      type="button"
+                      onClick={handleClearSearch}
+                      title="Clear search"
+                      aria-label="Clear search"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <X className="h-4 w-4 stroke-[2.5]" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      title="Search Turfs"
+                      aria-label="Search Turfs"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-lime-400 text-slate-900 transition-all hover:bg-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <Search className="h-4 w-4 stroke-[2.5]" />
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
 
@@ -883,112 +777,109 @@ export default function TurfListingPage({
         </section>
 
         {/* ─── MAIN LISTING LAYOUT WITH OPTIONAL SPLIT MAP VIEW ─── */}
-        <main className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 pt-2 pb-6">
+        <main className="mx-auto max-w-[1440px] px-6 lg:px-10 pt-2 pb-6">
           {/* ─── MAIN CONTENT: LEFT MAP VIEW + RIGHT TURF LIST ─── */}
           <div
-            className={`flex flex-col xl:flex-row items-start transition-all duration-300 ${
-              showMap ? 'gap-6 xl:gap-8 2xl:gap-10' : 'gap-0'
-            }`}
+            className={`flex flex-col xl:flex-row items-start transition-all duration-300 ${showMap ? 'gap-6 xl:gap-8 2xl:gap-10' : 'gap-0'
+              }`}
           >
             {/* ══════════════════════════════════════
                 LEFT STICKY MAP CONTAINER (ANIMATED COLLAPSE / EXPAND)
                ══════════════════════════════════════ */}
             <div
-              className={`hidden xl:block sticky top-[90px] self-start z-10 transition-all duration-300 ease-in-out overflow-hidden ${
-                showMap
-                  ? 'w-[48%] xl:w-[58%] 2xl:w-[60%] opacity-100 max-h-[700px]'
-                  : 'w-0 opacity-0 max-h-0 pointer-events-none'
-              }`}
+              className={`hidden xl:block sticky top-[90px] self-start z-10 transition-all duration-300 ease-in-out overflow-hidden ${showMap
+                ? 'w-[48%] xl:w-[58%] 2xl:w-[60%] opacity-100 max-h-[700px]'
+                : 'w-0 opacity-0 max-h-0 pointer-events-none'
+                }`}
             >
-                <div className="h-[540px] 2xl:h-[580px] w-full rounded-3xl overflow-hidden bg-slate-100 relative group">
-                  <TurfMap
-                    turfs={searchFilteredTurfs}
-                    selectedTurf={selectedMapTurf}
-                    hoveredTurfId={hoveredFromListId || hoveredFromMapId}
-                    hoveredFromListId={hoveredFromListId}
-                    resetViewKey={resetMapKey}
-                    onSelectTurf={(turf) => {
-                      setSelectedMapTurf(turf);
-                      // Selecting a marker on the map highlights it without redirecting away from the listing page
-                    }}
-                    onHoverTurf={setHoveredFromMapId}
-                    onBoundsChange={setMapBounds}
-                    onNavigateRoute={onNavigateRoute}
-                    searchLocation={appliedLocation}
-                    activeLocationQuery={activeLocationQuery}
-                  />
-                </div>
+              <div className="h-[594px] 2xl:h-[648px] w-full rounded-3xl overflow-hidden bg-slate-100 relative group">
+                <TurfMap
+                  turfs={searchFilteredTurfs}
+                  selectedTurf={selectedMapTurf}
+                  hoveredTurfId={hoveredFromListId || hoveredFromMapId}
+                  hoveredFromListId={hoveredFromListId}
+                  resetViewKey={resetMapKey}
+                  onSelectTurf={(turf) => {
+                    setSelectedMapTurf(turf);
+                    // Selecting a marker on the map highlights it without redirecting away from the listing page
+                  }}
+                  onHoverTurf={setHoveredFromMapId}
+                  onBoundsChange={setMapBounds}
+                  onNavigateRoute={onNavigateRoute}
+                  searchLocation={appliedLocation}
+                  searchLocationCoords={appliedLocationCoords}
+                  activeLocationQuery={activeLocationQuery}
+                />
               </div>
+            </div>
 
-              {/* ══════════════════════════════════════
+            {/* ══════════════════════════════════════
                   RIGHT COLUMN: HEADER ON TOP OF TURF LIST + SCROLLABLE CARDS GRID
                  ══════════════════════════════════════ */}
-              <div
-                className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${
-                  showMap ? 'h-[540px] 2xl:h-[580px]' : ''
+            <div
+              className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${showMap ? 'h-[594px] 2xl:h-[648px]' : ''
                 }`}
-              >
-                {/* Header Bar on Top of Turf List */}
-                <div className="pb-3 mb-2 shrink-0">
-                  {listingLoading ? (
-                    <div className="space-y-1.5 animate-pulse select-none">
-                      <div className="h-6 w-64 max-w-[80%] rounded-lg bg-slate-200" />
-                      <div className="h-4 w-44 max-w-[60%] rounded-md bg-slate-200/80" />
-                    </div>
-                  ) : (
-                    <>
-                      <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                        Futsal Arenas in {appliedLocation || 'Kathmandu Valley'}
-                      </h1>
-                      <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
-                        Over <span className="font-semibold text-slate-800">{filteredTurfs.length} arenas</span> available for instant booking
-                      </p>
-                    </>
-                  )}
-                </div>
+            >
+              {/* Header Bar on Top of Turf List */}
+              <div className="pb-3 mb-2 shrink-0">
+                {listingLoading ? (
+                  <div className="space-y-1.5 animate-pulse select-none">
+                    <div className="h-6 w-64 max-w-[80%] rounded-lg bg-slate-200" />
+                    <div className="h-4 w-44 max-w-[60%] rounded-md bg-slate-200/80" />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                      Futsal Arenas in {appliedLocation || 'Kathmandu Valley'}
+                    </h1>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
+                      Over <span className="font-semibold text-slate-800">{filteredTurfs.length} arenas</span> available for instant booking
+                    </p>
+                  </>
+                )}
+              </div>
 
-                {/* Independently Scrollable Cards Grid (when map open) or Full Grid (when map hidden) */}
-                <div className="relative flex-1 min-h-0 flex flex-col">
-                  {/* Floating Scroll Indicator Signal: Card is ABOVE (Centered) */}
-                  {showMap && offscreenDirection === 'up' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetCard = listScrollContainerRef.current?.querySelector(`[data-turf-id="${hoveredFromMapId}"]`);
-                        targetCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
-                      title="Scroll to hovered arena"
-                      className="absolute top-5 left-1/2 -translate-x-1/2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-white/98 backdrop-blur-md text-[#0f172a] border border-slate-200/90 shadow-[0_4px_16px_rgba(15,23,42,0.16)] cursor-pointer animate-signal-up hover:bg-slate-50 hover:scale-110 transition-all select-none"
-                    >
-                      <ChevronUp className="h-4 w-4 stroke-[3] text-slate-800" />
-                    </button>
-                  )}
-
-                  {/* Floating Scroll Indicator Signal: Card is BELOW (Centered) */}
-                  {showMap && offscreenDirection === 'down' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetCard = listScrollContainerRef.current?.querySelector(`[data-turf-id="${hoveredFromMapId}"]`);
-                        targetCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
-                      title="Scroll to hovered arena"
-                      className="absolute bottom-1 left-1/2 -translate-x-1/2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-white/98 backdrop-blur-md text-[#0f172a] border border-slate-200/90 shadow-[0_4px_16px_rgba(15,23,42,0.16)] cursor-pointer animate-signal-down hover:bg-slate-50 hover:scale-110 transition-all select-none"
-                    >
-                      <ChevronDown className="h-4 w-4 stroke-[3] text-slate-800" />
-                    </button>
-                  )}
-
-                  <div
-                    ref={listScrollContainerRef}
-                    className={`${showMap ? 'overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 flex-1' : ''}`}
+              {/* Independently Scrollable Cards Grid (when map open) or Full Grid (when map hidden) */}
+              <div className="relative flex-1 min-h-0 flex flex-col">
+                {/* Floating Scroll Indicator Signal: Card is ABOVE (Centered) */}
+                {showMap && offscreenDirection === 'up' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetCard = listScrollContainerRef.current?.querySelector(`[data-turf-id="${hoveredFromMapId}"]`);
+                      targetCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    title="Scroll to hovered arena"
+                    className="absolute top-5 left-1/2 -translate-x-1/2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-white/98 backdrop-blur-md text-[#0f172a] border border-slate-200/90 shadow-[0_4px_16px_rgba(15,23,42,0.16)] cursor-pointer animate-signal-up hover:bg-slate-50 hover:scale-110 transition-all select-none"
                   >
+                    <ChevronUp className="h-4 w-4 stroke-[3] text-slate-800" />
+                  </button>
+                )}
+
+                {/* Floating Scroll Indicator Signal: Card is BELOW (Centered) */}
+                {showMap && offscreenDirection === 'down' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetCard = listScrollContainerRef.current?.querySelector(`[data-turf-id="${hoveredFromMapId}"]`);
+                      targetCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    title="Scroll to hovered arena"
+                    className="absolute bottom-1 left-1/2 -translate-x-1/2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-white/98 backdrop-blur-md text-[#0f172a] border border-slate-200/90 shadow-[0_4px_16px_rgba(15,23,42,0.16)] cursor-pointer animate-signal-down hover:bg-slate-50 hover:scale-110 transition-all select-none"
+                  >
+                    <ChevronDown className="h-4 w-4 stroke-[3] text-slate-800" />
+                  </button>
+                )}
+
+                <div
+                  ref={listScrollContainerRef}
+                  className={`${showMap ? 'overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 flex-1' : ''}`}
+                >
                   <div
-                    className={`grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 ${
-                      showMap
-                        ? 'xl:grid-cols-2 2xl:grid-cols-2'
-                        : 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                    }`}
+                    className={`grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 ${showMap
+                      ? 'xl:grid-cols-2 2xl:grid-cols-2'
+                      : 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                      }`}
                   >
                     {listingLoading ? (
                       /* Airbnb-Style Card Skeletons matching exact layout */
@@ -1036,10 +927,28 @@ export default function TurfListingPage({
                           />
                         </div>
                         <div className="space-y-2.5">
-                          <h3 className="text-base font-bold text-slate-900">No Futsal Arenas Available for This Time</h3>
-                          <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
-                            Pan the map or adjust filters to explore available arenas in Kathmandu & Lalitpur.
-                          </p>
+                          {filteringTier === 'no-date' ? (
+                            <>
+                              <h3 className="text-base font-bold text-slate-900">No Futsal Arenas Match Your Filters</h3>
+                              <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                                Try adjusting your location, type, size, price, or amenity filters to see more arenas.
+                              </p>
+                            </>
+                          ) : filteringTier === 'date-only' ? (
+                            <>
+                              <h3 className="text-base font-bold text-slate-900">No Arenas Open on This Day</h3>
+                              <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                                Try selecting a different date or adjusting your other filters.
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <h3 className="text-base font-bold text-slate-900">No Futsal Arenas Available for This Time</h3>
+                              <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                                Try selecting a different time or date, or adjust your filters to explore more options.
+                              </p>
+                            </>
+                          )}
                           <div>
                             <button
                               type="button"
@@ -1064,105 +973,116 @@ export default function TurfListingPage({
                             }}
                             onMouseEnter={() => setHoveredFromListId(turf.id)}
                             onMouseLeave={() => setHoveredFromListId(null)}
-                            className={`group flex flex-col justify-between bg-white cursor-pointer select-none rounded-[22px] transition-all duration-200 ${
-                              isHoveredFromMap ? 'animate-turf-blink' : ''
-                            }`}
+                            className={`group flex flex-col justify-between bg-white cursor-pointer select-none rounded-[22px] transition-all duration-200 ${isHoveredFromMap ? 'animate-turf-blink' : ''
+                              }`}
                           >
-                          <div className="w-full">
-                            {/* Card Image with rounded corners */}
-                            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[20px] bg-slate-100">
-                              <img
-                                src={turf.image}
-                                alt={turf.title}
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = '/image.png';
-                                }}
-                              />
-                            </div>
-
-                            {/* Text details flush with left edge */}
-                            <div className="pt-3 px-0 pb-0">
-                              {/* Badges / Features line */}
-                              <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-                                {turf.type && (
-                                  <span className="flex items-center gap-1">
-                                    <Compass className="h-3.5 w-3.5 text-slate-400" />
-                                    {turf.type}
-                                  </span>
-                                )}
-                                {turf.size && (
-                                  <span className="flex items-center gap-1">
-                                    <Users className="h-3.5 w-3.5 text-slate-400" />
-                                    {turf.size}
-                                  </span>
-                                )}
-                                {turf.parking && (
-                                  <span className="flex items-center gap-1">
-                                    <Car className="h-3.5 w-3.5 text-slate-400" />
-                                    {turf.parking}
-                                  </span>
-                                )}
+                            <div className="w-full">
+                              {/* Card Image with rounded corners */}
+                              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[20px] bg-slate-100">
+                                <img
+                                  src={turf.image}
+                                  alt={turf.title}
+                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/image.png';
+                                  }}
+                                />
                               </div>
 
-                              {/* Title */}
-                              <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors truncate">
-                                {turf.title}
-                              </h3>
-
-                              {/* Rating */}
-                              <div className="mt-1 flex items-center gap-1 text-xs">
-                                <div className="flex text-lime-400">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className="h-4 w-4 fill-lime-400 text-lime-400"
-                                    />
-                                  ))}
+                              {/* Text details flush with left edge */}
+                              <div className="pt-3 px-0 pb-0">
+                                {/* Badges / Features line */}
+                                <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+                                  {turf.type && (
+                                    <span className="flex items-center gap-1">
+                                      <Compass className="h-3.5 w-3.5 text-slate-400" />
+                                      {turf.type}
+                                    </span>
+                                  )}
+                                  {turf.size && (
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3.5 w-3.5 text-slate-400" />
+                                      {turf.size}
+                                    </span>
+                                  )}
+                                  {turf.parking && (
+                                    <span className="flex items-center gap-1">
+                                      <Car className="h-3.5 w-3.5 text-slate-400" />
+                                      {turf.parking}
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="ml-1 text-xs font-semibold text-slate-600">
-                                  {turf.rating} ({turf.reviews})
-                                </span>
+
+                                {/* Title */}
+                                <h3 className="mt-2 text-base font-bold text-slate-900 group-hover:text-lime-600 transition-colors truncate">
+                                  {turf.title}
+                                </h3>
+
+                                {/* Rating */}
+                                <div className="mt-1 flex items-center gap-1 text-xs">
+                                  <div className="flex text-lime-400">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className="h-4 w-4 fill-lime-400 text-lime-400"
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="ml-1 text-xs font-semibold text-slate-600">
+                                    {turf.rating} ({turf.reviews})
+                                  </span>
+                                </div>
+
+                                {/* Availability Status - Tier-specific */}
+                                <div className="mt-2 flex items-center gap-1">
+                                  {(() => {
+                                    const { label, color } = getAvailabilityStatus(turf);
+                                    return (
+                                      <span className={`text-xs font-medium ${color}`}>
+                                        {label}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Footer: Price & CTA flush with left edge */}
-                          <div className="pt-3 px-0 pb-1 flex items-center justify-between">
-                            <span className="text-sm font-semibold text-slate-600">
-                              {turf.price}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              {onNavigateRoute && (
+                            {/* Footer: Price & CTA flush with left edge */}
+                            <div className="pt-3 px-0 pb-1 flex items-center justify-between">
+                              <span className="text-sm font-semibold text-slate-600">
+                                {turf.price}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {onNavigateRoute && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onNavigateRoute(turf);
+                                    }}
+                                    title="Get Directions"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                                  >
+                                    <Navigation className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onNavigateRoute(turf);
+                                    onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                                   }}
-                                  title="Get Directions"
-                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                                  className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
                                 >
-                                  <Navigation className="h-3.5 w-3.5" />
+                                  Book Now
                                 </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
-                                }}
-                                className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
-                              >
-                                Book Now
-                              </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
                   </div>
 
                   {/* ─── PAGINATION CONTROLS (NEON THEME) ─── */}
@@ -1202,11 +1122,10 @@ export default function TurfListingPage({
                               key={pageNum}
                               type="button"
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`h-8 w-8 rounded-full text-xs font-black transition-all cursor-pointer ${
-                                isActive
-                                  ? 'bg-lime-400 text-slate-950'
-                                  : 'text-slate-600 bg-slate-100 hover:bg-lime-50 hover:text-slate-900'
-                              }`}
+                              className={`h-8 w-8 rounded-full text-xs font-black transition-all cursor-pointer ${isActive
+                                ? 'bg-lime-400 text-slate-950'
+                                : 'text-slate-600 bg-slate-100 hover:bg-lime-50 hover:text-slate-900'
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -1224,10 +1143,10 @@ export default function TurfListingPage({
                       </div>
                     </div>
                   )}
-                  </div>
                 </div>
               </div>
             </div>
+          </div>
         </main>
 
         {/* Floating Mobile Map Switcher Button */}
@@ -1246,18 +1165,16 @@ export default function TurfListingPage({
         {/* Backdrop */}
         <div
           onClick={() => setFilterModalOpen(false)}
-          className={`fixed inset-0 z-[60] bg-slate-950/20 transition-opacity duration-300 ${
-            filterModalOpen
-              ? 'opacity-100 pointer-events-auto'
-              : 'opacity-0 pointer-events-none'
-          }`}
+          className={`fixed inset-0 z-[60] bg-slate-950/20 transition-opacity duration-300 ${filterModalOpen
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
+            }`}
         />
 
         {/* Sidebar Drawer Container */}
         <aside
-          className={`fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out border-l border-slate-100 ${
-            filterModalOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out border-l border-slate-100 ${filterModalOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
           aria-label="Filter sidebar"
         >
           {/* Header */}
@@ -1298,11 +1215,10 @@ export default function TurfListingPage({
                       key={name}
                       type="button"
                       onClick={() => handleTypeToggle(name)}
-                      className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
-                        active
-                          ? 'border-lime-400 bg-lime-50/60 text-slate-900 shadow-2xs'
-                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                      className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${active
+                        ? 'border-lime-400 bg-lime-50/60 text-slate-900 shadow-2xs'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
                     >
                       <Icon className={`h-4 w-4 ${active ? 'text-lime-600' : 'text-slate-400'}`} />
                       <span>{name}</span>
@@ -1325,11 +1241,10 @@ export default function TurfListingPage({
                       key={size}
                       type="button"
                       onClick={() => handleSizeToggle(size)}
-                      className={`py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
-                        active
-                          ? 'border-lime-400 bg-lime-50/60 text-slate-900 shadow-2xs'
-                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                      className={`py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${active
+                        ? 'border-lime-400 bg-lime-50/60 text-slate-900 shadow-2xs'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
                     >
                       {size}
                     </button>
@@ -1376,17 +1291,15 @@ export default function TurfListingPage({
                       key={amenity}
                       type="button"
                       onClick={() => handleAmenityToggle(amenity)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-left transition-all cursor-pointer ${
-                        active
-                          ? 'border-lime-400 bg-lime-50/50 text-slate-900'
-                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-semibold text-left transition-all cursor-pointer ${active
+                        ? 'border-lime-400 bg-lime-50/50 text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
                     >
                       <span>{amenity}</span>
                       <span
-                        className={`h-4 w-4 rounded flex items-center justify-center ${
-                          active ? 'bg-lime-400 text-slate-950' : 'border border-slate-300'
-                        }`}
+                        className={`h-4 w-4 rounded flex items-center justify-center ${active ? 'bg-lime-400 text-slate-950' : 'border border-slate-300'
+                          }`}
                       >
                         {active && <Check className="h-3 w-3 stroke-[3]" />}
                       </span>
@@ -1422,4 +1335,3 @@ export default function TurfListingPage({
     </div>
   );
 }
-

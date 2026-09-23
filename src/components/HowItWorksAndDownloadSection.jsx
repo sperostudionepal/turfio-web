@@ -41,7 +41,7 @@ const steps = [
 export default function HowItWorksAndDownloadSection() {
   return (
     <section id="how-it-works" className="bg-white pt-10 pb-8 lg:pt-12 lg:pb-10 border-t border-slate-100/60 overflow-hidden scroll-mt-20">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">
           <span className="text-sm font-semibold text-lime-500">
@@ -110,10 +110,10 @@ export default function HowItWorksAndDownloadSection() {
               Play anywhere
             </span>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Download Turfio
+              Download Turfio Now
             </h2>
             <p className="mt-3 max-w-md text-base font-medium text-slate-500">
-              Your next match is just a tap away.
+              Your next match is just a tap away. Find a nearby arena, pick your time, and book in seconds.
             </p>
 
             {/* App Store & Google Play Badges */}
@@ -223,7 +223,7 @@ export default function HowItWorksAndDownloadSection() {
               </div>
 
               {/* Top Right Floating Card: 4.9 Rating (Hidden on mobile) */}
-              <div className="absolute top-8 -right-4 sm:-right-16 md:-right-8 lg:-right-48 z-10 hidden md:flex items-center gap-2.5 rounded-2xl bg-white py-2 px-3 sm:py-2.5 sm:px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
+              <div className="absolute top-8 -right-4 sm:-right-16 md:-right-8 lg:-right-8 z-10 hidden md:flex items-center gap-2.5 rounded-2xl bg-white py-2 px-3 sm:py-2.5 sm:px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
                 <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
                   <Star className="h-4 w-4 fill-lime-400 text-lime-400" />
                 </div>
@@ -241,7 +241,7 @@ export default function HowItWorksAndDownloadSection() {
               </div>
 
               {/* Bottom Right Floating Card: Invite Friends (Hidden on mobile) */}
-              <div className="absolute bottom-3 -right-4 sm:-right-16 md:-right-8 lg:-right-44 z-10 hidden md:flex items-center gap-2.5 rounded-2xl bg-white py-2 px-3 sm:py-2.5 sm:px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
+              <div className="absolute bottom-3 -right-4 sm:-right-16 md:-right-8 lg:-right-0 z-10 hidden md:flex items-center gap-2.5 rounded-2xl bg-white py-2 px-3 sm:py-2.5 sm:px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
                 <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
                   <Users className="h-4 w-4" />
                 </div>
@@ -257,7 +257,7 @@ export default function HowItWorksAndDownloadSection() {
                 <img
                   src="/mockup.png"
                   alt="Turfio App Mobile Mockup"
-                  className="relative z-0 w-full max-w-[300px] sm:max-w-[340px] md:max-w-[330px] lg:max-w-[420px] object-contain drop-shadow-md transition-transform duration-500 hover:scale-[1.02]"
+                  className="relative z-0 w-full mr-48 max-w-[300px] sm:max-w-[340px] md:max-w-[330px] lg:max-w-[420px] object-contain drop-shadow-md transition-transform duration-500 hover:scale-[1.02]"
                   loading="lazy"
                   decoding="async"
                   width="420"

@@ -42,7 +42,7 @@ const steps = [
 export default function HowItWorksSection() {
   return (
     <section className="bg-white pt-12 pb-12 lg:pt-14 lg:pb-14 border-t border-slate-100/60">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">
           <span className="text-sm font-semibold text-lime-500">

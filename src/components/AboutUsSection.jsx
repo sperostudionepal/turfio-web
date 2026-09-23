@@ -30,7 +30,7 @@ const aboutCards = [
 export default function AboutUsSection() {
   return (
     <section id="about-us" className="bg-white pt-10 pb-16 lg:pt-12 lg:pb-20 border-t border-slate-100 scroll-mt-20">
-      <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
           <span className="text-sm font-semibold text-lime-500">

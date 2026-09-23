@@ -18,6 +18,7 @@ import {
   FALLBACK_OSM_STYLE,
 } from '../../config/mapConfig';
 import { useToast } from './toastContext';
+import LocationAutocomplete from './LocationAutocomplete';
 
 export default function MapPinPositioner({
   initialPosition = { lat: 27.648385, lng: 85.338022 },
@@ -36,13 +37,9 @@ export default function MapPinPositioner({
   const [isDragging, setIsDragging] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [placeName, setPlaceName] = useState('Fetching address...');
 
-  const searchTimeoutRef = useRef(null);
   const reverseGeoTimeoutRef = useRef(null);
 
   // Reverse geocode to get a human-readable place name from coordinates
@@ -366,40 +363,20 @@ export default function MapPinPositioner({
     };
   }, [targetLat, targetLng, registerCustomIcons, reverseGeocode]);
 
-  const handleSearchChange = (val) => {
-    setSearchQuery(val);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!val.trim()) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setShowSuggestions(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5&countrycodes=np`
-        );
-        const data = await response.json();
-        setSuggestions(data || []);
-      } catch (err) {
-        console.error('Nominatim autocomplete error:', err);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 400);
-  };
-
-  const handleSelectSuggestion = (item) => {
-    const lat = parseFloat(item.lat);
-    const lon = parseFloat(item.lon);
-    setSearchQuery(item.display_name);
-    setSuggestions([]);
-    setShowSuggestions(false);
+  const handleSelectLocationFromAutocomplete = (location) => {
+    const lat = location.lat;
+    const lng = location.lon;
+    setSearchQuery(location.display_name);
+    setCurrentCenter({ lat, lng });
+    // Fly to the selected location
     if (mapRef.current) {
-      mapRef.current.flyTo({ center: [lon, lat], zoom: 17, duration: 1500, essential: true });
+      mapRef.current.flyTo({
+        center: [lng, lat],
+        zoom: 17,
+        duration: 1500,
+      });
     }
+    reverseGeocode(lat, lng);
   };
 
   const handleGPSFetch = () => {
@@ -473,36 +450,17 @@ export default function MapPinPositioner({
           {/* Right: Search Bar */}
           <div className="relative w-72 hidden md:block">
             <div className="relative flex items-center">
-              <Search className="absolute left-5 h-4 w-4 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search location (e.g. Hattiban, Lalitpur)"
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onFocus={() => searchQuery && setShowSuggestions(true)}
-                className="w-full pl-12 pr-10 py-3 rounded-full bg-slate-100 text-slate-900 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all placeholder:text-slate-400 placeholder:font-medium"
-              />
-              {isSearching && (
-                <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />
-              )}
-            </div>
-
-            {/* Autocomplete Dropdown */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 max-h-60 overflow-y-auto divide-y divide-slate-50 overflow-hidden z-[1100]">
-                {suggestions.map((item) => (
-                  <button
-                    key={item.place_id}
-                    type="button"
-                    onClick={() => handleSelectSuggestion(item)}
-                    className="w-full px-5 py-3.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-start gap-2.5 cursor-pointer"
-                  >
-                    <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="truncate">{item.display_name}</span>
-                  </button>
-                ))}
+              <Search className="absolute left-5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+              <div className="w-full pl-12 pr-4">
+                <LocationAutocomplete
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSelect={handleSelectLocationFromAutocomplete}
+                  placeholder="Search location (e.g. Hattiban, Lalitpur)"
+                  className="py-3 text-xs"
+                />
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -510,36 +468,17 @@ export default function MapPinPositioner({
       {/* Mobile Search Bar */}
       <div className="w-full md:hidden bg-white border-b border-slate-100 px-6 py-3 z-10 shrink-0">
         <div className="relative flex items-center">
-          <Search className="absolute left-5 h-4 w-4 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search location (e.g. Hattiban, Lalitpur)"
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onFocus={() => searchQuery && setShowSuggestions(true)}
-            className="w-full pl-12 pr-10 py-3 rounded-full bg-slate-100 text-slate-900 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-lime-400 outline-none transition-all placeholder:text-slate-400 placeholder:font-medium"
-          />
-          {isSearching && (
-            <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />
-          )}
-        </div>
-
-        {/* Autocomplete Dropdown Mobile */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 max-h-60 overflow-y-auto divide-y divide-slate-50 overflow-hidden z-[1100]">
-            {suggestions.map((item) => (
-              <button
-                key={item.place_id}
-                type="button"
-                onClick={() => handleSelectSuggestion(item)}
-                className="w-full px-5 py-3.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-start gap-2.5 cursor-pointer"
-              >
-                <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                <span className="truncate">{item.display_name}</span>
-              </button>
-            ))}
+          <Search className="absolute left-5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+          <div className="w-full pl-12 pr-4">
+            <LocationAutocomplete
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onSelect={handleSelectLocationFromAutocomplete}
+              placeholder="Search location (e.g. Hattiban, Lalitpur)"
+              className="py-3 text-xs"
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Map Workspace ── */}

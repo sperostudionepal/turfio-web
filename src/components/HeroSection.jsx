@@ -110,7 +110,7 @@ export default function HeroSection({
           </picture>
         </div>
 
-        <div className={`relative mx-auto max-w-[1440px] px-6 pb-10 md:px-14 md:pb-12 lg:px-20 lg:pb-16 transition-all ${
+        <div className={`relative mx-auto max-w-[1440px] px-6 pb-10 lg:px-10 lg:pb-16 transition-all ${
           hasTopbar
             ? 'pt-12 md:pt-16 lg:pt-20'
             : 'pt-[82px]'
@@ -181,9 +181,9 @@ export default function HeroSection({
             </div>
 
             {/* Right column - hero image with floating cards (Hidden on mobile) */}
-            <div className="hidden lg:flex relative mx-auto h-full w-full max-w-[460px] items-center justify-center lg:mr-0 lg:-translate-x-8">
+            <div className="hidden lg:flex relative mx-auto h-full w-full max-w-[460px] items-center justify-center lg:mr-0 lg:-translate-x-26">
               {/* Top Left Floating Card: Live Slot */}
-              <div className="absolute top-10 -left-36 xl:-left-44 z-10 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
+              <div className="absolute top-10 -left-30 xl:-left-38 z-10 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
                   <Clock className="h-4 w-4" />
                 </div>
@@ -194,7 +194,7 @@ export default function HeroSection({
               </div>
 
               {/* Top Right Floating Card: 4.9 Rating (Shifted further upward) */}
-              <div className="absolute -top-4 -right-20 xl:-right-28 z-20 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
+              <div className="absolute -top-10 -right-20 xl:-right-28 z-20 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
                   <Star className="h-4 w-4 fill-lime-400 text-lime-400" />
                 </div>
@@ -212,7 +212,7 @@ export default function HeroSection({
               </div>
 
               {/* Bottom Left Floating Card: Matchmaking (Shifted upward) */}
-              <div className="absolute bottom-28 -left-36 xl:-left-44 z-20 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
+              <div className="absolute bottom-28 -left-30 xl:-left-38 z-20 flex items-center gap-3 rounded-2xl bg-white py-2.5 px-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100/80">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-600">
                   <Users className="h-4 w-4" />
                 </div>
