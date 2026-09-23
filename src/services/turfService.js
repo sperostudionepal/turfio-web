@@ -260,6 +260,30 @@ export const turfService = {
     return response?.data || response;
   },
 
+  /**
+   * Request cancellation with refund (user side)
+   */
+  async requestCancellation(bookingId, reason) {
+    const response = await apiClient.post(`/bookings/${encodeURIComponent(bookingId)}/request-cancellation`, { reason });
+    return response?.data || response;
+  },
+
+  /**
+   * Approve cancellation request (admin side)
+   */
+  async approveCancellation(bookingId, reviewNotes) {
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/approve-cancellation`, { reviewNotes });
+    return response?.data || response;
+  },
+
+  /**
+   * Reject cancellation request (admin side)
+   */
+  async rejectCancellation(bookingId, reviewNotes) {
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/reject-cancellation`, { reviewNotes });
+    return response?.data || response;
+  },
+
   async createManualBooking(bookingData) {
     const response = await apiClient.post('/bookings/manual', bookingData);
     return response?.data || response;
