@@ -392,17 +392,44 @@ export default function ProfilePage({
                       <p className="text-sm text-slate-500">No bookings yet.</p>
                     ) : (
                       <div className="space-y-3">
-                        {bookings.map((booking) => (
-                          <div key={booking._id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
-                            <div>
-                              <p className="font-bold text-slate-900">{booking.turf?.name || 'Turf booking'}</p>
-                              <p className="text-xs text-slate-500">{booking.dateStr} · {booking.timeSlot}</p>
+                        {bookings.map((booking) => {
+                          const totalAmount = Number(booking.totalAmount || 0);
+                          const paidAmount = Number(booking.totalPaidAmount || 0);
+                          const dueAmount = Math.max(0, totalAmount - paidAmount);
+                          
+                          return (
+                            <div key={booking._id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-slate-900">{booking.turf?.name || 'Turf booking'}</p>
+                                <p className="text-xs text-slate-500">{booking.dateStr} · {booking.timeSlot}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    booking.paymentStatus === 'Paid' 
+                                      ? 'bg-emerald-100 text-emerald-700' 
+                                      : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {booking.paymentStatus}
+                                  </span>
+                                  {dueAmount > 0 && (
+                                    <span className="text-[10px] font-bold text-amber-600">
+                                      Due: NPR {dueAmount.toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="text-sm font-black text-slate-900 block">
+                                  NPR {totalAmount.toLocaleString()}
+                                </span>
+                                {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
+                                  <span className="text-[10px] font-medium text-slate-500">
+                                    Deposit paid
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-sm font-black text-slate-900">
-                              NPR {Number(booking.totalAmount || 0).toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
