@@ -67,6 +67,9 @@ const mapServerBooking = (booking) => ({
   amount: Number(booking.totalAmount || 0),
   paid: paidAmount(booking),
   due: Math.max(0, Number(booking.totalAmount || 0) - paidAmount(booking)),
+  depositAmount: Number(booking.depositAmount || 0),
+  remainingBalance: Number(booking.remainingBalance || 0),
+  depositPaid: booking.depositPaid || false,
   paymentType: booking.paymentType || 'full',
   paymentMethod: booking.paymentMethod || '—',
   paymentStatus: booking.paymentStatus || 'Pending',
@@ -659,6 +662,7 @@ function BookingsPage({
                     {sortHeader('Court Pitch', 'court', 'pb-3 pr-6 min-w-[110px]')}
                     {sortHeader('Date & Time Slot', 'when')}
                     {sortHeader('Total Amount', 'amount')}
+                    {sortHeader('Due Amount', 'due')}
                     {sortHeader('Payment', 'payment')}
                     {sortHeader('Status', 'status')}
                     <th className="pb-3 text-right">Actions</th>
@@ -727,6 +731,11 @@ function BookingsPage({
                         </div>
                       </td>
                       <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(b.amount || 0).toLocaleString('en-NP')}</td>
+                      <td className="py-3.5 pr-4 whitespace-nowrap">
+                        <span className={`text-sm font-black ${b.due > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          NRs. {Number(b.due || 0).toLocaleString('en-NP')}
+                        </span>
+                      </td>
                       <td className="py-3.5 pr-4 whitespace-nowrap">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                           b.paymentStatus === 'Paid'
