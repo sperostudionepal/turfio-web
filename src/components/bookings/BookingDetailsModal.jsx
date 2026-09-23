@@ -122,6 +122,18 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                 {booking.paymentStatus}
               </span>
             </div>
+            {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
+              <div className="pt-2 border-t border-amber-100 bg-amber-50/30 -mx-4 px-4 pb-2 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-700 font-bold text-[11px]">Deposit Paid (20%)</span>
+                  <span className="font-extrabold text-emerald-600">{money(booking.depositAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-700 font-bold text-[11px]">Pay at Venue</span>
+                  <span className="font-extrabold text-amber-700">{money(booking.remainingBalance)}</span>
+                </div>
+              </div>
+            )}
             <div className="pt-2 border-t border-slate-100 space-y-1.5">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-semibold">Total price</span>
