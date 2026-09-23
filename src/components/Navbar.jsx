@@ -27,6 +27,7 @@ export default function Navbar({
   onPricing,
   onAboutUs,
   isInitializing = false,
+  hideTopbar = false,
 }) {
   const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,10 +78,10 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)]">
       {/* Contextual Top Banner: Turf Approval Banner for approved venue admins OR Marketing Topbar for non-logged-in visitors */}
-      {user && user.isTurfAdmin && !user.turfApprovalBannerSeen ? (
+      {!hideTopbar && (user && user.isTurfAdmin && !user.turfApprovalBannerSeen ? (
         /* Turf Approval Notification Banner */
         <div className="border-b border-lime-100/40 bg-lime-50">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 md:px-14 lg:px-20 text-[13px] font-medium text-slate-900">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-10 text-[13px] font-medium text-slate-900">
             <div className="flex items-center gap-2">
               <span className="shrink-0 text-base">🎉</span>
               <span>Congratulations! Your turf listing request has been approved and your venue is ready.</span>
@@ -111,7 +112,7 @@ export default function Navbar({
       ) : !user || (user.role !== 'owner' && user.role !== 'admin' && !user.isTurfAdmin) ? (
         /* Topbar — shown ONLY for logged out visitors and non-admin player accounts */
         <div className="border-b border-lime-100/40 bg-lime-50">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 md:px-14 lg:px-20">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-10">
             {/* Left — announcement */}
             <div className="flex items-center gap-2 text-[13px] font-medium text-slate-900">
               <Clock className="h-3.5 w-3.5 shrink-0 text-lime-500" />
@@ -170,10 +171,10 @@ export default function Navbar({
             </div>
           </div>
         </div>
-      ) : null}
+      ) : null)}
 
       {/* Main Navbar Row */}
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 md:px-14 lg:px-20">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 lg:px-10">
         {/* Brand Logo */}
         <a href="#" onClick={(e) => { e.preventDefault(); onHome?.(); }} className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity">
           <picture>

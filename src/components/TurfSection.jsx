@@ -201,7 +201,7 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
   const isLoading = propLoading || (loadingRealTurfs && activeTurfs.length === 0);
   return (
     <section id="popular-turfs" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16 scroll-mt-20">
-      <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-8">
           {/* Left Column: Heading & Info */}
           <div className="flex flex-col justify-center lg:col-span-3 lg:pt-2">
@@ -226,9 +226,9 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
           </div>
 
           {/* Right Column: Turf Cards Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-9 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-9 lg:grid-cols-4">
             {isLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
+              Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={`turf-skeleton-${index}`}
                   className="flex flex-col justify-between bg-white animate-pulse select-none"
