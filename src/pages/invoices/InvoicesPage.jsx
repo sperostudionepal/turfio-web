@@ -125,6 +125,9 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
           vat: 0,
           totalAmount: Number(booking.totalAmount || 0),
           paidAmount: Number(booking.totalPaidAmount || 0),
+          depositAmount: Number(booking.depositAmount || 0),
+          remainingBalance: Number(booking.remainingBalance || 0),
+          paymentType: booking.paymentType || 'full',
           paymentMethod: booking.paymentMethod || '—',
           paymentStatus: booking.paymentStatus || 'Pending',
           status: booking.paymentStatus === 'Paid' ? 'Paid' : booking.status === 'Cancelled' ? 'Cancelled' : 'Unpaid',
@@ -292,15 +295,36 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
       doc.setTextColor(...dark);
       doc.text('NRs. 0', 192, summaryY + 6, { align: 'right' });
 
+      // Show deposit breakdown if it's a venue payment
+      let depositLinesAdded = 0;
+      if (invoice.paymentType === 'venue' && invoice.depositAmount > 0) {
+        const depositStr = `NRs. ${Number(invoice.depositAmount || 0).toLocaleString('en-NP')}`;
+        const balanceStr = `NRs. ${Number(invoice.remainingBalance || 0).toLocaleString('en-NP')}`;
+        
+        doc.setFontSize(8.5);
+        doc.setTextColor(217, 119, 6); // amber-600
+        doc.text('Deposit Paid (20%):', 135, summaryY + 12);
+        doc.setTextColor(16, 185, 129); // emerald-500
+        doc.text(depositStr, 192, summaryY + 12, { align: 'right' });
+        
+        doc.setTextColor(217, 119, 6);
+        doc.text('Balance at Venue:', 135, summaryY + 18);
+        doc.setTextColor(217, 119, 6);
+        doc.text(balanceStr, 192, summaryY + 18, { align: 'right' });
+        
+        depositLinesAdded = 12;
+        doc.setFontSize(9);
+      }
+
       doc.setDrawColor(...borderGray);
       doc.setLineWidth(0.4);
-      doc.line(130, summaryY + 10, 196, summaryY + 10);
+      doc.line(130, summaryY + 10 + depositLinesAdded, 196, summaryY + 10 + depositLinesAdded);
 
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...emerald);
-      doc.text('Total Amount Due:', 135, summaryY + 18);
-      doc.text(amountStr, 192, summaryY + 18, { align: 'right' });
+      doc.text('Total Amount Due:', 135, summaryY + 18 + depositLinesAdded);
+      doc.text(amountStr, 192, summaryY + 18 + depositLinesAdded, { align: 'right' });
 
       // Verification stamp / seal box
       doc.setDrawColor(...borderGray);
@@ -835,8 +859,22 @@ function InvoicesPage({ user, activeTab, setActiveTab }) {
                     <span className="font-semibold">VAT (0% / Exempt)</span>
                     <span className="font-bold text-slate-900">NRs. 0</span>
                   </div>
+                  {selectedInvoice.paymentType === 'venue' && selectedInvoice.depositAmount > 0 && (
+                    <>
+                      <div className="pt-2 border-t border-amber-100 bg-amber-50/30 -mx-4 px-4 pb-2 space-y-1.5">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-amber-700">Deposit Paid (20%)</span>
+                          <span className="font-extrabold text-emerald-600">NRs. {Number(selectedInvoice.depositAmount || 0).toLocaleString('en-NP')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-amber-700">Balance at Venue</span>
+                          <span className="font-extrabold text-amber-700">NRs. {Number(selectedInvoice.remainingBalance || 0).toLocaleString('en-NP')}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-extrabold text-slate-900">
-                    <span>Total Amount Paid</span>
+                    <span>Total Amount {selectedInvoice.paymentType === 'venue' && selectedInvoice.depositAmount > 0 ? '' : 'Paid'}</span>
                     <span className="font-black text-emerald-600 text-base">
                       NRs. {Number(selectedInvoice.totalAmount || 0).toLocaleString('en-NP')}
                     </span>
