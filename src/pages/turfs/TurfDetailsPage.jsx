@@ -750,7 +750,7 @@ export default function TurfDetailsPage({
       />
 
       {/* ─── BREADCRUMB (ABOVE GALLERY) ─── */}
-      <div className="mx-auto max-w-[1440px] px-6 pt-6 pb-3.5 md:px-14 lg:px-20">
+      <div className="mx-auto max-w-[1440px] px-6 pt-6 pb-3.5 lg:px-10">
         <nav className="flex items-center gap-2 text-xs md:text-sm font-medium text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -775,7 +775,7 @@ export default function TurfDetailsPage({
       </div>
 
       {/* ─── SECTION 1: 5-IMAGE SHOWCASE GRID (NO BORDER) ─── */}
-      <section className="mx-auto max-w-[1440px] px-6 pb-2 md:px-14 lg:px-20">
+      <section className="mx-auto max-w-[1440px] px-6 pb-2 lg:px-10">
         {/* Desktop 5-Photo Mosaic Grid */}
         <div className="hidden md:grid md:grid-cols-4 md:grid-rows-2 gap-3.5 h-[380px] lg:h-[430px] rounded-2xl overflow-hidden relative shadow-lg shadow-slate-200/50">
           {/* Main Hero Shot */}
@@ -862,7 +862,7 @@ export default function TurfDetailsPage({
       </section>
 
       {/* ─── MAIN TWO-COLUMN CONTENT GRID (EXPLICIT FR + FIXED SIDEBAR) ─── */}
-      <main className="mx-auto max-w-[1440px] px-6 py-6 md:px-14 lg:px-20">
+      <main className="mx-auto max-w-[1440px] px-6 py-6 lg:px-10">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_440px] lg:gap-8 xl:gap-12">
           {/* ══════════════════════════════════════
               LEFT MAIN CONTENT COLUMN (NO BORDERS)
@@ -1445,7 +1445,7 @@ export default function TurfDetailsPage({
       {/* ─── SIMILAR TURFS NEARBY (DESKTOP ONLY) ─── */}
       {similarTurfs.length > 0 && (
         <section className="hidden md:block bg-white py-12 md:py-16">
-          <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+          <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
             <div className="flex items-end justify-between mb-8">
               <div>
                 <span className="text-sm font-semibold text-lime-500">

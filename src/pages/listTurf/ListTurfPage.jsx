@@ -410,7 +410,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
 
       {/* 1. Main Registration Form & How It Works Column */}
       <section className="pt-6 md:pt-10 pb-16 md:pb-24">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+        <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
             
             {/* Left Column: Form */}
@@ -1118,7 +1118,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
           />
         </div>
 
-        <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20">
+        <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Hero Content */}
