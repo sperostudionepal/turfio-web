@@ -7,6 +7,7 @@ import {
   Minimize2,
   Plus,
   Minus,
+  Compass,
 } from 'lucide-react';
 import {
   MAPTILER_KEY,
@@ -29,6 +30,7 @@ export default function TurfMap({
   onBoundsChange,
   onNavigateRoute,
   searchLocation = '',
+  searchLocationCoords = null,
   activeLocationQuery = 'Kathmandu, Nepal',
   className = '',
 }) {
@@ -44,6 +46,7 @@ export default function TurfMap({
 
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapHasBeenMoved, setMapHasBeenMoved] = useState(false);
 
   // Helper to get active style spec / URL
   const getActiveStyle = useCallback(
@@ -69,6 +72,7 @@ export default function TurfMap({
       try {
         const bounds = map.getBounds();
         if (bounds) {
+          setMapHasBeenMoved(true);
           onBoundsChange({
             north: bounds.getNorth(),
             south: bounds.getSouth(),
@@ -81,6 +85,29 @@ export default function TurfMap({
       }
     }, 150);
   }, [onBoundsChange]);
+
+  // Pan/zoom to search location when coordinates are provided
+  useEffect(() => {
+    if (!mapRef.current || !searchLocationCoords) return;
+
+    const { lat, lng } = searchLocationCoords;
+    if (typeof lat !== 'number' || typeof lng !== 'number') return;
+
+    // Fly to the selected location with appropriate zoom
+    mapRef.current.flyTo({
+      center: [lng, lat],
+      zoom: 14, // Neighborhood/ward level zoom
+      duration: 1500,
+      essential: true,
+    });
+
+    // Trigger bounds change after pan completes to filter results
+    const moveendHandler = () => {
+      emitBounds();
+      mapRef.current.off('moveend', moveendHandler);
+    };
+    mapRef.current.on('moveend', moveendHandler);
+  }, [searchLocationCoords, emitBounds]);
 
   // Initialize MapLibre GL instance
   useEffect(() => {
@@ -647,11 +674,13 @@ export default function TurfMap({
     const bounds = new maplibregl.LngLatBounds();
     validTurfs.forEach((t) => bounds.extend([t.lng, t.lat]));
 
-    map.fitBounds(bounds, {
-      padding: 55,
-      maxZoom: 14.5,
-      duration: 900,
-    });
+    if (validTurfs.length > 0) {
+      map.fitBounds(bounds, {
+        padding: 55,
+        maxZoom: 14.5,
+        duration: 900,
+      });
+    }
   }, [turfs]);
 
   // Reset map view when requested externally via resetViewKey
@@ -703,8 +732,8 @@ export default function TurfMap({
       {/* Native MapLibre WebGL Canvas Container */}
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* ── Top-Left Info Card ── */}
-      {(() => {
+      {/* ── Top-Left Info Card (Only show when turf selected or location searched) ── */}
+      {(selectedTurf || searchLocation) && (() => {
         const displayTitle = selectedTurf
           ? selectedTurf.title
           : searchLocation
