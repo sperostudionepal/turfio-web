@@ -4,8 +4,7 @@
  */
 
 // Cancelled/Completed come straight from the server. Otherwise a booking is Confirmed once money has been
-// received (fully or in part, e.g. a split payment) or the owner has confirmed it (e.g. Pay at Venue),
-// and Pending until then.
+// received (fully or in part) or the owner has confirmed it (e.g. Pay at Venue), and Pending until then.
 export const deriveBookingStatus = (booking) => {
   if (booking.status === 'Cancelled' || booking.status === 'Completed') return booking.status;
   const moneyReceived = booking.paymentStatus === 'Paid' || Number(booking.totalPaidAmount || 0) > 0;

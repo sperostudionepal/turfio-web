@@ -7,8 +7,8 @@
 // Waiting for the owner to accept it
 export const canConfirm = (booking) => booking.bookingStatus === 'Pending';
 
-// Cancelled bookings and split bookings (each player pays their own share) can't be paid in person here
+// Cancelled bookings can't be paid in person here
 export const canMarkPaid = (booking) =>
-  booking.bookingStatus !== 'Cancelled' && booking.paymentStatus !== 'Paid' && booking.paymentType !== 'split';
+  booking.bookingStatus !== 'Cancelled' && booking.paymentStatus !== 'Paid';
 
 export const canCancel = (booking) => booking.bookingStatus !== 'Cancelled' && booking.bookingStatus !== 'Completed';

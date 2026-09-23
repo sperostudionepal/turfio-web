@@ -143,9 +143,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
             <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment history</h5>
             {booking.payments.length === 0 ? (
               <p className="text-[11px] text-slate-400 font-medium bg-slate-50 rounded-xl px-3 py-2.5">
-                {booking.paymentType === 'split'
-                  ? 'No shares paid yet. Each player pays their share through their own payment link.'
-                  : 'No payments recorded yet.'}
+                No payments recorded yet.
               </p>
             ) : (
               <div className="rounded-xl border border-slate-100 divide-y divide-slate-50 overflow-hidden">

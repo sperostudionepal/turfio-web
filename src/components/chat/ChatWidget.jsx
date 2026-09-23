@@ -47,13 +47,13 @@ const QUICK_ACTIONS = [
     title: 'How does booking work?',
     subtitle: 'Get started guide',
     icon: Users,
-    query: 'How does split payment work?',
+    query: 'How do I book a turf?',
   },
 ];
 
 const PROMPT_SUGGESTIONS = [
   'Are there any free slots tomorrow evening?',
-  'Can I split payment with my friends?',
+  'What payment methods can I use?',
   'Show turfs in Lalitpur',
 ];
 
