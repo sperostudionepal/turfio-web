@@ -702,7 +702,10 @@ function BookingsPage({
                     </tr>
                   ) : paginatedBookings.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-50/50 transition-colors whitespace-nowrap">
-                      <td className="py-3.5 pr-4 font-bold text-emerald-600 text-sm whitespace-nowrap">{b.id}</td>
+                      <td className="py-3.5 pr-4 whitespace-nowrap">
+                        <p className="font-bold text-emerald-600 text-sm leading-tight">{b.id}</p>
+                        <p className="text-xs text-slate-400 font-medium leading-tight mt-0.5">{b.bookedOn}</p>
+                      </td>
                       <td className="py-3.5 pr-6 min-w-[210px] whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <img
