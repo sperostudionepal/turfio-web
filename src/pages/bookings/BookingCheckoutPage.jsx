@@ -65,33 +65,6 @@ function EsewaIcon({ className = 'h-5 w-5' }) {
   );
 }
 
-function FonepayIcon({ className = 'h-full w-full' }) {
-  return (
-    <svg
-      viewBox="0 0 460 180"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect width="460" height="180" rx="36" fill="#D31D24" />
-      <g fill="#FFFFFF">
-        {/* f */}
-        <path d="M68 45 C55 45 44 54 44 70 L44 80 L30 80 L30 102 L44 102 L44 144 L70 144 L70 102 L86 102 L90 80 L70 80 L70 70 C70 66 73 63 78 63 L90 63 L90 45 Z" />
-        {/* o */}
-        <path d="M136 78 C114 78 98 94 98 116 C98 138 114 154 136 154 C158 154 174 138 174 116 C174 94 158 78 136 78 Z M136 132 C125 132 120 125 120 116 C120 107 125 100 136 100 C147 100 152 107 152 116 C152 125 147 132 136 132 Z" />
-        {/* n */}
-        <path d="M182 80 L182 144 L204 144 L204 112 C204 103 209 98 217 98 C225 98 229 103 229 112 L229 144 L251 144 L251 106 C251 90 241 80 225 80 C214 80 206 85 201 93 L201 80 Z" />
-        {/* e */}
-        <path d="M294 78 C272 78 257 94 257 116 C257 138 273 154 296 154 C311 154 324 146 329 132 L308 126 C306 131 301 135 295 135 C286 135 279 129 278 119 L332 119 C332 117 333 113 333 110 C333 92 318 78 294 78 Z M279 104 C281 97 287 93 294 93 C302 93 308 97 310 104 Z" />
-        {/* Wi-Fi Waves */}
-        <path d="M362 55 C377 70 377 94 362 109 L374 121 C395 100 395 64 374 43 Z" />
-        <path d="M344 73 C353 82 353 96 344 105 L356 117 C371 102 371 76 356 61 Z" />
-        <circle cx="328" cy="98" r="10" />
-      </g>
-    </svg>
-  );
-}
-
 export default function BookingCheckoutPage({
   onLogin,
   user,
@@ -128,7 +101,7 @@ export default function BookingCheckoutPage({
       teamName: '',
       expectedPlayers: turf?.size?.includes('5') ? 10 : 14,
       paymentType: 'full', // 'full' | 'venue'
-      selectedPaymentMethod: 'esewa', // 'esewa' | 'fonepay' | 'venue'
+      selectedPaymentMethod: 'esewa', // 'esewa' only
       fullName:
         user?.name ||
         user?.fullName ||
@@ -422,16 +395,6 @@ export default function BookingCheckoutPage({
       bgLight: 'bg-emerald-100',
       description: 'Pay directly with your registered eSewa ID',
     },
-    {
-      id: 'fonepay',
-      name: 'Fonepay QR / Mobile Banking',
-      tag: 'Scan & Pay',
-      customIcon: FonepayIcon,
-      color: 'bg-transparent',
-      textColor: 'text-rose-700',
-      bgLight: 'bg-rose-100',
-      description: 'Scan QR with any mobile banking app',
-    },
   ];
 
   const steps = [
@@ -615,7 +578,7 @@ export default function BookingCheckoutPage({
           totalAmount: totalAmount,
           totalPaidAmount: 0,
           paymentType: formData.paymentType || 'venue',
-          paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'Fonepay',
+          paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'eSewa',
           paymentStatus: 'Pending',
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
@@ -1364,7 +1327,7 @@ export default function BookingCheckoutPage({
                           <p>• <span className="font-bold">Pay Now:</span> NPR {depositAmount.toLocaleString()} deposit (20% of total)</p>
                           <p>• <span className="font-bold">Pay at Venue:</span> NPR {remainingBalance.toLocaleString()} remaining balance</p>
                           <p className="mt-2 pt-2 border-t border-amber-200">
-                            Please arrive at least 15 minutes before kickoff to clear the remaining payment at the counter via Cash or Fonepay QR.
+                            Please arrive at least 15 minutes before kickoff to clear the remaining payment at the counter via Cash or Mobile Banking.
                           </p>
                         </div>
                       </div>
