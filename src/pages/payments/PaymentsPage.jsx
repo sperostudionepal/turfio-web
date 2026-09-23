@@ -15,7 +15,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
-import { formatNepalDateTime } from '../../utils/dateTime';
+import { formatNepalDateTimeParts } from '../../utils/dateTime';
 
 const METHOD_BADGE = {
   eSewa: 'bg-emerald-600 text-white',
@@ -113,13 +113,17 @@ function PaymentsPage({ activeTab, setActiveTab }) {
   const paginatedPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-hidden select-none">
-      {/* Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-hidden select-none">
+      {/* Top Header Bar across full window width */}
+      <TopBar />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar />
+      {/* Main Body Section: Left Sidebar + Right Content Area */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Sidebar */}
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
@@ -252,7 +256,17 @@ function PaymentsPage({ activeTab, setActiveTab }) {
                           <span className="text-xs text-slate-400 font-medium">{p.customer?.phone || '—'}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 pr-4 font-medium text-slate-600 text-sm whitespace-nowrap">{formatNepalDateTime(p.paidAt)}</td>
+                      <td className="py-3.5 pr-4 whitespace-nowrap">
+                        {(() => {
+                          const { date, time } = formatNepalDateTimeParts(p.paidAt);
+                          return (
+                            <div className="leading-tight">
+                              <p className="font-medium text-slate-600 text-sm">{date}</p>
+                              <p className="text-xs text-slate-400 font-medium">{time}</p>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="py-3.5 pr-4 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold inline-flex items-center gap-1.5 ${METHOD_BADGE[p.method] || 'bg-slate-200 text-slate-700'}`}>
                           {p.method}
@@ -335,6 +349,7 @@ function PaymentsPage({ activeTab, setActiveTab }) {
             </div>
           </div>
         </main>
+        </div>
       </div>
 
       {/* Payment Receipt Modal */}
@@ -373,7 +388,12 @@ function PaymentsPage({ activeTab, setActiveTab }) {
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-slate-50">
                   <span className="text-slate-400 font-medium">Transaction Date</span>
-                  <span className="font-bold text-slate-900">{formatNepalDateTime(selectedPayment.paidAt)}</span>
+                  <span className="font-bold text-slate-900">
+                    {(() => {
+                      const { date, time } = formatNepalDateTimeParts(selectedPayment.paidAt);
+                      return `${date}, ${time}`;
+                    })()}
+                  </span>
                 </div>
                 {selectedPayment.transactionId && (
                   <div className="flex justify-between py-1.5 border-b border-slate-50">

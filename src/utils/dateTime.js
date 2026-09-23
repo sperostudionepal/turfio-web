@@ -155,6 +155,32 @@ export function formatNepalDateTime(value) {
 }
 
 /**
+ * Same as formatNepalDateTime but split into { date, time } so callers can stack
+ * them on two lines instead of one wide "12 Jun 2026, 09:15 AM" string.
+ */
+export function formatNepalDateTimeParts(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return { date: '—', time: '' };
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kathmandu',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  );
+  return {
+    date: `${parts.day} ${parts.month} ${parts.year}`,
+    time: `${parts.hour}:${parts.minute} ${parts.dayPeriod}`,
+  };
+}
+
+/**
  * Processes and filters slots for a given date:
  * 1. Skips / removes past slots completely when viewing today or past dates.
  * 2. For future slots, marks which are Available vs Booked / Held.
