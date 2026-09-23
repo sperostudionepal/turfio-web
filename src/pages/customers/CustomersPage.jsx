@@ -38,7 +38,7 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
         const customer = booking.user;
         if (!customer?._id) return;
         const existing = grouped.get(customer._id) || {
-          id: `CUS-${customer._id.slice(-6).toUpperCase()}`,
+          id: `TUF-${customer._id.slice(-6).toUpperCase()}`,
           name: [customer.firstName, customer.lastName].filter(Boolean).join(' ') || 'Customer',
           phone: customer.phone || '—',
           email: customer.email || '—',

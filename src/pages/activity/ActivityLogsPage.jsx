@@ -126,7 +126,7 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
       action: 'Created',
       actionTag: 'bg-emerald-50 text-emerald-600 dot-emerald',
       detailsTitle: 'New customer registered',
-      detailsSub: 'Customer ID: #CUS-2026-0067',
+      detailsSub: 'Customer ID: #TUF-2026-0067',
       ip: '192.168.1.13',
     },
     {
@@ -162,7 +162,7 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
       action: 'Deleted',
       actionTag: 'bg-amber-50 text-amber-600 dot-amber',
       detailsTitle: 'Deleted customer',
-      detailsSub: 'Customer ID: #CUS-2026-0065',
+      detailsSub: 'Customer ID: #TUF-2026-0065',
       ip: '192.168.1.14',
     },
   ]);
