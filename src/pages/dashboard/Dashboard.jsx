@@ -45,6 +45,9 @@ function Dashboard({ user, onLogout }) {
   // Lets the top bar / dashboard cards open the Bookings tab with a search, filter or the New Booking form.
   // Changing the nonce remounts the Bookings page so it starts from these values.
   const [bookingIntent, setBookingIntent] = useState({ nonce: 0, search: '', status: 'All', date: 'all', openAdd: false });
+  // Same deep-link pattern for the top bar's global search jumping straight to a Payment or Customer ID.
+  const [paymentIntent, setPaymentIntent] = useState({ nonce: 0, search: '' });
+  const [customerIntent, setCustomerIntent] = useState({ nonce: 0, search: '' });
 
   const loadVenue = () => {
     const userId = user?._id || user?.id;
@@ -109,6 +112,14 @@ function Dashboard({ user, onLogout }) {
     setBookingIntent((prev) => ({ nonce: prev.nonce + 1, search, status, date, openAdd }));
     setActiveTab('Bookings');
   };
+  const openPayments = ({ search = '' } = {}) => {
+    setPaymentIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setActiveTab('Payments');
+  };
+  const openCustomers = ({ search = '' } = {}) => {
+    setCustomerIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setActiveTab('Customers');
+  };
 
   const pendingCount = ownerBookings.filter((b) => isActiveBooking(b) && deriveBookingStatus(b) === 'Pending').length;
 
@@ -124,6 +135,8 @@ function Dashboard({ user, onLogout }) {
     refreshVenue,
     refreshBookings,
     openBookings,
+    openPayments,
+    openCustomers,
     pendingCount,
     isMobileMenuOpen,
     toggleMobileMenu: () => setIsMobileMenuOpen((open) => !open),
@@ -146,8 +159,20 @@ function Dashboard({ user, onLogout }) {
         initialAddOpen={bookingIntent.openAdd}
       />
     ),
-    Customers: <CustomersPage {...pageProps} />,
-    Payments: <PaymentsPage {...pageProps} />,
+    Customers: (
+      <CustomersPage
+        key={customerIntent.nonce}
+        {...pageProps}
+        initialSearch={customerIntent.search}
+      />
+    ),
+    Payments: (
+      <PaymentsPage
+        key={paymentIntent.nonce}
+        {...pageProps}
+        initialSearch={paymentIntent.search}
+      />
+    ),
     Invoices: <InvoicesPage {...pageProps} />,
     Pricing: <PricingPage {...pageProps} />,
     Coupons: <CouponsPage {...pageProps} />,

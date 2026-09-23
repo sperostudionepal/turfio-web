@@ -21,8 +21,8 @@ import {
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
 
-function CustomersPage({ user, activeTab, setActiveTab }) {
-  const [searchQuery, setSearchQuery] = useState('');
+function CustomersPage({ user, activeTab, setActiveTab, initialSearch = '' }) {
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);

@@ -27,8 +27,8 @@ const METHOD_BADGE = {
 
 const formatNpr = (amount) => `NRs. ${Math.round(Number(amount) || 0).toLocaleString('en-NP')}`;
 
-function PaymentsPage({ activeTab, setActiveTab }) {
-  const [searchQuery, setSearchQuery] = useState('');
+function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
