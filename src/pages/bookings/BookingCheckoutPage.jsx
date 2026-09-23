@@ -462,11 +462,11 @@ export default function BookingCheckoutPage({
       if (formData.selectedPaymentMethod === 'esewa') {
         try {
           setIsProcessingPayment(true);
-          
+
           const isVenueDeposit = formData.paymentType === 'venue';
           const payAmount = isVenueDeposit ? depositAmount : totalAmount;
-          
-          triggerToast(isVenueDeposit 
+
+          triggerToast(isVenueDeposit
             ? `Processing NPR ${depositAmount.toLocaleString()} deposit payment...`
             : 'Connecting to eSewa payment gateway...');
 
@@ -654,31 +654,28 @@ export default function BookingCheckoutPage({
                           updateStep(step.id);
                         }
                       }}
-                      className={`flex items-center gap-3 transition-all ${
-                        step.id <= currentStep ? 'cursor-pointer' : 'cursor-default'
-                      }`}
+                      className={`flex items-center gap-3 transition-all ${step.id <= currentStep ? 'cursor-pointer' : 'cursor-default'
+                        }`}
                     >
                       <div
-                        className={`flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full font-black text-xs md:text-sm transition-all shadow-xs ${
-                          isDone
-                            ? 'bg-lime-400 text-slate-950 font-black'
-                            : isActive
+                        className={`flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full font-black text-xs md:text-sm transition-all shadow-xs ${isDone
+                          ? 'bg-lime-400 text-slate-950 font-black'
+                          : isActive
                             ? 'bg-lime-400 text-slate-950 font-black ring-4 ring-lime-100'
                             : 'bg-slate-100 text-slate-400'
-                        }`}
+                          }`}
                       >
                         {isDone ? <Check className="h-4 w-4 stroke-[3]" /> : step.id}
                       </div>
 
                       <div className="hidden sm:block text-left">
                         <p
-                          className={`text-xs md:text-sm font-bold leading-none ${
-                            isActive
-                              ? 'text-slate-900 font-extrabold'
-                              : isDone
+                          className={`text-xs md:text-sm font-bold leading-none ${isActive
+                            ? 'text-slate-900 font-extrabold'
+                            : isDone
                               ? 'text-slate-800'
                               : 'text-slate-400'
-                          }`}
+                            }`}
                         >
                           {step.title}
                         </p>
@@ -692,9 +689,8 @@ export default function BookingCheckoutPage({
                     {idx < steps.length - 1 && (
                       <div className="flex-1 mx-2 md:mx-4 h-1 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all duration-500 ${
-                            currentStep > step.id ? 'bg-lime-400 w-full' : 'bg-transparent w-0'
-                          }`}
+                          className={`h-full transition-all duration-500 ${currentStep > step.id ? 'bg-lime-400 w-full' : 'bg-transparent w-0'
+                            }`}
                         />
                       </div>
                     )}
@@ -747,7 +743,7 @@ export default function BookingCheckoutPage({
 
           {/* 2-Column Split Hub Grid (Matching ApplicationSubmittedPage) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start max-w-4xl mx-auto">
-            
+
             {/* Left Column: Match Pass & Primary Actions */}
             <div className="lg:col-span-6 space-y-4 w-full">
 
@@ -925,11 +921,10 @@ export default function BookingCheckoutPage({
                   <Wallet className="h-4.5 w-4.5 text-lime-600" />
                   <span>Payment Information</span>
                 </h3>
-                <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full ${
-                  formData.paymentType === 'venue'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-lime-100 text-lime-800'
-                }`}>
+                <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full ${formData.paymentType === 'venue'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-lime-100 text-lime-800'
+                  }`}>
                   {formData.paymentType === 'venue'
                     ? 'PAY AT VENUE'
                     : 'PAID ONLINE'}
@@ -1010,417 +1005,403 @@ export default function BookingCheckoutPage({
                  ──────────────────────────────────────────────── */}
               {currentStep === 2 && (
                 <>
-                {/* ── Section 1: Contact Person (At the Top) ── */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      1. Contact Person
-                    </h2>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      We will send your digital Match Pass, entry QR code, and SMS updates here.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Full Name */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                        Full Name <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Saugat Shahi"
-                          value={formData.fullName}
-                          onChange={(e) => handleInputChange('fullName', e.target.value)}
-                          className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
-                        />
-                      </div>
+                  {/* ── Section 1: Contact Person (At the Top) ── */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        1. Contact Person
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        We will send your digital Match Pass, entry QR code, and SMS updates here.
+                      </p>
                     </div>
 
-                    {/* Phone Number */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                        Phone Number <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="flex rounded-2xl bg-slate-50 overflow-hidden transition-all focus-within:bg-slate-100/80">
-                        <span className="flex items-center gap-1 px-3 text-xs sm:text-[13px] font-bold text-slate-600 bg-slate-200/50 select-none shrink-0 whitespace-nowrap">
-                          <span>🇳🇵</span>
-                          <span>+977</span>
-                        </span>
-                        <input
-                          type="tel"
-                          required
-                          placeholder="98XXXXXXXX"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="w-full px-3.5 py-3.5 bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                        Email Address{' '}
-                        <span className="text-slate-400 font-normal text-xs sm:text-[13px]">(optional)</span>
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                          type="email"
-                          placeholder="saugat@example.com"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-slate-100 my-8" />
-
-                {/* ── Section 2: Who's Playing ── */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      2. Who's Playing?
-                    </h2>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      Choose whether you're booking for a full match squad or playing solo.
-                    </p>
-                  </div>
-
-                  {/* Playing Type Toggle */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {[
-                      {
-                        id: 'team',
-                        icon: Users,
-                        title: 'Team / Group',
-                        desc: 'Book whole pitch for your squad or scrimmage',
-                      },
-                      {
-                        id: 'individual',
-                        icon: User,
-                        title: 'Individual / Open Play',
-                        desc: 'Single player or training session',
-                      },
-                    ].map((type) => {
-                      const Icon = type.icon;
-                      const isSelected = formData.playingType === type.id;
-                      return (
-                        <button
-                          key={type.id}
-                          type="button"
-                          onClick={() => handleInputChange('playingType', type.id)}
-                          className={`relative flex items-start gap-3.5 p-4 rounded-2xl text-left transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-lime-50 text-slate-950'
-                              : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
-                          }`}
-                        >
-                          <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                              isSelected
-                                ? 'bg-lime-400 text-slate-950 font-black'
-                                : 'bg-white text-slate-600'
-                            }`}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </div>
-
-                          <div className="flex-1 min-w-0 pr-5">
-                            <p className="font-extrabold text-[15px] text-slate-900">{type.title}</p>
-                            <p className="text-xs text-slate-500 font-medium mt-1 leading-snug">
-                              {type.desc}
-                            </p>
-                          </div>
-
-                          <div
-                            className={`absolute top-4 right-4 h-5 w-5 rounded-full flex items-center justify-center transition-all ${
-                              isSelected ? 'bg-lime-400 text-slate-950' : 'bg-slate-200/80 text-transparent'
-                            }`}
-                          >
-                            <Check className="h-3 w-3 stroke-[3]" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Inputs: Team Name & Expected Players */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    {formData.playingType === 'team' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* Full Name */}
                       <div className="space-y-1.5">
                         <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                          Team / Group Name{' '}
+                          Full Name <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Saugat Shahi"
+                            value={formData.fullName}
+                            onChange={(e) => handleInputChange('fullName', e.target.value)}
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Phone Number */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                          Phone Number <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="flex rounded-2xl bg-slate-50 overflow-hidden transition-all focus-within:bg-slate-100/80">
+                          <span className="flex items-center gap-1 px-3 text-xs sm:text-[13px] font-bold text-slate-600 bg-slate-200/50 select-none shrink-0 whitespace-nowrap">
+                            <span>🇳🇵</span>
+                            <span>+977</span>
+                          </span>
+                          <input
+                            type="tel"
+                            required
+                            placeholder="98XXXXXXXX"
+                            value={formData.phone}
+                            onChange={(e) => handleInputChange('phone', e.target.value)}
+                            className="w-full px-3.5 py-3.5 bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                          Email Address{' '}
                           <span className="text-slate-400 font-normal text-xs sm:text-[13px]">(optional)</span>
                         </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Lalitpur FC, Himalayan Tigers"
-                          value={formData.teamName}
-                          onChange={(e) => handleInputChange('teamName', e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                          Expected Players
-                        </label>
-                        <span className="text-[11px] font-semibold text-slate-400">
-                          Max {maxPlayersAllowed} players
-                        </span>
-                      </div>
-
-                      {/* Stepper Group */}
-                      <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleInputChange(
-                              'expectedPlayers',
-                              Math.max(2, formData.expectedPlayers - 1)
-                            )
-                          }
-                          className="flex h-9 w-10 items-center justify-center rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-2xs transition-all active:scale-90 cursor-pointer"
-                        >
-                          −
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-slate-400" />
-                          <span className="text-base font-bold text-slate-900 min-w-[28px] text-center">
-                            {formData.expectedPlayers}
-                          </span>
-                          <span className="text-xs font-semibold text-slate-400 hidden sm:inline">
-                            players
-                          </span>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <input
+                            type="email"
+                            placeholder="saugat@example.com"
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
+                          />
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleInputChange(
-                              'expectedPlayers',
-                              Math.min(maxPlayersAllowed, formData.expectedPlayers + 1)
-                            )
-                          }
-                          className="flex h-9 w-10 items-center justify-center rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-2xs transition-all active:scale-90 cursor-pointer"
-                        >
-                          +
-                        </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Match Equipment Chips */}
-                  <div className="pt-2">
-                    <p className="text-xs font-semibold text-slate-500 mb-2">
-                      Included Match Equipment
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                        <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> FIFA Standard Ball
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                        <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Team Bibs (2 Colors)
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                        <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Cold Drinking Water
-                      </span>
+                  <div className="h-px bg-slate-100 my-8" />
+
+                  {/* ── Section 2: Who's Playing ── */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        2. Who's Playing?
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        Choose whether you're booking for a full match squad or playing solo.
+                      </p>
                     </div>
-                  </div>
-                </div>
 
-                <div className="h-px bg-slate-100 my-8" />
-
-                {/* ── Section 3: Payment Type ── */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      3. Payment Type
-                    </h2>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      Choose how you want to handle the match payment with your squad.
-                    </p>
-                  </div>
-
-                  {/* Payment Type Selection Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {paymentMethods.map((method) => {
-                      const Icon = method.icon;
-                      const isSelected = formData.paymentType === method.id;
-                      return (
-                        <button
-                          key={method.id}
-                          type="button"
-                          onClick={() => handleInputChange('paymentType', method.id)}
-                          className={`relative flex flex-col justify-between p-5 rounded-2xl text-left transition-all cursor-pointer ${
-                            isSelected
+                    {/* Playing Type Toggle */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {[
+                        {
+                          id: 'team',
+                          icon: Users,
+                          title: 'Team / Group',
+                          desc: 'Book whole pitch for your squad or scrimmage',
+                        },
+                        {
+                          id: 'individual',
+                          icon: User,
+                          title: 'Individual / Open Play',
+                          desc: 'Single player or training session',
+                        },
+                      ].map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = formData.playingType === type.id;
+                        return (
+                          <button
+                            key={type.id}
+                            type="button"
+                            onClick={() => handleInputChange('playingType', type.id)}
+                            className={`relative flex items-start gap-3.5 p-4 rounded-2xl text-left transition-all cursor-pointer ${isSelected
                               ? 'bg-lime-50 text-slate-950'
                               : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-3 min-w-0">
-                              <div
-                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors shrink-0 ${
-                                  isSelected
-                                    ? 'bg-lime-400 text-slate-950 font-black'
-                                    : 'bg-white text-slate-600'
+                              }`}
+                          >
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${isSelected
+                                ? 'bg-lime-400 text-slate-950 font-black'
+                                : 'bg-white text-slate-600'
                                 }`}
-                              >
-                                <Icon className="h-5 w-5" />
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-extrabold text-[15px] text-slate-900 leading-tight">{method.label}</p>
-                                  <div
-                                    className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                                      isSelected
-                                        ? 'bg-lime-400 text-slate-950'
-                                        : 'bg-slate-200/80 text-transparent'
-                                    }`}
-                                  >
-                                    <Check className="h-3 w-3 stroke-[3]" />
-                                  </div>
-                                </div>
-
-                                <p className="text-xs text-slate-500 font-medium mt-1 leading-snug whitespace-nowrap">
-                                  {method.description}
-                                </p>
-                              </div>
+                            >
+                              <Icon className="h-5 w-5" />
                             </div>
 
-                            {method.badge && (
-                              <span
-                                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
-                                  isSelected
-                                    ? 'bg-lime-200/80 text-slate-900'
-                                    : 'bg-white text-slate-600'
-                                }`}
-                              >
-                                {method.badge}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <div className="flex-1 min-w-0 pr-5">
+                              <p className="font-extrabold text-[15px] text-slate-900">{type.title}</p>
+                              <p className="text-xs text-slate-500 font-medium mt-1 leading-snug">
+                                {type.desc}
+                              </p>
+                            </div>
 
-                  {formData.paymentType === 'venue' ? (
-                    <div className="rounded-2xl bg-amber-50 p-4 text-xs sm:text-sm font-medium text-amber-950 flex items-start gap-3">
-                      <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
-                      <div className="space-y-2">
-                        <p className="font-bold text-slate-900">Pay at Venue with 20% Deposit</p>
-                        <div className="space-y-1 text-xs text-amber-900 leading-relaxed">
-                          <p>• <span className="font-bold">Pay Now:</span> NPR {depositAmount.toLocaleString()} deposit (20% of total)</p>
-                          <p>• <span className="font-bold">Pay at Venue:</span> NPR {remainingBalance.toLocaleString()} remaining balance</p>
-                          <p className="mt-2 pt-2 border-t border-amber-200">
-                            Please arrive at least 15 minutes before kickoff to clear the remaining payment at the counter via Cash or Mobile Banking.
-                          </p>
+                            <div
+                              className={`absolute top-4 right-4 h-5 w-5 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-lime-400 text-slate-950' : 'bg-slate-200/80 text-transparent'
+                                }`}
+                            >
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Inputs: Team Name & Expected Players */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      {formData.playingType === 'team' && (
+                        <div className="space-y-1.5">
+                          <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                            Team / Group Name{' '}
+                            <span className="text-slate-400 font-normal text-xs sm:text-[13px]">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Lalitpur FC, Himalayan Tigers"
+                            value={formData.teamName}
+                            onChange={(e) => handleInputChange('teamName', e.target.value)}
+                            className="w-full px-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                            Expected Players
+                          </label>
+                          <span className="text-[11px] font-semibold text-slate-400">
+                            Max {maxPlayersAllowed} players
+                          </span>
+                        </div>
+
+                        {/* Stepper Group */}
+                        <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleInputChange(
+                                'expectedPlayers',
+                                Math.max(2, formData.expectedPlayers - 1)
+                              )
+                            }
+                            className="flex h-9 w-10 items-center justify-center rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-2xs transition-all active:scale-90 cursor-pointer"
+                          >
+                            −
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-slate-400" />
+                            <span className="text-base font-bold text-slate-900 min-w-[28px] text-center">
+                              {formData.expectedPlayers}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400 hidden sm:inline">
+                              players
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleInputChange(
+                                'expectedPlayers',
+                                Math.min(maxPlayersAllowed, formData.expectedPlayers + 1)
+                              )
+                            }
+                            className="flex h-9 w-10 items-center justify-center rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-2xs transition-all active:scale-90 cursor-pointer"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ) : null}
-                </div>
 
-              </>
-            )}
+                    {/* Match Equipment Chips */}
+                    <div className="pt-2">
+                      <p className="text-xs font-semibold text-slate-500 mb-2">
+                        Included Match Equipment
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
+                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> FIFA Standard Ball
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
+                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Team Bibs (2 Colors)
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
+                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Cold Drinking Water
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* ────────────────────────────────────────────────
+                  <div className="h-px bg-slate-100 my-8" />
+
+                  {/* ── Section 3: Payment Type ── */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        3. Payment Type
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        Choose how you want to handle the match payment with your squad.
+                      </p>
+                    </div>
+
+                    {/* Payment Type Selection Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {paymentMethods.map((method) => {
+                        const Icon = method.icon;
+                        const isSelected = formData.paymentType === method.id;
+                        return (
+                          <button
+                            key={method.id}
+                            type="button"
+                            onClick={() => handleInputChange('paymentType', method.id)}
+                            className={`relative flex flex-col justify-between p-5 rounded-2xl text-left transition-all cursor-pointer ${isSelected
+                              ? 'bg-lime-50 text-slate-950'
+                              : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
+                              }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 min-w-0">
+                                <div
+                                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors shrink-0 ${isSelected
+                                    ? 'bg-lime-400 text-slate-950 font-black'
+                                    : 'bg-white text-slate-600'
+                                    }`}
+                                >
+                                  <Icon className="h-5 w-5" />
+                                </div>
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-extrabold text-[15px] text-slate-900 leading-tight">{method.label}</p>
+                                    <div
+                                      className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-all ${isSelected
+                                        ? 'bg-lime-400 text-slate-950'
+                                        : 'bg-slate-200/80 text-transparent'
+                                        }`}
+                                    >
+                                      <Check className="h-3 w-3 stroke-[3]" />
+                                    </div>
+                                  </div>
+
+                                  <p className="text-xs text-slate-500 font-medium mt-1 leading-snug whitespace-nowrap">
+                                    {method.description}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {method.badge && (
+                                <span
+                                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${isSelected
+                                    ? 'bg-lime-200/80 text-slate-900'
+                                    : 'bg-white text-slate-600'
+                                    }`}
+                                >
+                                  {method.badge}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {formData.paymentType === 'venue' ? (
+                      <div className="rounded-2xl bg-amber-50 p-4 text-xs sm:text-sm font-medium text-amber-950 flex items-start gap-3">
+                        <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+                        <div className="space-y-2">
+                          <p className="font-bold text-amber-900">Pay at Venue with 20% Deposit (NRs. {depositAmount.toLocaleString()} of {totalAmount})</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                </>
+              )}
+
+              {/* ────────────────────────────────────────────────
                 STEP 3: REVIEW & PAY
                ──────────────────────────────────────────────── */}
-            {currentStep === 3 && (
-              <div className="space-y-8 animate-fadeIn">
-                {/* Review Overview Section */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      Review Match Details
-                    </h2>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      Double check your schedule and details before completing payment.
-                    </p>
-                  </div>
+              {currentStep === 3 && (
+                <div className="space-y-8 animate-fadeIn">
+                  {/* Review Overview Section */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        Review Match Details
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        Double check your schedule and details before completing payment.
+                      </p>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Pitch & Arena Card */}
-                    <div className="rounded-2xl bg-slate-50 p-5 space-y-3">
-                      <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                        Pitch & Arena
-                      </label>
-                      <p className="text-base font-extrabold text-slate-900">{venueTitle}</p>
-                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        <span className="text-xs font-black text-lime-950 bg-lime-300 px-2.5 py-0.5 rounded-md">
-                          {courtName}
-                        </span>
-                        {venueType && (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
-                            <Compass className="h-3.5 w-3.5 text-slate-400" />
-                            <span>{venueType}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Pitch & Arena Card */}
+                      <div className="rounded-2xl bg-slate-50 p-5 space-y-3">
+                        <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                          Pitch & Arena
+                        </label>
+                        <p className="text-base font-extrabold text-slate-900">{venueTitle}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="text-xs font-black text-lime-950 bg-lime-300 px-2.5 py-0.5 rounded-md">
+                            {courtName}
                           </span>
-                        )}
-                        <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
-                          {courtDimension}
-                        </span>
+                          {venueType && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
+                              <Compass className="h-3.5 w-3.5 text-slate-400" />
+                              <span>{venueType}</span>
+                            </span>
+                          )}
+                          <span className="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md">
+                            {courtDimension}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4 text-lime-600 shrink-0" />
+                          <span>{venueLocation}</span>
+                        </p>
                       </div>
-                      <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4 text-lime-600 shrink-0" />
-                        <span>{venueLocation}</span>
-                      </p>
-                    </div>
 
-                    {/* Date & Slot Time Card */}
-                    <div className="rounded-2xl bg-slate-50 p-5 space-y-3">
-                      <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
-                        Date & Slot Time
-                      </label>
-                      <p className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4 text-lime-600 shrink-0" />
-                        <span>{selectedDateStr}</span>
-                      </p>
-                      <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-lime-600 shrink-0" />
-                        <span>{selectedTimeStr} → {endTimeStr} ({duration} hr)</span>
-                      </p>
-                      <div className="pt-0.5 text-xs sm:text-[13px] font-medium text-slate-600">
-                        <span className="text-slate-500">Booked by: </span>
-                        <span className="text-slate-900 font-bold">{formData.fullName}</span>{' '}
-                        <span className="text-slate-500">({formData.phone})</span>
+                      {/* Date & Slot Time Card */}
+                      <div className="rounded-2xl bg-slate-50 p-5 space-y-3">
+                        <label className="block text-[13px] sm:text-sm font-semibold text-slate-700">
+                          Date & Slot Time
+                        </label>
+                        <p className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-lime-600 shrink-0" />
+                          <span>{selectedDateStr}</span>
+                        </p>
+                        <p className="text-xs sm:text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-lime-600 shrink-0" />
+                          <span>{selectedTimeStr} → {endTimeStr} ({duration} hr)</span>
+                        </p>
+                        <div className="pt-0.5 text-xs sm:text-[13px] font-medium text-slate-600">
+                          <span className="text-slate-500">Booked by: </span>
+                          <span className="text-slate-900 font-bold">{formData.fullName}</span>{' '}
+                          <span className="text-slate-500">({formData.phone})</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="h-px bg-slate-100 my-8" />
+                  <div className="h-px bg-slate-100 my-8" />
 
-                {/* Payment Gateway Selection - Show for both full and venue deposit */}
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      {formData.paymentType === 'venue' 
-                        ? 'Pay Deposit via eSewa'
-                        : 'Select Payment Method'}
-                    </h2>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      {formData.paymentType === 'venue'
-                        ? `Secure your booking with NPR ${depositAmount.toLocaleString()} deposit payment`
-                        : 'Secure instant checkout powered by verified Nepali payment gateways.'}
-                    </p>
-                  </div>
+                  {/* Payment Gateway Selection - Show for both full and venue deposit */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        {formData.paymentType === 'venue'
+                          ? 'Pay Deposit via eSewa'
+                          : 'Select Payment Method'}
+                      </h2>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        {formData.paymentType === 'venue'
+                          ? `Secure your booking with NPR ${depositAmount.toLocaleString()} deposit payment`
+                          : 'Secure instant checkout powered by verified Nepali payment gateways.'}
+                      </p>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       {paymentGateways.map((gw) => {
                         const isSelected = formData.selectedPaymentMethod === gw.id;
                         return (
@@ -1428,11 +1409,10 @@ export default function BookingCheckoutPage({
                             key={gw.id}
                             type="button"
                             onClick={() => handleInputChange('selectedPaymentMethod', gw.id)}
-                            className={`flex items-start gap-3.5 p-4 rounded-2xl text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-lime-50 text-slate-950'
-                                : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
-                            }`}
+                            className={`flex items-start gap-3.5 p-4 rounded-2xl text-left transition-all cursor-pointer ${isSelected
+                              ? 'bg-lime-50 text-slate-950'
+                              : 'bg-slate-50 hover:bg-slate-100/80 text-slate-700'
+                              }`}
                           >
                             <div
                               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-black overflow-hidden ${gw.color}`}
@@ -1457,9 +1437,8 @@ export default function BookingCheckoutPage({
                             </div>
 
                             <div
-                              className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-1 transition-all ${
-                                isSelected ? 'bg-lime-400 text-slate-950' : 'bg-slate-200/80 text-transparent'
-                              }`}
+                              className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-1 transition-all ${isSelected ? 'bg-lime-400 text-slate-950' : 'bg-slate-200/80 text-transparent'
+                                }`}
                             >
                               <Check className="h-3 w-3 stroke-[3]" />
                             </div>
@@ -1467,236 +1446,225 @@ export default function BookingCheckoutPage({
                         );
                       })}
                     </div>
-                    
-                    {formData.paymentType === 'venue' && (
-                      <div className="rounded-2xl bg-lime-50 p-4 text-xs sm:text-sm font-medium text-lime-950 flex items-start gap-3">
-                        <Info className="h-5 w-5 text-lime-700 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold text-slate-900">Deposit Payment Required</p>
-                          <p className="text-xs text-lime-900 mt-0.5 leading-relaxed">
-                            You'll pay NPR {depositAmount.toLocaleString()} deposit now to secure your booking. 
-                            Pay the remaining NPR {remainingBalance.toLocaleString()} at the venue before kickoff.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+
+
                   </div>
 
-                {/* Terms Agreement */}
-                <div className="pt-1">
+                  {/* Terms Agreement */}
+                  <div className="pt-1">
 
-                  {/* Clean Checkbox without gray card */}
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="terms"
-                      checked={formData.termsAgreed}
-                      onChange={(e) => handleInputChange('termsAgreed', e.target.checked)}
-                      className="h-4 w-4 rounded text-lime-600 focus:ring-lime-500 cursor-pointer accent-lime-500 shrink-0"
-                    />
-                    <label
-                      htmlFor="terms"
-                      className="text-[13px] sm:text-sm font-medium text-slate-600 cursor-pointer select-none leading-relaxed"
-                    >
-                      I agree to the{' '}
-                      <span className="font-bold text-slate-900 underline decoration-slate-300">
-                        Turf Rules & Guidelines
-                      </span>{' '}
-                      and the{' '}
-                      <span className="font-bold text-slate-900 underline decoration-slate-300">
-                        Cancellation Policy
-                      </span>
-                      .
-                    </label>
+                    {/* Clean Checkbox without gray card */}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={formData.termsAgreed}
+                        onChange={(e) => handleInputChange('termsAgreed', e.target.checked)}
+                        className="h-4 w-4 rounded text-lime-600 focus:ring-lime-500 cursor-pointer accent-lime-500 shrink-0"
+                      />
+                      <label
+                        htmlFor="terms"
+                        className="text-[13px] sm:text-sm font-medium text-slate-600 cursor-pointer select-none leading-relaxed"
+                      >
+                        I agree to the{' '}
+                        <span className="font-bold text-slate-900 underline decoration-slate-300">
+                          Turf Rules & Guidelines
+                        </span>{' '}
+                        and the{' '}
+                        <span className="font-bold text-slate-900 underline decoration-slate-300">
+                          Cancellation Policy
+                        </span>
+                        .
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ────────────────────────────────────────────────
+              {/* ────────────────────────────────────────────────
                 STEP 4: CONFIRMATION SUCCESS RECEIPT
                ──────────────────────────────────────────────── */}
-            {currentStep === 4 && (
-              <div className="space-y-8 animate-fadeIn text-center py-4">
-                {/* Celebratory Icon */}
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-lime-100 text-lime-700 shadow-md">
-                  <CheckCircle2 className="h-10 w-10 stroke-[2.5]" />
-                </div>
-
-                <div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-100 px-3.5 py-1 text-xs font-extrabold text-lime-800">
-                    <Sparkles className="h-3.5 w-3.5" /> RESERVATION CONFIRMED
-                  </span>
-                  <h2 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900">
-                    You're All Set to Play!
-                  </h2>
-                  <p className="mt-1 text-sm font-medium text-slate-500 max-w-md mx-auto">
-                    Your futsal slot at {venueTitle} has been successfully locked in. An SMS pass
-                    has been dispatched to +977 {formData.phone || '98XXXXXXXX'}.
-                  </p>
-                </div>
-
-                {/* Digital Match Pass / Ticket (Light Theme) */}
-                <div className="relative mx-auto max-w-lg overflow-hidden rounded-3xl bg-slate-50 text-slate-900 p-6 sm:p-8 text-left shadow-lg shadow-slate-100">
-                  <div className="flex items-start justify-between pb-4 bg-white -mx-6 -mt-6 p-6 mb-4 shadow-2xs">
-                    <div>
-                      <p className="text-[11px] font-extrabold text-lime-700">
-                        Official Match Pass
-                      </p>
-                      <h3 className="text-xl font-extrabold text-slate-900 mt-1">{venueTitle}</h3>
-                      <p className="text-xs font-bold text-lime-700 mt-0.5">
-                        {confirmedBooking?.court?.name || courtName} • {confirmedBooking?.court?.dimension || courtDimension}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-lime-600" />
-                        {venueLocation}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-[11px] font-semibold text-slate-500">
-                        Booking ID
-                      </p>
-                      <p className="font-mono text-sm font-extrabold text-slate-900">
-                        {confirmedBookingId || 'See My Bookings'}
-                      </p>
-                    </div>
+              {currentStep === 4 && (
+                <div className="space-y-8 animate-fadeIn text-center py-4">
+                  {/* Celebratory Icon */}
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-lime-100 text-lime-700 shadow-md">
+                    <CheckCircle2 className="h-10 w-10 stroke-[2.5]" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-4 text-xs">
-                    <div>
-                      <p className="text-slate-500 font-medium">Match Date</p>
-                      <p className="font-extrabold text-sm text-slate-900 mt-0.5">{selectedDateStr}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 font-medium">Time Window</p>
-                      <p className="font-extrabold text-sm text-lime-700 mt-0.5">
-                        {selectedTimeStr} – {endTimeStr}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 font-medium">Booked For</p>
-                      <p className="font-bold text-slate-900 mt-0.5">
-                        {formData.teamName || formData.fullName || 'Futsal Squad'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 font-medium">Total Paid</p>
-                      <p className="font-bold text-slate-900 mt-0.5">
-                        NPR {totalAmount.toLocaleString()}
-                      </p>
-                    </div>
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-100 px-3.5 py-1 text-xs font-extrabold text-lime-800">
+                      <Sparkles className="h-3.5 w-3.5" /> RESERVATION CONFIRMED
+                    </span>
+                    <h2 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900">
+                      You're All Set to Play!
+                    </h2>
+                    <p className="mt-1 text-sm font-medium text-slate-500 max-w-md mx-auto">
+                      Your futsal slot at {venueTitle} has been successfully locked in. An SMS pass
+                      has been dispatched to +977 {formData.phone || '98XXXXXXXX'}.
+                    </p>
                   </div>
 
-                  {/* QR Code Entry Badge */}
-                  <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 shadow-2xs">
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 rounded-xl bg-slate-50 p-1.5 flex items-center justify-center shrink-0">
-                        <QrCode className="h-full w-full text-slate-900" />
+                  {/* Digital Match Pass / Ticket (Light Theme) */}
+                  <div className="relative mx-auto max-w-lg overflow-hidden rounded-3xl bg-slate-50 text-slate-900 p-6 sm:p-8 text-left shadow-lg shadow-slate-100">
+                    <div className="flex items-start justify-between pb-4 bg-white -mx-6 -mt-6 p-6 mb-4 shadow-2xs">
+                      <div>
+                        <p className="text-[11px] font-extrabold text-lime-700">
+                          Official Match Pass
+                        </p>
+                        <h3 className="text-xl font-extrabold text-slate-900 mt-1">{venueTitle}</h3>
+                        <p className="text-xs font-bold text-lime-700 mt-0.5">
+                          {confirmedBooking?.court?.name || courtName} • {confirmedBooking?.court?.dimension || courtDimension}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 text-lime-600" />
+                          {venueLocation}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold text-slate-500">
+                          Booking ID
+                        </p>
+                        <p className="font-mono text-sm font-extrabold text-slate-900">
+                          {confirmedBookingId || 'See My Bookings'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 py-4 text-xs">
+                      <div>
+                        <p className="text-slate-500 font-medium">Match Date</p>
+                        <p className="font-extrabold text-sm text-slate-900 mt-0.5">{selectedDateStr}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-900">Scan for Pitch Entry</p>
-                        <p className="text-[11px] text-slate-500">Show this QR code at venue counter</p>
+                        <p className="text-slate-500 font-medium">Time Window</p>
+                        <p className="font-extrabold text-sm text-lime-700 mt-0.5">
+                          {selectedTimeStr} – {endTimeStr}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 font-medium">Booked For</p>
+                        <p className="font-bold text-slate-900 mt-0.5">
+                          {formData.teamName || formData.fullName || 'Futsal Squad'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 font-medium">Total Paid</p>
+                        <p className="font-bold text-slate-900 mt-0.5">
+                          NPR {totalAmount.toLocaleString()}
+                        </p>
                       </div>
                     </div>
-                    <span className="text-[11px] font-extrabold text-lime-800 bg-lime-100 px-3 py-1 rounded-full">
-                      VALID PASS
-                    </span>
+
+                    {/* QR Code Entry Badge */}
+                    <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 shadow-2xs">
+                      <div className="flex items-center gap-3">
+                        <div className="h-14 w-14 rounded-xl bg-slate-50 p-1.5 flex items-center justify-center shrink-0">
+                          <QrCode className="h-full w-full text-slate-900" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Scan for Pitch Entry</p>
+                          <p className="text-[11px] text-slate-500">Show this QR code at venue counter</p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-extrabold text-lime-800 bg-lime-100 px-3 py-1 rounded-full">
+                        VALID PASS
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => triggerToast('Match pass downloaded as PDF!')}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 px-6 py-3 text-xs font-bold text-slate-900 transition-all cursor-pointer"
+                    >
+                      <Download className="h-4 w-4" /> Download Pass
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareText = `Hey! I just booked a slot at ${venueTitle} for ${selectedDateStr} from ${selectedTimeStr} to ${endTimeStr}. See you on the pitch!`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                      }}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] px-6 py-3 text-xs font-bold text-white transition-all cursor-pointer"
+                    >
+                      <WhatsAppIcon className="h-4 w-4 fill-white text-white" /> Share on WhatsApp
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onHome}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 px-7 py-3 text-xs font-black text-slate-950 transition-all cursor-pointer shadow-xs"
+                    >
+                      Return to Home
+                    </button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => triggerToast('Match pass downloaded as PDF!')}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 px-6 py-3 text-xs font-bold text-slate-900 transition-all cursor-pointer"
-                  >
-                    <Download className="h-4 w-4" /> Download Pass
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const shareText = `Hey! I just booked a slot at ${venueTitle} for ${selectedDateStr} from ${selectedTimeStr} to ${endTimeStr}. See you on the pitch!`;
-                      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-                    }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] px-6 py-3 text-xs font-bold text-white transition-all cursor-pointer"
-                  >
-                    <WhatsAppIcon className="h-4 w-4 fill-white text-white" /> Share on WhatsApp
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onHome}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-lime-400 hover:bg-lime-500 px-7 py-3 text-xs font-black text-slate-950 transition-all cursor-pointer shadow-xs"
-                  >
-                    Return to Home
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ═════════════════════════════════════════════════
+            {/* ═════════════════════════════════════════════════
               RIGHT COLUMN: FLOATING BOOKING SUMMARY CARD
               (ELEVATED SHADOW, BORDERLESS, MATCHING TURF DETAILS)
              ═════════════════════════════════════════════════ */}
-          <div>
-            <div className="lg:sticky lg:top-28 space-y-5 w-full">
-              {/* Elevated Floating Card (Exact rounded-2xl and shadow from TurfDetailsPage) */}
-              <div className="w-full rounded-2xl bg-white p-6 sm:p-7 shadow-[0_0_25px_rgba(0,0,0,0.04)] space-y-5">
-                {/* Compact Horizontal Venue Header (Vertically Centered to Image, Tags at End) */}
-                <div className="flex items-center gap-4">
-                  <div className="relative h-20 w-20 sm:h-22 sm:w-22 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-2xs">
-                    <img
-                      src={venueImage}
-                      alt={venueTitle}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/image.png';
-                      }}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-base sm:text-lg font-black text-slate-900 truncate leading-snug">
-                        {venueTitle}
-                      </h3>
-
-                      {onViewTurfDetails && (
-                        <button
-                          type="button"
-                          onClick={() => onViewTurfDetails(turf)}
-                          className="text-xs font-bold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:text-lime-700 transition-colors cursor-pointer shrink-0"
-                        >
-                          View Arena
-                        </button>
-                      )}
+            <div>
+              <div className="lg:sticky lg:top-28 space-y-5 w-full">
+                {/* Elevated Floating Card (Exact rounded-2xl and shadow from TurfDetailsPage) */}
+                <div className="w-full rounded-2xl bg-white p-6 sm:p-7 shadow-[0_0_25px_rgba(0,0,0,0.04)] space-y-5">
+                  {/* Compact Horizontal Venue Header (Vertically Centered to Image, Tags at End) */}
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-20 w-20 sm:h-22 sm:w-22 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-2xs">
+                      <img
+                        src={venueImage}
+                        alt={venueTitle}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/image.png';
+                        }}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
 
-                    <p className="text-[13px] text-slate-600 font-medium truncate flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-lime-600 shrink-0" />
-                      <span>{venueLocation}</span>
-                    </p>
+                    <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-base sm:text-lg font-black text-slate-900 truncate leading-snug">
+                          {venueTitle}
+                        </h3>
 
-                    {/* Venue Type & Size Tags at the Last */}
-                    <div className="flex items-center gap-1.5 pt-2">
-                      <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">
-                        <Compass className="h-3 w-3 text-slate-400" />
-                        <span>{venueType}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">
-                        <Users className="h-3 w-3 text-slate-400" />
-                        <span>{venueSize}</span>
-                      </span>
+                        {onViewTurfDetails && (
+                          <button
+                            type="button"
+                            onClick={() => onViewTurfDetails(turf)}
+                            className="text-xs font-bold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:text-lime-700 transition-colors cursor-pointer shrink-0"
+                          >
+                            View Arena
+                          </button>
+                        )}
+                      </div>
+
+                      <p className="text-[13px] text-slate-600 font-medium truncate flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                        <span>{venueLocation}</span>
+                      </p>
+
+                      {/* Venue Type & Size Tags at the Last */}
+                      <div className="flex items-center gap-1.5 pt-2">
+                        <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">
+                          <Compass className="h-3 w-3 text-slate-400" />
+                          <span>{venueType}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700">
+                          <Users className="h-3 w-3 text-slate-400" />
+                          <span>{venueSize}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="h-px bg-slate-100" />
+                  <div className="h-px bg-slate-100" />
 
                   {/* Schedule Details */}
                   <div className="space-y-3.5">
@@ -1861,9 +1829,9 @@ export default function BookingCheckoutPage({
                   )}
                 </div>
               </div>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
       )}
 
       {/* ── Fixed Bottom Sticky Action Bar ── */}
