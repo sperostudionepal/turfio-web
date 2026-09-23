@@ -384,52 +384,149 @@ export default function ProfilePage({
                 )}
 
                 {activeTab === 'bookings' && (
-                  <div className="bg-white rounded-3xl p-6 shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-                    <h3 className="text-lg font-black text-slate-900 mb-4">My Bookings</h3>
+                  <div className="bg-white rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.08)] overflow-hidden">
+                    <div className="p-6 border-b border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-black text-slate-900">My Bookings</h3>
+                          <p className="text-xs font-medium text-slate-500 mt-0.5">
+                            {bookings.length > 0 
+                              ? `${bookings.length} ${bookings.length === 1 ? 'booking' : 'bookings'} found`
+                              : 'No bookings yet'}
+                          </p>
+                        </div>
+                        {bookings.length > 0 && (
+                          <span className="text-xs font-bold text-slate-400 px-3 py-1 rounded-full bg-slate-50">
+                            Total: {bookings.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     {bookingsLoading ? (
-                      <p className="text-sm text-slate-500">Loading bookings...</p>
+                      <div className="p-6">
+                        <p className="text-sm text-slate-500 text-center">Loading bookings...</p>
+                      </div>
                     ) : bookings.length === 0 ? (
-                      <p className="text-sm text-slate-500">No bookings yet.</p>
+                      <div className="p-12 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+                          <Calendar className="h-8 w-8" />
+                        </div>
+                        <h4 className="text-base font-bold text-slate-900">No bookings yet</h4>
+                        <p className="text-sm text-slate-500 mt-1">Book your first turf to get started</p>
+                      </div>
                     ) : (
-                      <div className="space-y-3">
-                        {bookings.map((booking) => {
-                          const totalAmount = Number(booking.totalAmount || 0);
-                          const paidAmount = Number(booking.totalPaidAmount || 0);
-                          const dueAmount = Math.max(0, totalAmount - paidAmount);
-                          
-                          return (
-                            <div key={booking._id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900">{booking.turf?.name || 'Turf booking'}</p>
-                                <p className="text-xs text-slate-500">{booking.dateStr} · {booking.timeSlot}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    booking.paymentStatus === 'Paid' 
-                                      ? 'bg-emerald-100 text-emerald-700' 
-                                      : 'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    {booking.paymentStatus}
-                                  </span>
-                                  {dueAmount > 0 && (
-                                    <span className="text-[10px] font-bold text-amber-600">
-                                      Due: NPR {dueAmount.toLocaleString()}
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-slate-50/50 border-b border-slate-100">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Booking ID
+                              </th>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Venue & Court
+                              </th>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Date & Time
+                              </th>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Amount
+                              </th>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Payment Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {bookings.map((booking) => {
+                              const totalAmount = Number(booking.totalAmount || 0);
+                              const paidAmount = Number(booking.totalPaidAmount || 0);
+                              const dueAmount = Math.max(0, totalAmount - paidAmount);
+                              
+                              return (
+                                <tr key={booking._id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase">ID</span>
+                                        <span className="text-xs font-black text-slate-900 font-mono">
+                                          {booking.bookingId || booking.shortCode || '—'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-slate-900 truncate">
+                                        {booking.turf?.name || 'Turf booking'}
+                                      </p>
+                                      <p className="text-xs text-slate-500 font-medium">
+                                        {booking.court?.name || 'Court 1'}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-900">
+                                        {booking.dateStr || new Date(booking.date).toLocaleDateString()}
+                                      </p>
+                                      <p className="text-xs text-slate-500 font-medium">
+                                        {booking.timeSlot}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div>
+                                      <p className="text-sm font-black text-slate-900">
+                                        NPR {totalAmount.toLocaleString()}
+                                      </p>
+                                      {dueAmount > 0 && (
+                                        <p className="text-[10px] font-bold text-amber-600 mt-0.5">
+                                          Due: NPR {dueAmount.toLocaleString()}
+                                        </p>
+                                      )}
+                                      {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
+                                        <p className="text-[10px] font-medium text-emerald-600 mt-0.5">
+                                          Deposit: NPR {Number(booking.depositAmount).toLocaleString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="flex flex-col gap-1">
+                                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold w-fit ${
+                                        booking.paymentStatus === 'Paid'
+                                          ? 'bg-emerald-100 text-emerald-700'
+                                          : booking.paymentStatus === 'Partial'
+                                          ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-slate-100 text-slate-700'
+                                      }`}>
+                                        {booking.paymentStatus}
+                                      </span>
+                                      <span className="text-[10px] font-medium text-slate-500">
+                                        {booking.paymentMethod || 'eSewa'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                      booking.status === 'Confirmed'
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : booking.status === 'Completed'
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'bg-rose-100 text-rose-700'
+                                    }`}>
+                                      {booking.status}
                                     </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-sm font-black text-slate-900 block">
-                                  NPR {totalAmount.toLocaleString()}
-                                </span>
-                                {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
-                                  <span className="text-[10px] font-medium text-slate-500">
-                                    Deposit paid
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
