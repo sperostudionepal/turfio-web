@@ -24,7 +24,6 @@ function Sidebar(props) {
   const venue = props.venue ?? ctx.venue;
   const setActiveTab = props.setActiveTab ?? ctx.setActiveTab;
   const onLogout = props.onLogout ?? ctx.onLogout;
-  const onSwitchToPlayer = props.onSwitchToPlayer ?? ctx.onSwitchToPlayer;
 
   // Navigation structured specifically for Turf Arena Owners
   const mainItems = [
@@ -50,11 +49,9 @@ function Sidebar(props) {
     { label: 'Log out', icon: LogOut, href: '#' },
   ];
 
-  const handleNavClick = (item, isLogout, isSwitchPlayer) => {
+  const handleNavClick = (item, isLogout) => {
     if (isLogout && onLogout) {
       onLogout();
-    } else if (isSwitchPlayer && onSwitchToPlayer) {
-      onSwitchToPlayer();
     } else if (setActiveTab) {
       setActiveTab(item.label);
     }
@@ -75,23 +72,20 @@ function Sidebar(props) {
           const Icon = item.icon;
           const isActive = activeTab === item.label;
           const isLogout = item.label === 'Log out';
-          const isSwitchPlayer = item.label === 'Switch to Player View';
           return (
             <button
               key={item.label}
-              onClick={() => handleNavClick(item, isLogout, isSwitchPlayer)}
+              onClick={() => handleNavClick(item, isLogout)}
               className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-all cursor-pointer rounded-full ${
                 isLogout
                   ? 'text-rose-600 hover:bg-rose-50'
-                  : isSwitchPlayer
-                  ? 'text-slate-800 hover:bg-slate-50'
                   : isActive
                   ? 'bg-lime-400 text-slate-950 font-bold shadow-2xs'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Icon size={18} className={isLogout ? 'text-rose-500' : isSwitchPlayer ? 'text-slate-600' : isActive ? 'text-slate-950' : 'text-slate-400'} />
+                <Icon size={18} className={isLogout ? 'text-rose-500' : isActive ? 'text-slate-950' : 'text-slate-400'} />
                 <span>{item.label}</span>
               </div>
               {item.badge && (

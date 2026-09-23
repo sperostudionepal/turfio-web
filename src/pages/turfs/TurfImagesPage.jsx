@@ -16,7 +16,7 @@ import turfService from '../../services/turfService';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { useToast } from '../../components/common/toastContext';
 
-export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, onLogout, onSwitchToPlayer }) {
+export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, onLogout }) {
   const { showToast } = useToast();
   const [currentVenue, setCurrentVenue] = useState(venue || null);
   const [images, setImages] = useState([]);
@@ -123,7 +123,6 @@ export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, o
         user={user}
         venue={currentVenue}
         onLogout={onLogout}
-        onSwitchToPlayer={onSwitchToPlayer}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -135,7 +134,6 @@ export default function TurfImagesPage({ user, venue, activeTab, setActiveTab, o
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onLogout={onLogout}
-          onSwitchToPlayer={onSwitchToPlayer}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />

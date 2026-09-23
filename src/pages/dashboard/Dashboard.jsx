@@ -32,7 +32,7 @@ import { deriveBookingStatus, isActiveBooking } from '../../utils/bookingStatus'
 import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../utils/reportExport';
 import { getTodayNepalString, formatDateDisplay } from '../../utils/dateTime';
 
-function Dashboard({ user, onLogout, onSwitchToPlayer }) {
+function Dashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [venue, setVenue] = useState(null);
   const [ownerBookings, setOwnerBookings] = useState([]);
@@ -116,13 +116,12 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
   const refreshVenue = loadVenue;
 
   // Shared by every owner page (Sidebar/TopBar read it) so the venue name, user and
-  // logout/switch actions are identical no matter which tab is open.
+  // logout action are identical no matter which tab is open.
   const ownerContext = {
     user,
     venue,
     setActiveTab: goToTab,
     onLogout,
-    onSwitchToPlayer,
     refreshVenue,
     refreshBookings,
     openBookings,
@@ -131,7 +130,7 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
     toggleMobileMenu: () => setIsMobileMenuOpen((open) => !open),
     closeMobileMenu: () => setIsMobileMenuOpen(false),
   };
-  const pageProps = { user, venue, activeTab, setActiveTab: goToTab, onLogout, onSwitchToPlayer, refreshVenue };
+  const pageProps = { user, venue, activeTab, setActiveTab: goToTab, onLogout, refreshVenue };
 
   const tabPages = {
     Courts: <CourtsPage {...pageProps} />,
@@ -185,7 +184,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
         venue={venue}
         setActiveTab={goToTab}
         onLogout={onLogout}
-        onSwitchToPlayer={onSwitchToPlayer}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -199,7 +197,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
           activeTab={activeTab}
           setActiveTab={goToTab}
           onLogout={onLogout}
-          onSwitchToPlayer={onSwitchToPlayer}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />

@@ -37,7 +37,7 @@ const SURFACE_OPTIONS = [
   'Indoor Wooden / Hardcourt',
 ];
 
-function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout, onSwitchToPlayer }) {
+function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
   const { showToast } = useToast();
   const [currentVenue, setCurrentVenue] = useState(venue || null);
   const [courts, setCourts] = useState(() => (Array.isArray(venue?.courts) ? venue.courts : []));
@@ -407,7 +407,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout, onSwitchTo
   return (
     <>
       <div className="flex flex-col h-screen bg-[#f3f5fc] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
-        <TopBar user={user} venue={currentVenue} setActiveTab={setActiveTab} onLogout={onLogout} onSwitchToPlayer={onSwitchToPlayer} />
+        <TopBar user={user} venue={currentVenue} setActiveTab={setActiveTab} onLogout={onLogout} />
 
         <div className="flex flex-1 min-h-0 relative">
           <div className="absolute top-[45%] right-[35%] w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[160px] pointer-events-none" />
