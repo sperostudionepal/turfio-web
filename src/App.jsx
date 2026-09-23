@@ -18,7 +18,7 @@ import ListTurfPage from './pages/listTurf/ListTurfPage';
 import Dashboard from './pages/dashboard/Dashboard';
 import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
 import TurfListingPage from './pages/turfs/TurfListingPage';
-import BookingCheckoutPage, { PublicSplitPaymentPage } from './pages/bookings/BookingCheckoutPage';
+import BookingCheckoutPage from './pages/bookings/BookingCheckoutPage';
 import TurfDetailsPage from './pages/turfs/TurfDetailsPage';
 import TurfRoutePage from './pages/turfs/TurfRoutePage';
 import turfService from './services/turfService';
@@ -94,7 +94,6 @@ function App() {
   const [routeTurf, setRouteTurf] = useState(null);
   const [selectedTurfForBooking, setSelectedTurfForBooking] = useState(null);
   const [turfSearch, setTurfSearch] = useState(null);
-  const [splitBookingId, setSplitBookingId] = useState(null);
   const [submittedApplication, setSubmittedApplication] = useState(null);
   const pendingSectionRef = useRef(null);
 
@@ -142,13 +141,7 @@ function App() {
     const isPaymentFailure = pathname.includes('/payment-failure');
     const esewaDataParam = searchParams.get('data');
 
-    // Check for public split payment route (e.g. /pay/:bookingId)
-    const payMatch = pathname.match(/^\/pay\/([a-zA-Z0-9_-]+)/);
-
-    if (payMatch) {
-      setSplitBookingId(payMatch[1]);
-      setCurrentPage('publicSplit');
-    } else if (isPaymentSuccess) {
+    if (isPaymentSuccess) {
       if (esewaDataParam) {
         let pending = {};
         try {
@@ -316,14 +309,8 @@ function App() {
       const idParam = params.get('id') || params.get('turfId');
       const popBookingTurfId = popBookingMatch ? popBookingMatch[1] : (params.get('booking') === 'true' || params.get('page') === 'book' ? (idParam || (detailMatch ? detailMatch[1] : null)) : null);
       const popTurfId = detailMatch ? detailMatch[1] : (idParam || null);
-      const popPayMatch = path.match(/^\/pay\/([a-zA-Z0-9_-]+)/);
 
-      if (popPayMatch) {
-        setSplitBookingId(popPayMatch[1]);
-        setSelectedTurf(null);
-        setSelectedTurfForBooking(null);
-        setCurrentPage('publicSplit');
-      } else if (popBookingTurfId) {
+      if (popBookingTurfId) {
         turfService.getTurfById(popBookingTurfId)
           .then((turfData) => {
             let cached = {};
@@ -1112,20 +1099,6 @@ function App() {
             return res;
           }}
           onHome={handleNavigateHome}
-        />
-      );
-    }
-
-    // Public Split Payment Page (Teammate share checkout)
-    if (currentPage === 'publicSplit') {
-      return (
-        <PublicSplitPaymentPage
-          bookingId={splitBookingId}
-          onHome={() => {
-            window.history.pushState({}, '', '/');
-            setSplitBookingId(null);
-            setCurrentPage('home');
-          }}
         />
       );
     }

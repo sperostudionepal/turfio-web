@@ -36,7 +36,7 @@ const reviews = [
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
     rating: 5,
     comment:
-      'The app UI is super smooth and intuitive! We love inviting friends directly through the platform and splitting payment cleanly.',
+      'The app UI is super smooth and intuitive! Booking a slot and getting instant confirmation takes seconds.',
   },
   {
     id: 5,

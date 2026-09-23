@@ -21,9 +21,8 @@ import {
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
 
-function CustomersPage({ user, activeTab, setActiveTab }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState('All');
+function CustomersPage({ user, activeTab, setActiveTab, initialSearch = '' }) {
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,13 +38,11 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
         const customer = booking.user;
         if (!customer?._id) return;
         const existing = grouped.get(customer._id) || {
-          id: `CUS-${customer._id.slice(-6).toUpperCase()}`,
+          id: `TUF-${customer._id.slice(-6).toUpperCase()}`,
           name: [customer.firstName, customer.lastName].filter(Boolean).join(' ') || 'Customer',
           phone: customer.phone || '—',
           email: customer.email || '—',
           avatar: customer.profilePicture || '/logo.png',
-          membership: 'Registered Player',
-          tierBg: 'bg-emerald-50 text-emerald-700',
           totalBookings: 0,
           totalSpend: 0,
           lastActive: '',
@@ -107,15 +104,12 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
     },
   ];
 
-  const filteredCustomers = customers.filter((c) => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTier = tierFilter === 'All' || c.membership.includes(tierFilter);
-    return matchesSearch && matchesTier;
-  });
+  const filteredCustomers = customers.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.phone.includes(searchQuery) ||
+    c.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -146,7 +140,7 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                     Customer & Player Directory
                   </h1>
                   <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">
-                    Manage registered players, VIP membership tiers, and booking history.
+                    Manage registered players and booking history.
                   </p>
                 </div>
 
@@ -170,13 +164,6 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat) => {
                   const Icon = stat.icon;
-                  const liveValue = stat.title === 'Total Registered Players'
-                    ? customers.length.toLocaleString()
-                    : stat.title === 'Active Recurrent Players'
-                    ? customers.filter((customer) => customer.totalBookings > 1).length.toLocaleString()
-                    : stat.title === 'Avg Customer Spend'
-                    ? `NRs. ${customers.length ? Math.round(customers.reduce((sum, customer) => sum + customer.totalSpend, 0) / customers.length).toLocaleString('en-NP') : '0'}`
-                    : customers.filter((customer) => customer.membership.includes('Platinum')).length.toLocaleString();
                   return (
                     <div
                       key={stat.title}
@@ -193,7 +180,7 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                               {stat.title}
                             </span>
                             <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
-                              {liveValue}
+                              {stat.value}
                             </h3>
                           </div>
                         </div>
@@ -216,8 +203,8 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
 
               {/* Unified Card Container: Search, Filter & Table with Glassmorphism */}
               <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-xs hover:shadow-md transition-all">
-                {/* Filter & Search Controls */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                {/* Search Controls */}
+                <div className="flex items-center justify-between gap-3">
                   {/* Search Box */}
                   <div className="relative w-full md:w-80">
                     <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -232,26 +219,6 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                       className="w-full pl-10 pr-4 py-3 rounded-full bg-white/80 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     />
                   </div>
-
-                  {/* Tier Filter Pills */}
-                  <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto py-0.5">
-                    {['All', 'Platinum', 'Gold', 'Silver', 'Regular'].map((tier) => (
-                      <button
-                        key={tier}
-                        onClick={() => {
-                          setTierFilter(tier);
-                          setCurrentPage(1);
-                        }}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                          tierFilter === tier
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-white/80 text-slate-600 hover:bg-white border border-slate-200/80'
-                        }`}
-                      >
-                        {tier}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Customers Directory Table */}
@@ -262,10 +229,8 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                         <th className="pb-3 pr-4">Customer ID</th>
                         <th className="pb-3 pr-4">Player Details</th>
                         <th className="pb-3 pr-4">Contact Info</th>
-                        <th className="pb-3 pr-4">Tier Status</th>
                         <th className="pb-3 pr-4">Total Bookings</th>
                         <th className="pb-3 pr-4">Lifetime Spend</th>
-                        <th className="pb-3 pr-4">Last Active</th>
                         <th className="pb-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -287,14 +252,8 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                             </div>
                           </td>
                           <td className="py-3.5 pr-4 text-xs font-medium text-slate-600 whitespace-nowrap">{c.email}</td>
-                          <td className="py-3.5 pr-4 whitespace-nowrap">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${c.tierBg}`}>
-                              {c.membership}
-                            </span>
-                          </td>
                           <td className="py-3.5 pr-4 font-bold text-slate-900 text-sm whitespace-nowrap">{c.totalBookings} matches</td>
                           <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(c.totalSpend || 0).toLocaleString('en-NP')}</td>
-                          <td className="py-3.5 pr-4 font-medium text-slate-500 text-xs whitespace-nowrap">{c.lastActive || '—'}</td>
                           <td className="py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               <a
@@ -407,9 +366,6 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${selectedCustomer.tierBg}`}>
-                  {selectedCustomer.membership}
-                </span>
                 <button
                   onClick={() => setSelectedCustomer(null)}
                   className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors ml-1"
@@ -437,21 +393,12 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                 </div>
               </div>
 
-              {/* Player Stats Grid */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                    <Calendar size={13} /> Matches Booked
-                  </div>
-                  <p className="font-extrabold text-sm text-slate-900">{selectedCustomer.totalBookings} Matches</p>
+              {/* Player Stats */}
+              <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                  <Calendar size={13} /> Matches Booked
                 </div>
-
-                <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-100/60 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-purple-700 uppercase tracking-wider">
-                    <Award size={13} /> Tier Status
-                  </div>
-                  <p className="font-extrabold text-sm text-slate-900">{selectedCustomer.membership}</p>
-                </div>
+                <p className="font-extrabold text-sm text-slate-900">{selectedCustomer.totalBookings} Matches</p>
               </div>
 
               {/* Lifetime Spend Box */}
@@ -513,25 +460,14 @@ function CustomersPage({ user, activeTab, setActiveTab }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="+977 98..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Membership Tier</label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold">
-                    <option>Regular Player</option>
-                    <option>Silver Club</option>
-                    <option>Gold Member</option>
-                    <option>VIP Platinum</option>
-                  </select>
-                </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  placeholder="+977 98..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  required
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">

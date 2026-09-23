@@ -5,7 +5,6 @@ import StatCards from '../../components/dashboard/StatCards';
 import ScheduleCard from '../../components/dashboard/ScheduleCard';
 import RevenueChart from '../../components/dashboard/RevenueChart';
 import RecentBookingsTable from '../../components/dashboard/RecentBookingsTable';
-import RecentPaymentsTable from '../../components/dashboard/RecentPaymentsTable';
 import RevenueSummaryDonut from '../../components/dashboard/RevenueSummaryDonut';
 import CourtsPage from '../turfs/CourtsPage';
 import TurfImagesPage from '../turfs/TurfImagesPage';
@@ -32,7 +31,7 @@ import { deriveBookingStatus, isActiveBooking } from '../../utils/bookingStatus'
 import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../utils/reportExport';
 import { getTodayNepalString, formatDateDisplay } from '../../utils/dateTime';
 
-function Dashboard({ user, onLogout, onSwitchToPlayer }) {
+function Dashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [venue, setVenue] = useState(null);
   const [ownerBookings, setOwnerBookings] = useState([]);
@@ -46,6 +45,9 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
   // Lets the top bar / dashboard cards open the Bookings tab with a search, filter or the New Booking form.
   // Changing the nonce remounts the Bookings page so it starts from these values.
   const [bookingIntent, setBookingIntent] = useState({ nonce: 0, search: '', status: 'All', date: 'all', openAdd: false });
+  // Same deep-link pattern for the top bar's global search jumping straight to a Payment or Customer ID.
+  const [paymentIntent, setPaymentIntent] = useState({ nonce: 0, search: '' });
+  const [customerIntent, setCustomerIntent] = useState({ nonce: 0, search: '' });
 
   const loadVenue = () => {
     const userId = user?._id || user?.id;
@@ -110,28 +112,37 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
     setBookingIntent((prev) => ({ nonce: prev.nonce + 1, search, status, date, openAdd }));
     setActiveTab('Bookings');
   };
+  const openPayments = ({ search = '' } = {}) => {
+    setPaymentIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setActiveTab('Payments');
+  };
+  const openCustomers = ({ search = '' } = {}) => {
+    setCustomerIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setActiveTab('Customers');
+  };
 
   const pendingCount = ownerBookings.filter((b) => isActiveBooking(b) && deriveBookingStatus(b) === 'Pending').length;
 
   const refreshVenue = loadVenue;
 
   // Shared by every owner page (Sidebar/TopBar read it) so the venue name, user and
-  // logout/switch actions are identical no matter which tab is open.
+  // logout action are identical no matter which tab is open.
   const ownerContext = {
     user,
     venue,
     setActiveTab: goToTab,
     onLogout,
-    onSwitchToPlayer,
     refreshVenue,
     refreshBookings,
     openBookings,
+    openPayments,
+    openCustomers,
     pendingCount,
     isMobileMenuOpen,
     toggleMobileMenu: () => setIsMobileMenuOpen((open) => !open),
     closeMobileMenu: () => setIsMobileMenuOpen(false),
   };
-  const pageProps = { user, venue, activeTab, setActiveTab: goToTab, onLogout, onSwitchToPlayer, refreshVenue };
+  const pageProps = { user, venue, activeTab, setActiveTab: goToTab, onLogout, refreshVenue };
 
   const tabPages = {
     Courts: <CourtsPage {...pageProps} />,
@@ -148,8 +159,20 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
         initialAddOpen={bookingIntent.openAdd}
       />
     ),
-    Customers: <CustomersPage {...pageProps} />,
-    Payments: <PaymentsPage {...pageProps} />,
+    Customers: (
+      <CustomersPage
+        key={customerIntent.nonce}
+        {...pageProps}
+        initialSearch={customerIntent.search}
+      />
+    ),
+    Payments: (
+      <PaymentsPage
+        key={paymentIntent.nonce}
+        {...pageProps}
+        initialSearch={paymentIntent.search}
+      />
+    ),
     Invoices: <InvoicesPage {...pageProps} />,
     Pricing: <PricingPage {...pageProps} />,
     Coupons: <CouponsPage {...pageProps} />,
@@ -185,7 +208,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
         venue={venue}
         setActiveTab={goToTab}
         onLogout={onLogout}
-        onSwitchToPlayer={onSwitchToPlayer}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -199,7 +221,6 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
           activeTab={activeTab}
           setActiveTab={goToTab}
           onLogout={onLogout}
-          onSwitchToPlayer={onSwitchToPlayer}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />
@@ -291,11 +312,8 @@ function Dashboard({ user, onLogout, onSwitchToPlayer }) {
                 <RevenueSummaryDonut bookings={ownerBookings} period={period} />
               </div>
 
-              {/* Bottom Row: Recent Bookings & Recent Payments */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <RecentBookingsTable bookings={ownerBookings} />
-                <RecentPaymentsTable bookings={ownerBookings} />
-              </div>
+              {/* Bottom Row: Recent Bookings. Payments now live on their own dashboard page (see Sidebar). */}
+              <RecentBookingsTable bookings={ownerBookings} />
               </>
             )}
           </div>

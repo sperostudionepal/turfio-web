@@ -229,6 +229,11 @@ export const turfService = {
     return response?.data || response;
   },
 
+  async getOwnerPayments() {
+    const response = await apiClient.get('/payments/owner');
+    return response?.data || response;
+  },
+
   /**
    * Update editable venue fields (name, description, address city/area, pricePerHour, amenities)
    */
@@ -265,37 +270,6 @@ export const turfService = {
    */
   async initiateEsewaPayment(bookingId, amount, extraOptions = {}) {
     const response = await apiClient.post('/payments/initiate', {
-      bookingId,
-      amount,
-      ...extraOptions,
-    });
-    return response?.data || response;
-  },
-
-  /**
-   * Convert an existing booking (e.g. venue) to split payment
-   */
-  async convertToSplitPayment(bookingId, splitCount = 2) {
-    const response = await apiClient.post('/payments/convert-to-split', {
-      bookingId,
-      splitCount,
-    });
-    return response?.data || response;
-  },
-
-  /**
-   * Fetch public split payment details for teammates
-   */
-  async getSplitPaymentDetails(identifier) {
-    const response = await apiClient.get(`/payments/split/${identifier}`);
-    return response?.booking || response;
-  },
-
-  /**
-   * Initiate public split payment share
-   */
-  async initiateSplitSharePayment(bookingId, amount, extraOptions = {}) {
-    const response = await apiClient.post('/payments/initiate-share', {
       bookingId,
       amount,
       ...extraOptions,

@@ -4,11 +4,13 @@ import { NPT_OFFSET_MINUTES } from './dateTime';
 /**
  * Turns bookings into a flat list of payments that were actually received, newest first.
  *
- * Source of truth is each booking's `payments` ledger (eSewa/split payments write one entry per payment).
+ * Source of truth is each booking's `payments` ledger (one entry per eSewa payment).
  * A booking marked Paid at the venue has no ledger entry, so any received amount the ledger doesn't
  * explain is added as one "recorded at venue" payment. Unpaid bookings produce no rows.
  */
 
+// Some older payment records (from before real payer names were captured) still have a
+// generic role-label payer name -- fall back to the account's real name for those.
 const GENERIC_PAYERS = /^(player|organizer|teammate)\b/i;
 
 // ISO timestamp -> 'YYYY-MM-DD' in Nepal time
@@ -38,8 +40,7 @@ export function buildPaymentRows(bookings = []) {
       rows.push({
         key: `${bookingKey}-${payment.transactionId || index}`,
         name: payer || name,
-        // On split bookings, say which share this was
-        note: booking.paymentType === 'split' ? `Split · ${payment.payerName || 'Player'}` : '',
+        note: '',
         method: payment.paymentMethod || booking.paymentMethod || 'eSewa',
         reference: shortReference(payment.transactionId),
         amount,

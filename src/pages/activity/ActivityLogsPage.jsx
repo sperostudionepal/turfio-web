@@ -97,7 +97,7 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
       id: 'LOG-003',
       time: '12 Jun 2026, 10:15 AM',
       user: 'Bikash Gurung',
-      role: 'Staff',
+      role: 'Admin',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
       action: 'Cancelled',
       actionTag: 'bg-amber-50 text-amber-600 dot-amber',
@@ -126,7 +126,7 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
       action: 'Created',
       actionTag: 'bg-emerald-50 text-emerald-600 dot-emerald',
       detailsTitle: 'New customer registered',
-      detailsSub: 'Customer ID: #CUS-2026-0067',
+      detailsSub: 'Customer ID: #TUF-2026-0067',
       ip: '192.168.1.13',
     },
     {
@@ -157,12 +157,12 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
       id: 'LOG-008',
       time: '12 Jun 2026, 08:30 AM',
       user: 'Prakash Yadav',
-      role: 'Staff',
+      role: 'Admin',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
       action: 'Deleted',
       actionTag: 'bg-amber-50 text-amber-600 dot-amber',
       detailsTitle: 'Deleted customer',
-      detailsSub: 'Customer ID: #CUS-2026-0065',
+      detailsSub: 'Customer ID: #TUF-2026-0065',
       ip: '192.168.1.14',
     },
   ]);
@@ -302,7 +302,6 @@ function ActivityLogsPage({ activeTab, setActiveTab }) {
                     <option>All Users</option>
                     <option>Super Admin</option>
                     <option>Admin</option>
-                    <option>Staff</option>
                     <option>System</option>
                   </select>
                   <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

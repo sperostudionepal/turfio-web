@@ -12,14 +12,26 @@ function TopBar(props) {
   const user = props.user ?? ctx.user;
   const venue = props.venue ?? ctx.venue;
   const setActiveTab = props.setActiveTab ?? ctx.setActiveTab;
-  const { openBookings } = ctx;
+  const { openBookings, openPayments, openCustomers } = ctx;
   const searchRef = useRef(null);
   const [searchText, setSearchText] = useState('');
 
-  // Enter searches the Bookings list (name, phone, booking ID, court or date)
+  // Global search: a recognized ID prefix jumps straight to that record's page
+  // (Booking/Payment/Customer). Anything else falls back to the Bookings list,
+  // which already searches by name, phone, booking ID, court or date.
   const handleSearchKeyDown = (event) => {
-    if (event.key !== 'Enter' || !openBookings) return;
-    openBookings({ search: searchText.trim() });
+    if (event.key !== 'Enter') return;
+    const query = searchText.trim();
+    if (!query) return;
+    const upper = query.toUpperCase();
+
+    if (upper.startsWith('PAY-') && openPayments) {
+      openPayments({ search: query });
+    } else if (upper.startsWith('TUF-') && openCustomers) {
+      openCustomers({ search: query });
+    } else if (openBookings) {
+      openBookings({ search: query });
+    }
   };
 
   // Ctrl/Cmd + K jumps to the search box
@@ -239,7 +251,7 @@ function TopBar(props) {
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Search bookings by name, phone, ID or date..."
+              placeholder="Search Booking, Payment or Customer ID, name, phone..."
               className="w-full pl-11 pr-16 py-2.5 sm:py-3 rounded-full bg-slate-100/80 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition-colors focus:bg-slate-100"
             />
             <div className="absolute right-3.5 flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-400 pointer-events-none">
