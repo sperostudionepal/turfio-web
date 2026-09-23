@@ -65,33 +65,6 @@ function EsewaIcon({ className = 'h-5 w-5' }) {
   );
 }
 
-function FonepayIcon({ className = 'h-full w-full' }) {
-  return (
-    <svg
-      viewBox="0 0 460 180"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect width="460" height="180" rx="36" fill="#D31D24" />
-      <g fill="#FFFFFF">
-        {/* f */}
-        <path d="M68 45 C55 45 44 54 44 70 L44 80 L30 80 L30 102 L44 102 L44 144 L70 144 L70 102 L86 102 L90 80 L70 80 L70 70 C70 66 73 63 78 63 L90 63 L90 45 Z" />
-        {/* o */}
-        <path d="M136 78 C114 78 98 94 98 116 C98 138 114 154 136 154 C158 154 174 138 174 116 C174 94 158 78 136 78 Z M136 132 C125 132 120 125 120 116 C120 107 125 100 136 100 C147 100 152 107 152 116 C152 125 147 132 136 132 Z" />
-        {/* n */}
-        <path d="M182 80 L182 144 L204 144 L204 112 C204 103 209 98 217 98 C225 98 229 103 229 112 L229 144 L251 144 L251 106 C251 90 241 80 225 80 C214 80 206 85 201 93 L201 80 Z" />
-        {/* e */}
-        <path d="M294 78 C272 78 257 94 257 116 C257 138 273 154 296 154 C311 154 324 146 329 132 L308 126 C306 131 301 135 295 135 C286 135 279 129 278 119 L332 119 C332 117 333 113 333 110 C333 92 318 78 294 78 Z M279 104 C281 97 287 93 294 93 C302 93 308 97 310 104 Z" />
-        {/* Wi-Fi Waves */}
-        <path d="M362 55 C377 70 377 94 362 109 L374 121 C395 100 395 64 374 43 Z" />
-        <path d="M344 73 C353 82 353 96 344 105 L356 117 C371 102 371 76 356 61 Z" />
-        <circle cx="328" cy="98" r="10" />
-      </g>
-    </svg>
-  );
-}
-
 export default function BookingCheckoutPage({
   onLogin,
   user,
@@ -128,7 +101,7 @@ export default function BookingCheckoutPage({
       teamName: '',
       expectedPlayers: turf?.size?.includes('5') ? 10 : 14,
       paymentType: 'full', // 'full' | 'venue'
-      selectedPaymentMethod: 'esewa', // 'esewa' | 'fonepay' | 'venue'
+      selectedPaymentMethod: 'esewa', // 'esewa' only
       fullName:
         user?.name ||
         user?.fullName ||
@@ -389,6 +362,9 @@ export default function BookingCheckoutPage({
   // Max players
   const maxPlayersAllowed = venueSize.includes('5') ? 10 : 14;
 
+  const depositAmount = Math.ceil(totalAmount * 0.2);
+  const remainingBalance = totalAmount - depositAmount;
+
   const paymentMethods = [
     {
       id: 'full',
@@ -401,8 +377,8 @@ export default function BookingCheckoutPage({
     {
       id: 'venue',
       label: 'Pay at Venue',
-      badge: 'On Arrival',
-      description: 'Pay directly at counter before kickoff',
+      badge: '20% Deposit',
+      description: `Pay NPR ${depositAmount.toLocaleString()} deposit now, NPR ${remainingBalance.toLocaleString()} at venue`,
       icon: Banknote,
       available: true,
     },
@@ -418,16 +394,6 @@ export default function BookingCheckoutPage({
       textColor: 'text-emerald-700',
       bgLight: 'bg-emerald-100',
       description: 'Pay directly with your registered eSewa ID',
-    },
-    {
-      id: 'fonepay',
-      name: 'Fonepay QR / Mobile Banking',
-      tag: 'Scan & Pay',
-      customIcon: FonepayIcon,
-      color: 'bg-transparent',
-      textColor: 'text-rose-700',
-      bgLight: 'bg-rose-100',
-      description: 'Scan QR with any mobile banking app',
     },
   ];
 
@@ -492,13 +458,18 @@ export default function BookingCheckoutPage({
         return;
       }
 
-      // If eSewa is selected and online payment
-      if (formData.paymentType !== 'venue' && formData.selectedPaymentMethod === 'esewa') {
+      // If eSewa payment is selected (for both full payment and venue deposit)
+      if (formData.selectedPaymentMethod === 'esewa') {
         try {
           setIsProcessingPayment(true);
-          triggerToast('Connecting to eSewa payment gateway...');
+          
+          const isVenueDeposit = formData.paymentType === 'venue';
+          const payAmount = isVenueDeposit ? depositAmount : totalAmount;
+          
+          triggerToast(isVenueDeposit 
+            ? `Processing NPR ${depositAmount.toLocaleString()} deposit payment...`
+            : 'Connecting to eSewa payment gateway...');
 
-          const payAmount = totalAmount;
           let matchType = '7v7';
           if (venueSize.includes('5')) matchType = '5v5';
           else if (venueSize.includes('11')) matchType = '11v11';
@@ -519,10 +490,12 @@ export default function BookingCheckoutPage({
             timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
             matchType,
             teamSize: formData.expectedPlayers || 10,
-            totalAmount: totalAmount, // Master total amount for venue booking
+            totalAmount: totalAmount,
             totalPaidAmount: 0,
+            depositAmount: isVenueDeposit ? depositAmount : 0,
+            remainingBalance: isVenueDeposit ? remainingBalance : 0,
             paymentType: formData.paymentType || 'full',
-            paymentMethod: 'eSewa',
+            paymentMethod: isVenueDeposit ? 'Pay at Venue' : 'eSewa',
             paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
@@ -544,6 +517,9 @@ export default function BookingCheckoutPage({
               formData,
               bookingPayload,
               totalAmount: payAmount,
+              depositAmount: isVenueDeposit ? depositAmount : 0,
+              remainingBalance: isVenueDeposit ? remainingBalance : 0,
+              isVenueDeposit,
               selectedDateStr,
               selectedTimeStr,
               endTimeStr,
@@ -566,6 +542,7 @@ export default function BookingCheckoutPage({
               holdToken: effectiveHoldToken,
               bookingId: effectiveBookingId,
               bookingData: bookingPayload,
+              isVenueDeposit,
             }
           );
 
@@ -601,7 +578,7 @@ export default function BookingCheckoutPage({
           totalAmount: totalAmount,
           totalPaidAmount: 0,
           paymentType: formData.paymentType || 'venue',
-          paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'Fonepay',
+          paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'eSewa',
           paymentStatus: 'Pending',
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
@@ -1344,12 +1321,15 @@ export default function BookingCheckoutPage({
                   {formData.paymentType === 'venue' ? (
                     <div className="rounded-2xl bg-amber-50 p-4 text-xs sm:text-sm font-medium text-amber-950 flex items-start gap-3">
                       <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-slate-900">Pay at Turf Policy</p>
-                        <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                          Your reservation will be held. Please arrive at least 15 minutes before
-                          kickoff to clear the payment at the arena counter via Cash or Fonepay QR.
-                        </p>
+                      <div className="space-y-2">
+                        <p className="font-bold text-slate-900">Pay at Venue with 20% Deposit</p>
+                        <div className="space-y-1 text-xs text-amber-900 leading-relaxed">
+                          <p>• <span className="font-bold">Pay Now:</span> NPR {depositAmount.toLocaleString()} deposit (20% of total)</p>
+                          <p>• <span className="font-bold">Pay at Venue:</span> NPR {remainingBalance.toLocaleString()} remaining balance</p>
+                          <p className="mt-2 pt-2 border-t border-amber-200">
+                            Please arrive at least 15 minutes before kickoff to clear the remaining payment at the counter via Cash or Mobile Banking.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ) : null}
@@ -1425,19 +1405,22 @@ export default function BookingCheckoutPage({
 
                 <div className="h-px bg-slate-100 my-8" />
 
-                {/* Payment Gateway Selection */}
-                {formData.paymentType !== 'venue' ? (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                        Select Payment Method
-                      </h2>
-                      <p className="text-sm font-medium text-slate-500 mt-1">
-                        Secure instant checkout powered by verified Nepali payment gateways.
-                      </p>
-                    </div>
+                {/* Payment Gateway Selection - Show for both full and venue deposit */}
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                      {formData.paymentType === 'venue' 
+                        ? 'Pay Deposit via eSewa'
+                        : 'Select Payment Method'}
+                    </h2>
+                    <p className="text-sm font-medium text-slate-500 mt-1">
+                      {formData.paymentType === 'venue'
+                        ? `Secure your booking with NPR ${depositAmount.toLocaleString()} deposit payment`
+                        : 'Secure instant checkout powered by verified Nepali payment gateways.'}
+                    </p>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       {paymentGateways.map((gw) => {
                         const isSelected = formData.selectedPaymentMethod === gw.id;
                         return (
@@ -1484,24 +1467,20 @@ export default function BookingCheckoutPage({
                         );
                       })}
                     </div>
+                    
+                    {formData.paymentType === 'venue' && (
+                      <div className="rounded-2xl bg-lime-50 p-4 text-xs sm:text-sm font-medium text-lime-950 flex items-start gap-3">
+                        <Info className="h-5 w-5 text-lime-700 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-slate-900">Deposit Payment Required</p>
+                          <p className="text-xs text-lime-900 mt-0.5 leading-relaxed">
+                            You'll pay NPR {depositAmount.toLocaleString()} deposit now to secure your booking. 
+                            Pay the remaining NPR {remainingBalance.toLocaleString()} at the venue before kickoff.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      Pay on Arrival
-                    </h2>
-                    <div className="rounded-2xl bg-slate-50 p-5 space-y-2">
-                      <p className="font-extrabold text-base text-slate-900">
-                        No online transaction needed right now!
-                      </p>
-                      <p className="text-xs sm:text-[13px] text-slate-500 font-medium leading-relaxed">
-                        Your slot reservation will be confirmed upon clicking the button below. You
-                        will receive a digital Match Pass on your phone which you will present at
-                        the arena reception to pay via Cash or Mobile Banking.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Terms Agreement */}
                 <div className="pt-1">
@@ -1938,7 +1917,7 @@ export default function BookingCheckoutPage({
                     <Lock className="h-4 w-4" />
                     <span>
                       {formData.paymentType === 'venue'
-                        ? 'Confirm Booking & Pay at Venue'
+                        ? `Pay NPR ${depositAmount.toLocaleString()} Deposit & Confirm`
                         : `Pay NPR ${totalAmount.toLocaleString()} & Confirm`}
                     </span>
                     <ArrowRight className="h-4 w-4 stroke-[2.5]" />

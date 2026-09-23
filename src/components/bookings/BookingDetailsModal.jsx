@@ -1,6 +1,7 @@
-import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, Banknote, XCircle, Phone, Mail, Users } from 'lucide-react';
+import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, Banknote, XCircle, Phone, Mail, Users, AlertCircle, CheckCircle, Ban } from 'lucide-react';
 import { formatNepalDateTime } from '../../utils/dateTime';
 import { canConfirm, canMarkPaid, canCancel } from '../../utils/bookingActions';
+import { useState } from 'react';
 
 const money = (value) => `NRs. ${Number(value || 0).toLocaleString('en-NP')}`;
 
@@ -13,13 +14,51 @@ const PAYMENT_STATUS_STYLES = {
  * Full view of one booking: who, when, payment summary and history, plus the owner's actions.
  * `booking` is the Bookings page's mapped booking; `statusBadge` is the rendered status pill.
  */
-function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', onClose, onConfirm, onMarkPaid, onCancel }) {
+function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', onClose, onConfirm, onMarkPaid, onCancel, onApproveCancellation, onRejectCancellation }) {
   if (!booking) return null;
+
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const hasPhone = booking.customerPhone && booking.customerPhone !== '—';
   const hasEmail = booking.customerEmail && booking.customerEmail !== '—';
   const cancelledAfterPayment = booking.bookingStatus === 'Cancelled' && booking.paid > 0;
-  const showActions = canConfirm(booking) || canMarkPaid(booking) || canCancel(booking);
+  const hasPendingCancellation = booking.cancellationRequest && booking.cancellationRequest.status === 'Pending';
+  const showActions = canConfirm(booking) || canMarkPaid(booking) || canCancel(booking) || hasPendingCancellation;
+
+  const handleApproveCancellation = async () => {
+    setIsProcessing(true);
+    try {
+      await onApproveCancellation(booking.rawId, reviewNotes);
+      setShowApproveDialog(false);
+      setReviewNotes('');
+      onClose();
+    } catch (err) {
+      alert(err.message || 'Failed to approve cancellation');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectCancellation = async () => {
+    if (!reviewNotes.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await onRejectCancellation(booking.rawId, reviewNotes);
+      setShowRejectDialog(false);
+      setReviewNotes('');
+      onClose();
+    } catch (err) {
+      alert(err.message || 'Failed to reject cancellation');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div
@@ -53,6 +92,77 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
         <div className="p-5 space-y-4 text-xs">
           {error && (
             <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">{error}</p>
+          )}
+
+          {/* Cancellation Request */}
+          {booking.cancellationRequest && (
+            <div className={`rounded-2xl p-4 border-2 ${
+              booking.cancellationRequest.status === 'Pending'
+                ? 'bg-amber-50 border-amber-200'
+                : booking.cancellationRequest.status === 'Approved'
+                ? 'bg-emerald-50 border-emerald-200'
+                : 'bg-rose-50 border-rose-200'
+            }`}>
+              <div className="flex items-start gap-3">
+                <AlertCircle className={`h-5 w-5 shrink-0 mt-0.5 ${
+                  booking.cancellationRequest.status === 'Pending'
+                    ? 'text-amber-600'
+                    : booking.cancellationRequest.status === 'Approved'
+                    ? 'text-emerald-600'
+                    : 'text-rose-600'
+                }`} />
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-slate-900">
+                    Cancellation Request {booking.cancellationRequest.status}
+                  </p>
+                  <p className="text-xs text-slate-600 mt-1">
+                    <span className="font-bold">Reason:</span> {booking.cancellationRequest.reason}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Requested {formatNepalDateTime(booking.cancellationRequest.requestedAt)}
+                  </p>
+                  {booking.cancellationRequest.reviewNotes && (
+                    <p className="text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200">
+                      <span className="font-bold">Admin Notes:</span> {booking.cancellationRequest.reviewNotes}
+                    </p>
+                  )}
+                  {booking.refund && booking.cancellationRequest.status === 'Approved' && (
+                    <div className="mt-3 pt-3 border-t border-emerald-200 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Original Amount:</span>
+                        <span className="font-bold text-slate-900">{money(booking.refund.amount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Processing Fee (10%):</span>
+                        <span className="font-bold text-rose-600">{money(booking.refund.deductedAmount)}</span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-emerald-200">
+                        <span className="font-bold text-emerald-700">Net Refund:</span>
+                        <span className="font-black text-emerald-700">{money(booking.refund.netRefundAmount)}</span>
+                      </div>
+                    </div>
+                  )}
+                  {hasPendingCancellation && (
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => setShowApproveDialog(true)}
+                        disabled={isProcessing}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        <CheckCircle size={14} /> Approve
+                      </button>
+                      <button
+                        onClick={() => setShowRejectDialog(true)}
+                        disabled={isProcessing}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        <Ban size={14} /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Customer */}
@@ -122,6 +232,18 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                 {booking.paymentStatus}
               </span>
             </div>
+            {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
+              <div className="pt-2 border-t border-amber-100 bg-amber-50/30 -mx-4 px-4 pb-2 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-700 font-bold text-[11px]">Deposit Paid (20%)</span>
+                  <span className="font-extrabold text-emerald-600">{money(booking.depositAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-700 font-bold text-[11px]">Pay at Venue</span>
+                  <span className="font-extrabold text-amber-700">{money(booking.remainingBalance)}</span>
+                </div>
+              </div>
+            )}
             <div className="pt-2 border-t border-slate-100 space-y-1.5">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-semibold">Total price</span>
@@ -220,6 +342,94 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
           </div>
         </div>
       </div>
+
+      {/* Approve Cancellation Dialog */}
+      {showApproveDialog && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Approve Cancellation</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              This will cancel the booking and process a refund of {money((booking.paid || 0) * 0.9)} (10% processing fee deducted).
+            </p>
+            
+            <label className="block text-sm font-bold text-slate-700 mb-2">
+              Admin Notes (Optional)
+            </label>
+            <textarea
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              placeholder="Add notes about this approval..."
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              rows={3}
+              disabled={isProcessing}
+            />
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleApproveCancellation}
+                disabled={isProcessing}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing...' : 'Approve & Refund'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowApproveDialog(false);
+                  setReviewNotes('');
+                }}
+                disabled={isProcessing}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Cancellation Dialog */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Reject Cancellation</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              The booking will remain active and the customer will be notified of the rejection.
+            </p>
+            
+            <label className="block text-sm font-bold text-slate-700 mb-2">
+              Rejection Reason <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              placeholder="Provide a reason for rejection..."
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+              rows={3}
+              disabled={isProcessing}
+            />
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleRejectCancellation}
+                disabled={isProcessing}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-all disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing...' : 'Reject Request'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setReviewNotes('');
+                }}
+                disabled={isProcessing}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

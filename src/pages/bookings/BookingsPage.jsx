@@ -67,12 +67,17 @@ const mapServerBooking = (booking) => ({
   amount: Number(booking.totalAmount || 0),
   paid: paidAmount(booking),
   due: Math.max(0, Number(booking.totalAmount || 0) - paidAmount(booking)),
+  depositAmount: Number(booking.depositAmount || 0),
+  remainingBalance: Number(booking.remainingBalance || 0),
+  depositPaid: booking.depositPaid || false,
   paymentType: booking.paymentType || 'full',
   paymentMethod: booking.paymentMethod || '—',
   paymentStatus: booking.paymentStatus || 'Pending',
   bookingStatus: deriveBookingStatus(booking),
   bookedOn: formatNepalDateTime(booking.createdAt),
   confirmedAt: booking.confirmedAt || null,
+  cancellationRequest: booking.cancellationRequest || null,
+  refund: booking.refund || null,
   raw: booking, // the untouched server booking, used by the CSV export
   payments: buildPaymentRows([booking]),
   playersCount: booking.teamSize || 0,
@@ -129,14 +134,16 @@ function BookingsPage({
   const [actionBusyId, setActionBusyId] = useState(null);
   const [actionError, setActionError] = useState('');
 
-  // Headline numbers from the real bookings. Cancelled bookings never count towards these.
-  const liveBookings = bookings.filter((b) => b.bookingStatus !== 'Cancelled');
-  const cancelledCount = bookings.length - liveBookings.length;
+  // Headline numbers from the real bookings. Cancelled and Refunded bookings don't count towards active stats.
+  const liveBookings = bookings.filter((b) => b.bookingStatus !== 'Cancelled' && b.bookingStatus !== 'Refunded');
+  const refundedCount = bookings.filter((b) => b.bookingStatus === 'Refunded').length;
+  const cancelledCount = bookings.filter((b) => b.bookingStatus === 'Cancelled').length;
+  const inactiveCount = refundedCount + cancelledCount;
   const stats = [
     {
       title: 'Total Bookings',
       value: liveBookings.length.toLocaleString(),
-      subtext: `${cancelledCount} cancelled`,
+      subtext: refundedCount > 0 ? `${cancelledCount} cancelled · ${refundedCount} refunded` : `${cancelledCount} cancelled`,
       icon: CalendarIcon,
       iconBg: 'bg-emerald-50 text-emerald-600',
     },
@@ -234,6 +241,26 @@ function BookingsPage({
       setCancelTarget(null);
     } finally {
       setActionBusyId(null);
+    }
+  };
+
+  const handleApproveCancellation = async (bookingId, reviewNotes) => {
+    try {
+      await turfService.approveCancellation(bookingId, reviewNotes);
+      await loadBookings();
+      if (refreshBookings) refreshBookings();
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to approve cancellation');
+    }
+  };
+
+  const handleRejectCancellation = async (bookingId, reviewNotes) => {
+    try {
+      await turfService.rejectCancellation(bookingId, reviewNotes);
+      await loadBookings();
+      if (refreshBookings) refreshBookings();
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to reject cancellation');
     }
   };
 
@@ -390,6 +417,12 @@ function BookingsPage({
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 w-fit">
             <AlertCircle size={13} /> Pending
+          </span>
+        );
+      case 'Refunded':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-600 w-fit">
+            <CheckCircle2 size={13} /> Refunded
           </span>
         );
       case 'Cancelled':
@@ -559,7 +592,7 @@ function BookingsPage({
 
               {/* Status Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto py-0.5">
-                {['All', 'Confirmed', 'Pending', 'Completed', 'Cancelled'].map((status) => (
+                {['All', 'Confirmed', 'Pending', 'Completed', 'Refunded', 'Cancelled'].map((status) => (
                   <button
                     key={status}
                     onClick={() => {
@@ -659,6 +692,7 @@ function BookingsPage({
                     {sortHeader('Court Pitch', 'court', 'pb-3 pr-6 min-w-[110px]')}
                     {sortHeader('Date & Time Slot', 'when')}
                     {sortHeader('Total Amount', 'amount')}
+                    {sortHeader('Due Amount', 'due')}
                     {sortHeader('Payment', 'payment')}
                     {sortHeader('Status', 'status')}
                     <th className="pb-3 text-right">Actions</th>
@@ -728,6 +762,11 @@ function BookingsPage({
                       </td>
                       <td className="py-3.5 pr-4 font-extrabold text-slate-900 text-sm whitespace-nowrap">NRs. {Number(b.amount || 0).toLocaleString('en-NP')}</td>
                       <td className="py-3.5 pr-4 whitespace-nowrap">
+                        <span className={`text-sm font-black ${b.due > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          NRs. {Number(b.due || 0).toLocaleString('en-NP')}
+                        </span>
+                      </td>
+                      <td className="py-3.5 pr-4 whitespace-nowrap">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                           b.paymentStatus === 'Paid'
                             ? 'text-emerald-600 bg-emerald-50'
@@ -738,7 +777,16 @@ function BookingsPage({
                           {b.paymentMethod} ({b.paymentStatus})
                         </span>
                       </td>
-                      <td className="py-3.5 pr-4 whitespace-nowrap">{getStatusBadge(b.bookingStatus)}</td>
+                      <td className="py-3.5 pr-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(b.bookingStatus)}
+                          {b.cancellationRequest && b.cancellationRequest.status === 'Pending' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 w-fit">
+                              <AlertCircle size={10} /> Cancellation Requested
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           {canMarkPaid(b) && (
@@ -868,6 +916,8 @@ function BookingsPage({
         onConfirm={() => handleConfirm(selectedBooking)}
         onMarkPaid={() => setPaidTarget(selectedBooking)}
         onCancel={() => setCancelTarget(selectedBooking)}
+        onApproveCancellation={handleApproveCancellation}
+        onRejectCancellation={handleRejectCancellation}
       />
 
       {/* Mark-as-paid Confirmation Popup */}

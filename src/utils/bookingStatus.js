@@ -3,10 +3,18 @@
  * so a booking reads the same everywhere.
  */
 
-// Cancelled/Completed come straight from the server. Otherwise a booking is Confirmed once money has been
-// received (fully or in part) or the owner has confirmed it (e.g. Pay at Venue), and Pending until then.
+// Cancelled/Completed come straight from the server. If cancelled with a processed refund, show as "Refunded".
+// Otherwise a booking is Confirmed once money has been received (fully or in part) or the owner has confirmed it 
+// (e.g. Pay at Venue), and Pending until then.
 export const deriveBookingStatus = (booking) => {
-  if (booking.status === 'Cancelled' || booking.status === 'Completed') return booking.status;
+  if (booking.status === 'Cancelled') {
+    // Show "Refunded" if the booking was cancelled and a refund was processed
+    if (booking.refund && booking.refund.status === 'Processed') {
+      return 'Refunded';
+    }
+    return 'Cancelled';
+  }
+  if (booking.status === 'Completed') return booking.status;
   const moneyReceived = booking.paymentStatus === 'Paid' || Number(booking.totalPaidAmount || 0) > 0;
   return moneyReceived || booking.confirmedAt ? 'Confirmed' : 'Pending';
 };
