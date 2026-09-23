@@ -6,6 +6,7 @@ import PlayerProfileCard from './PlayerProfileCard';
 import PreferencesForm from './PreferencesForm';
 import SecuritySettings from './SecuritySettings';
 import DangerZone from './DangerZone';
+import UserBookingDetailModal from '../../components/bookings/UserBookingDetailModal';
 import useAuthStore from '../../store/useAuthStore';
 import useWishlistStore from '../../store/useWishlistStore';
 import turfService from '../../services/turfService';
@@ -28,6 +29,7 @@ import {
   ShieldCheck,
   MapPin,
   Star,
+  Eye,
 } from 'lucide-react';
 
 export default function ProfilePage({
@@ -60,6 +62,7 @@ export default function ProfilePage({
   const [activeTab, setActiveTab] = useState('profile');
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const wishlistItems = useWishlistStore((s) => s.items);
   const wishlistLoading = useWishlistStore((s) => s.isLoading);
   const isWishlistLoaded = useWishlistStore((s) => s.isLoaded);
@@ -80,6 +83,20 @@ export default function ProfilePage({
       .catch(() => setBookings([]))
       .finally(() => setBookingsLoading(false));
   }, [activeTab, user]);
+
+  // Handler for requesting cancellation
+  const handleRequestCancellation = async (bookingId, reason) => {
+    try {
+      await turfService.requestCancellation(bookingId, reason);
+      showToast('Cancellation request submitted successfully', 'success');
+      // Refresh bookings
+      const updatedBookings = await turfService.getMyBookings();
+      setBookings(updatedBookings);
+      setSelectedBooking(null);
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to submit cancellation request');
+    }
+  };
 
   // Fetched on mount (not gated to the savedTurfs tab) since the saved-turfs count
   // also shows in the stats card on the default Personal Info tab.
@@ -438,6 +455,9 @@ export default function ProfilePage({
                               <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 Status
                               </th>
+                              <th className="px-6 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Actions
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
@@ -517,10 +537,23 @@ export default function ProfilePage({
                                         ? 'bg-blue-100 text-blue-700'
                                         : booking.status === 'Completed'
                                         ? 'bg-slate-100 text-slate-700'
+                                        : booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed'
+                                        ? 'bg-purple-100 text-purple-700'
+                                        : booking.status === 'Cancelled'
+                                        ? 'bg-rose-100 text-rose-700'
                                         : 'bg-rose-100 text-rose-700'
                                     }`}>
-                                      {booking.status}
+                                      {booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed' ? 'Refunded' : booking.status}
                                     </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-center">
+                                    <button
+                                      onClick={() => setSelectedBooking(booking)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-500 text-xs font-bold text-slate-900 transition-all"
+                                    >
+                                      <Eye className="h-3.5 w-3.5" />
+                                      View Details
+                                    </button>
                                   </td>
                                 </tr>
                               );
@@ -658,6 +691,15 @@ export default function ProfilePage({
           </div>
         )}
       </main>
+
+      {/* Booking Detail Modal */}
+      {selectedBooking && (
+        <UserBookingDetailModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onRequestCancellation={handleRequestCancellation}
+        />
+      )}
 
       {/* Footer */}
       <Footer onHome={onHome} onFindTurfs={onFindTurfs} onListTurf={onListTurf} />
