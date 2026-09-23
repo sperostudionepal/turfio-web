@@ -75,7 +75,11 @@ export default function CustomDropdown({
     if (!isOpen) return undefined;
     // Anchored repositioning on every scroll tick lags a frame behind and looks
     // glitchy; closing on scroll (like most anchored popovers) is simpler and robust.
-    const handleScroll = () => setIsOpen(false);
+    // Scrolling inside the popover's own option list must not close it though.
+    const handleScroll = (event) => {
+      if (popoverRef.current && popoverRef.current.contains(event.target)) return;
+      setIsOpen(false);
+    };
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, [isOpen]);
