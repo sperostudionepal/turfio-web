@@ -166,7 +166,7 @@ export const turfService = {
   },
 
   /**
-   * Create an atomic 10-minute hold on a slot range
+   * Create an atomic 5-minute hold on a slot range
    */
   async createSlotHold(id, { date, startTime, duration, courtId, courtName }) {
     const response = await apiClient.post(`/turfs/${id}/holds`, {
