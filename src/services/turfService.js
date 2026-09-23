@@ -229,6 +229,11 @@ export const turfService = {
     return response?.data || response;
   },
 
+  async getOwnerPayments() {
+    const response = await apiClient.get('/payments/owner');
+    return response?.data || response;
+  },
+
   /**
    * Update editable venue fields (name, description, address city/area, pricePerHour, amenities)
    */

@@ -5,7 +5,6 @@ import StatCards from '../../components/dashboard/StatCards';
 import ScheduleCard from '../../components/dashboard/ScheduleCard';
 import RevenueChart from '../../components/dashboard/RevenueChart';
 import RecentBookingsTable from '../../components/dashboard/RecentBookingsTable';
-import RecentPaymentsTable from '../../components/dashboard/RecentPaymentsTable';
 import RevenueSummaryDonut from '../../components/dashboard/RevenueSummaryDonut';
 import CourtsPage from '../turfs/CourtsPage';
 import TurfImagesPage from '../turfs/TurfImagesPage';
@@ -288,11 +287,8 @@ function Dashboard({ user, onLogout }) {
                 <RevenueSummaryDonut bookings={ownerBookings} period={period} />
               </div>
 
-              {/* Bottom Row: Recent Bookings & Recent Payments */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <RecentBookingsTable bookings={ownerBookings} />
-                <RecentPaymentsTable bookings={ownerBookings} />
-              </div>
+              {/* Bottom Row: Recent Bookings. Payments now live on their own dashboard page (see Sidebar). */}
+              <RecentBookingsTable bookings={ownerBookings} />
               </>
             )}
           </div>

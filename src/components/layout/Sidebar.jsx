@@ -9,6 +9,7 @@ import {
   LogOut,
   Building2,
   Image as ImageIcon,
+  Wallet,
   X,
 } from 'lucide-react';
 import { useOwnerContext } from '../../context/ownerContext';
@@ -30,6 +31,7 @@ function Sidebar(props) {
     { label: 'Dashboard', icon: LayoutDashboard, href: '#' },
     // Number of bookings waiting for the owner to confirm; hidden when there are none
     { label: 'Bookings', icon: Calendar, badge: ctx.pendingCount > 0 ? String(ctx.pendingCount) : undefined, href: '#' },
+    { label: 'Payments', icon: Wallet, href: '#' },
     { label: 'Customers', icon: Users, href: '#' },
   ];
 
