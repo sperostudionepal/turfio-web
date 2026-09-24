@@ -26,7 +26,7 @@ const pillars = [
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="bg-white pt-12 pb-8 lg:pt-16 lg:pb-10 border-t border-slate-100 scroll-mt-36">
+    <section id="pricing" className="bg-white pt-8 pb-8 lg:pt-10 lg:pb-10 border-t border-slate-100 scroll-mt-[var(--nav-h,72px)]">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto">

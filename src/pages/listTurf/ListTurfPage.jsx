@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { compressImageFile } from '../../utils/imageCompressor';
 import LottieAnimation from '../../components/common/LottieAnimation';
 import {
@@ -25,8 +26,6 @@ import {
   Plus,
   Minus,
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import MapPinPositioner from '../../components/common/MapPinPositioner';
 import TimePickerDropdown from '../../components/common/TimePickerDropdown';
 import { useToast } from '../../components/common/toastContext';
@@ -51,7 +50,9 @@ const DAY_KEYS = [
 ];
 
 
-export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTurfs, onDashboard, onSubmitted, onHowItWorks, onPricing, onAboutUs }) {
+export default function ListTurfPage({ user, onSubmitted, onHome: onHomeProp }) {
+  const navigate = useNavigate();
+  const handleHome = onHomeProp || (() => navigate('/'));
   const [formData, setFormData] = useState({
     arenaName: '',
     ownerName: '',
@@ -405,9 +406,6 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
 
   return (
     <div className="bg-white min-h-screen text-slate-900 font-sans">
-      {/* Top Navbar */}
-      <Navbar onLogin={onLogin} user={user} onLogout={onLogout} onHome={onHome} onFindTurfs={onFindTurfs} onDashboard={onDashboard} onHowItWorks={onHowItWorks} onPricing={onPricing} onAboutUs={onAboutUs} />
-
       {/* 1. Main Registration Form & How It Works Column */}
       <section className="pt-6 md:pt-10 pb-16 md:pb-24">
         <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
@@ -416,7 +414,7 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
             {/* Left Column: Form */}
             <div className="lg:col-span-7">
               {isSubmitted ? (
-                <RequestStatusPanel data={submittedData} onHome={onHome} />
+                <RequestStatusPanel data={submittedData} onHome={handleHome} />
               ) : (
               <form onSubmit={handleSubmit} data-form-section className="space-y-6">
                 {/* Step 1: Arena Details */}
@@ -1176,9 +1174,6 @@ export default function ListTurfPage({ onLogin, user, onLogout, onHome, onFindTu
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
 
       {/* Map Pin Positioner Modal */}
       {isMapOpen && (

@@ -1,4 +1,5 @@
 import { Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -10,7 +11,7 @@ export default function Footer() {
           <div className="flex flex-col justify-between lg:col-span-3 lg:pr-4">
             <div>
               {/* Brand Logo */}
-              <div className="flex items-center gap-2.5">
+              <Link to="/" aria-label="Turfio home" className="flex items-center gap-2.5">
                 <picture>
                   <source srcSet="/logo.webp" type="image/webp" />
                   <img
@@ -31,7 +32,7 @@ export default function Footer() {
                     Futsal, your way
                   </span>
                 </span>
-              </div>
+              </Link>
 
               {/* Tagline */}
               <p className="mt-4 text-sm font-medium leading-relaxed text-slate-500 max-w-xs">
@@ -92,24 +93,24 @@ export default function Footer() {
             <h4 className="text-[15px] font-extrabold text-slate-900">Explore</h4>
             <ul className="mt-4 space-y-3 text-sm font-medium text-slate-600">
               <li>
-                <a href="#" className="transition-colors hover:text-slate-900">
+                <Link to="/turfs" className="transition-colors hover:text-slate-900">
                   Find Turfs
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="transition-colors hover:text-slate-900">
+                <Link to="/#how-it-works" className="transition-colors hover:text-slate-900">
                   How It Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="transition-colors hover:text-slate-900">
+                <Link to="/#about-us" className="transition-colors hover:text-slate-900">
                   Features
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="transition-colors hover:text-slate-900">
+                <Link to="/#pricing" className="transition-colors hover:text-slate-900">
                   Pricing
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

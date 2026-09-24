@@ -203,7 +203,7 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
   const activeTurfs = turfsData || fetchedTurfs;
   const isLoading = propLoading || (loadingRealTurfs && activeTurfs.length === 0);
   return (
-    <section id="popular-turfs" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16 scroll-mt-36">
+    <section id="popular-turfs" className="bg-white pt-8 pb-14 lg:pt-10 lg:pb-16 scroll-mt-[var(--nav-h,72px)]">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header, centered above the card grid */}
         <div className="text-center">

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { useNavigate } from 'react-router-dom';
 import ProfileInfoCard from './ProfileInfoCard';
 import PlayerProfileCard from './PlayerProfileCard';
 import PreferencesForm from './PreferencesForm';
@@ -36,16 +35,7 @@ import { formatNepalDateTime } from '../../utils/dateTime';
 import { getPageItems } from '../../utils/pagination';
 
 export default function ProfilePage({
-  onHome,
-  onFindTurfs,
-  onListTurf,
-  onLogin,
-  onLogout,
-  onDashboard,
   onViewTurfDetails,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
 }) {
   const {
     user,
@@ -60,6 +50,8 @@ export default function ProfilePage({
     deleteAccount,
   } = useAuthStore();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const handleFindTurfs = () => navigate('/turfs');
 
   const [activeTab, setActiveTab] = useState('profile');
   const [bookings, setBookings] = useState([]);
@@ -72,11 +64,6 @@ export default function ProfilePage({
   const isWishlistLoaded = useWishlistStore((s) => s.isLoaded);
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
-
-  // Fetch current user data on mount
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
 
   // Re-fetch on entering Security & 2FA specifically: hasPassword (and other account-state
   // flags) can go stale between the initial mount and whenever the user actually opens this
@@ -114,7 +101,8 @@ export default function ProfilePage({
   // Fetched on mount (not gated to the savedTurfs tab) since the saved-turfs count
   // also shows in the stats card on the default Personal Info tab.
   useEffect(() => {
-    if (!user || isWishlistLoaded) return;
+    const userId = user?._id || user?.id;
+    if (!userId || isWishlistLoaded) return;
     fetchWishlist();
   }, [user, isWishlistLoaded, fetchWishlist]);
 
@@ -129,22 +117,7 @@ export default function ProfilePage({
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white font-sans">
-      {/* Top Navbar */}
-      <Navbar
-        user={user}
-        isInitializing={isInitializing}
-        onLogin={onLogin}
-        onLogout={onLogout}
-        onHome={onHome}
-        onFindTurfs={onFindTurfs}
-        onListTurf={onListTurf}
-        onDashboard={onDashboard}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
-
+    <div className="bg-white font-sans">
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-6 sm:px-8 lg:px-12">
         {/* Auth Check & Loading States */}
@@ -688,7 +661,7 @@ export default function ProfilePage({
                         </p>
                         <button
                           type="button"
-                          onClick={onFindTurfs}
+                          onClick={handleFindTurfs}
                           className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-lime-400 px-5 py-2.5 text-xs font-bold text-slate-900 hover:bg-lime-500 transition-all active:scale-95 cursor-pointer shadow-xs"
                         >
                           Browse Turfs
@@ -789,9 +762,6 @@ export default function ProfilePage({
           onRequestCancellation={handleRequestCancellation}
         />
       )}
-
-      {/* Footer */}
-      <Footer onHome={onHome} onFindTurfs={onFindTurfs} onListTurf={onListTurf} />
     </div>
   );
 }

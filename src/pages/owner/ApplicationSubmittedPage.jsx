@@ -5,20 +5,10 @@ import {
   CheckCircle2,
   MessageSquare,
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-
 export default function ApplicationSubmittedPage({
   data,
   onHome,
   onTrack,
-  onLogin,
-  onSignUp,
-  onListTurf,
-  onFindTurfs,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
 }) {
   const trackingUrl =
     data?.trackingUrl ||
@@ -46,20 +36,7 @@ export default function ApplicationSubmittedPage({
   ];
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col justify-between selection:bg-lime-300 selection:text-slate-900 relative">
-      {/* Top Navbar */}
-      <Navbar
-        onLogin={onLogin}
-        onSignUp={onSignUp}
-        onHome={onHome}
-        onListTurf={onListTurf}
-        onFindTurfs={onFindTurfs}
-        user={null}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
-
+    <div className="bg-white text-slate-900 font-sans selection:bg-lime-300 selection:text-slate-900 relative">
       {/* Main Page Content */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 md:px-8 pt-16 md:pt-24 pb-12 md:pb-16">
         
@@ -185,9 +162,6 @@ export default function ApplicationSubmittedPage({
       >
         <MessageSquare size={22} className="stroke-[2.2] text-white" />
       </a>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

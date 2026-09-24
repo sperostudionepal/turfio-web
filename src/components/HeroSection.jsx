@@ -11,7 +11,6 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import Navbar from './Navbar';
 import { getTodayNepalString } from '../utils/dateTime';
 import CustomDatePicker from './common/CustomDatePicker';
 import CustomDropdown from './common/CustomDropdown';
@@ -29,20 +28,9 @@ const TIME_OPTIONS = [
 ].map((value) => ({ value, label: value }));
 
 export default function HeroSection({
-  onLogin,
-  onSignUp,
-  user,
-  onLogout,
-  onListTurf,
-  onHome,
-  onViewTurfDetails,
   onFindTurfs,
-  onDashboard,
-  onProfile,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
-  isInitializing = false,
+  onListTurf,
+  onViewTurfDetails,
 }) {
   const [form, setForm] = useState(initialForm);
 
@@ -54,35 +42,8 @@ export default function HeroSection({
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const hasAdminAccess = user && (user.role === 'owner' || user.role === 'admin' || user.isTurfAdmin);
-  const isTurfBannerActive = user && user.isTurfAdmin && !user.turfApprovalBannerSeen;
-  const hasTopbar = !hasAdminAccess || isTurfBannerActive;
-
   return (
-    <>
-      <Navbar
-        onLogin={onLogin}
-        onSignUp={onSignUp}
-        user={user}
-        isInitializing={isInitializing}
-        onLogout={onLogout}
-        onListTurf={onListTurf}
-        onHome={onHome}
-        onFindTurfs={onFindTurfs}
-        onDashboard={onDashboard}
-        onProfile={onProfile}
-        onHowItWorks={onHowItWorks || (() => scrollToSection('popular-turfs'))}
-        onPricing={onPricing || (() => scrollToSection('pricing'))}
-        onAboutUs={onAboutUs || (() => scrollToSection('about-us'))}
-      />
-      <div className="bg-white">
+    <div className="bg-white">
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
@@ -99,11 +60,7 @@ export default function HeroSection({
           </picture>
         </div>
 
-        <div className={`relative mx-auto max-w-[1440px] px-6 pb-10 lg:px-10 lg:pb-16 transition-all ${
-          hasTopbar
-            ? 'pt-12 md:pt-16 lg:pt-20'
-            : 'pt-[82px]'
-        }`}>
+        <div className="relative mx-auto max-w-[1440px] px-6 pb-10 pt-8 md:pt-12 lg:px-10 lg:pb-16 lg:pt-16">
           <div className="grid items-stretch gap-3 lg:grid-cols-[1fr_0.78fr] lg:gap-6 xl:gap-8">
             {/* Left column */}
             <div className="max-w-[700px]">
@@ -312,6 +269,5 @@ export default function HeroSection({
         </div>
       </section>
     </div>
-  </>
-);
+  );
 }
