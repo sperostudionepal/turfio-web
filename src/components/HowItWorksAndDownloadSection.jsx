@@ -40,7 +40,7 @@ const steps = [
 
 export default function HowItWorksAndDownloadSection() {
   return (
-    <section id="how-it-works" className="bg-white pt-10 pb-8 lg:pt-12 lg:pb-10 border-t border-slate-100/60 overflow-hidden scroll-mt-20">
+    <section id="how-it-works" className="bg-white pt-10 pb-8 lg:pt-12 lg:pb-10 border-t border-slate-100/60 overflow-hidden scroll-mt-36">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">

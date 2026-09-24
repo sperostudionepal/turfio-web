@@ -358,8 +358,9 @@ export default function BookingCheckoutPage({
   const discountAmount = Math.round(subtotal * appliedDiscount);
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Max players
+  // Min/max players -- one full side per team is the floor, a full match both sides is the ceiling.
   const maxPlayersAllowed = venueSize.includes('5') ? 10 : 14;
+  const minPlayersAllowed = venueSize.includes('5') ? 5 : 7;
 
   const depositAmount = Math.ceil(totalAmount * 0.2);
   const remainingBalance = totalAmount - depositAmount;
@@ -494,7 +495,10 @@ export default function BookingCheckoutPage({
             depositAmount: isVenueDeposit ? depositAmount : 0,
             remainingBalance: isVenueDeposit ? remainingBalance : 0,
             paymentType: formData.paymentType || 'full',
-            paymentMethod: isVenueDeposit ? 'Pay at Venue' : 'eSewa',
+            // This whole branch only runs when eSewa is the selected gateway (even for a
+            // venue-deposit booking, the deposit itself is charged through eSewa) -- the
+            // "at venue" part is captured by paymentType/remainingBalance, not this field.
+            paymentMethod: 'eSewa',
             paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
@@ -788,7 +792,7 @@ export default function BookingCheckoutPage({
                   <div>
                     <p className="text-slate-500 font-medium">Total Paid</p>
                     <p className="font-bold text-slate-900 mt-0.5">
-                      NPR {totalAmount.toLocaleString()}
+                      NPR {(formData.paymentType === 'venue' ? depositAmount : totalAmount).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -949,7 +953,7 @@ export default function BookingCheckoutPage({
                 <div>
                   <p className="text-slate-500 font-medium">Amount Paid Now</p>
                   <p className="font-extrabold text-sm text-lime-700 mt-0.5">
-                    NPR {totalAmount.toLocaleString()}
+                    NPR {(formData.paymentType === 'venue' ? depositAmount : totalAmount).toLocaleString()}
                   </p>
                 </div>
 
@@ -1177,7 +1181,7 @@ export default function BookingCheckoutPage({
                             onClick={() =>
                               handleInputChange(
                                 'expectedPlayers',
-                                Math.max(2, formData.expectedPlayers - 1)
+                                Math.max(minPlayersAllowed, formData.expectedPlayers - 1)
                               )
                             }
                             className="flex h-9 w-10 items-center justify-center rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-2xs transition-all active:scale-90 cursor-pointer"
@@ -1549,7 +1553,7 @@ export default function BookingCheckoutPage({
                       <div>
                         <p className="text-slate-500 font-medium">Total Paid</p>
                         <p className="font-bold text-slate-900 mt-0.5">
-                          NPR {totalAmount.toLocaleString()}
+                          NPR {(formData.paymentType === 'venue' ? depositAmount : totalAmount).toLocaleString()}
                         </p>
                       </div>
                     </div>
