@@ -23,8 +23,6 @@ import {
   Navigation,
   PhoneCall,
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
 import { useToast } from '../../components/common/toastContext';
@@ -66,18 +64,14 @@ function EsewaIcon({ className = 'h-5 w-5' }) {
 }
 
 export default function BookingCheckoutPage({
-  onLogin,
   user,
-  onLogout,
-  onHome,
-  onDashboard,
   turf,
   onBack,
   onViewTurfDetails,
   onNavigateRoute,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
+  initialBooking = null,
+  initialStep = 2,
+  onBookingConfirmed,
 }) {
   // Persist and restore step and form data across reloads
   const storageKey = turf?.id ? `turfio_checkout_state_${turf.id}` : 'turfio_checkout_state';
@@ -88,7 +82,7 @@ export default function BookingCheckoutPage({
     const stepParam = parseInt(searchParams.get('step'), 10);
     if (stepParam && stepParam >= 2 && stepParam <= 4) return stepParam;
 
-    return 2;
+    return initialStep;
   });
 
   const { showToast } = useToast();
@@ -180,7 +174,8 @@ export default function BookingCheckoutPage({
   const [promoError, setPromoError] = useState('');
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [confirmedBooking, setConfirmedBooking] = useState(initialBooking);
+  const [bookingPass, setBookingPass] = useState(null);
   const [idempotencyKey] = useState(() => {
     const slotId = turf?.id || turf?._id || 'slot';
     const dateVal = turf?.selectedDate || 'date';
@@ -207,11 +202,14 @@ export default function BookingCheckoutPage({
       const derivedPhone = user.phone || user.phoneNumber || '';
       const derivedEmail = user.email || '';
 
+      // Account identity is authoritative for fields already known by Turfio.
+      // This also prevents stale checkout sessionStorage from another session
+      // from overriding the currently authenticated player's contact details.
       setFormData((prev) => ({
         ...prev,
-        fullName: prev.fullName || derivedName,
-        phone: prev.phone || derivedPhone,
-        email: prev.email || derivedEmail,
+        fullName: derivedName || prev.fullName,
+        phone: derivedPhone || prev.phone,
+        email: derivedEmail || prev.email,
       }));
     }
   }, [user]);
@@ -220,31 +218,29 @@ export default function BookingCheckoutPage({
   const [secondsRemaining, setSecondsRemaining] = useState(() => {
     if (turf?.holdExpiresAt) {
       const diffSec = Math.floor((new Date(turf.holdExpiresAt).getTime() - Date.now()) / 1000);
-      return Math.max(0, diffSec);
+      return Math.min(300, Math.max(0, diffSec));
     }
-    return 585; // 09:45 default fallback
+    return 0; // never invent/restart a hold timer without a server expiry
   });
 
   useEffect(() => {
     if (turf?.holdExpiresAt) {
       const diffSec = Math.floor((new Date(turf.holdExpiresAt).getTime() - Date.now()) / 1000);
-      setSecondsRemaining(Math.max(0, diffSec));
+      setSecondsRemaining(Math.min(300, Math.max(0, diffSec)));
     }
   }, [turf?.holdExpiresAt]);
 
   useEffect(() => {
-    if (secondsRemaining <= 0) return;
-    const timer = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          triggerToast('Your slot hold has expired. Please select your slot again.');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (!turf?.holdExpiresAt || currentStep >= 4) return;
+    const expiresAtMs = new Date(turf.holdExpiresAt).getTime();
+    const update = () => {
+      const next = Math.max(0, Math.min(300, Math.floor((expiresAtMs - Date.now()) / 1000)));
+      setSecondsRemaining(next);
+    };
+    update();
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [secondsRemaining]);
+  }, [turf?.holdExpiresAt, currentStep]);
 
   const formattedTimer = useMemo(() => {
     const mins = Math.floor(secondsRemaining / 60);
@@ -290,8 +286,6 @@ export default function BookingCheckoutPage({
 
   const courtName = turf?.courtName || turf?.selectedCourt?.name || turf?.court?.name || 'Court 1';
   const courtDimension = turf?.courtDimension || turf?.selectedCourt?.dimension || turf?.court?.dimension || '25m x 15m (Standard 5v5)';
-  const courtSurface = turf?.courtSurface || turf?.selectedCourt?.surface || turf?.court?.surface || 'FIFA Quality Synthetic Turf';
-  const courtNumber = turf?.courtNumber || turf?.selectedCourt?.courtNumber || 1;
 
   const selectedDateStr = useMemo(() => {
     if (turf?.selectedDate) {
@@ -482,34 +476,20 @@ export default function BookingCheckoutPage({
           // Build booking payload with hold linkage and idempotency key
           const bookingPayload = {
             turf: turf?.id || turf?._id,
-            user: user?._id || user?.id,
-            userId: user?._id || user?.id,
-            contactEmail: formData?.email || user?.email,
-            contactPhone: formData?.phone || user?.phone || user?.phoneNumber,
             date: bookingDate,
             timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
             matchType,
             teamSize: formData.expectedPlayers || 10,
-            totalAmount: totalAmount,
-            totalPaidAmount: 0,
-            depositAmount: isVenueDeposit ? depositAmount : 0,
-            remainingBalance: isVenueDeposit ? remainingBalance : 0,
             paymentType: formData.paymentType || 'full',
             // This whole branch only runs when eSewa is the selected gateway (even for a
             // venue-deposit booking, the deposit itself is charged through eSewa) -- the
             // "at venue" part is captured by paymentType/remainingBalance, not this field.
-            paymentMethod: 'eSewa',
-            paymentStatus: 'Pending',
             holdToken: turf?.holdToken,
             holdId: turf?.holdId,
             idempotencyKey,
             court: {
               id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
               name: courtName,
-              courtNumber,
-              dimension: courtDimension,
-              surface: courtSurface,
-              hourlyRate: Number(turf?.courtHourlyRate || turf?.pricePerHour) || 1200,
             },
           };
 
@@ -520,9 +500,7 @@ export default function BookingCheckoutPage({
               formData,
               bookingPayload,
               totalAmount: payAmount,
-              depositAmount: isVenueDeposit ? depositAmount : 0,
-              remainingBalance: isVenueDeposit ? remainingBalance : 0,
-              isVenueDeposit,
+                  isVenueDeposit,
               selectedDateStr,
               selectedTimeStr,
               endTimeStr,
@@ -578,27 +556,24 @@ export default function BookingCheckoutPage({
           timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
           matchType,
           teamSize: formData.expectedPlayers || 10,
-          totalAmount: totalAmount,
-          totalPaidAmount: 0,
           paymentType: formData.paymentType || 'venue',
-          paymentMethod: formData.paymentType === 'venue' ? 'Pay at Venue' : 'eSewa',
-          paymentStatus: 'Pending',
           holdToken: turf?.holdToken,
           holdId: turf?.holdId,
           idempotencyKey,
           court: {
             id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
             name: courtName,
-            courtNumber,
-            dimension: courtDimension,
-            surface: courtSurface,
-            hourlyRate: Number(turf?.courtHourlyRate || turf?.pricePerHour) || 1200,
           },
         };
 
         const res = await turfService.createBooking(bookingPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
-        setConfirmedBooking(res?.data || res);
+        const createdBooking = res?.data || res;
+        setConfirmedBooking(createdBooking);
 
+        if (createdBooking?.bookingId && onBookingConfirmed) {
+          onBookingConfirmed(createdBooking.bookingId);
+          return;
+        }
         updateStep(4);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         triggerToast('🎉 Reservation confirmed. Payment is due at the venue.');
@@ -622,24 +597,33 @@ export default function BookingCheckoutPage({
   // Only ever show the real booking ID: players show it (and its QR code) at the venue.
   const confirmedBookingId = confirmedBooking?.bookingId || turf?.bookingId || '';
 
-  return (
-    <div className="min-h-screen bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900 pb-28">
-      {/* ── Navbar ── */}
-      <Navbar
-        onLogin={onLogin}
-        user={user}
-        onLogout={onLogout}
-        onListTurf={onViewTurfDetails}
-        onHome={onHome}
-        onDashboard={onDashboard}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
+  useEffect(() => {
+    if (!confirmedBookingId || !user) {
+      setBookingPass(null);
+      return;
+    }
+    let cancelled = false;
+    turfService.generateBookingPass(confirmedBookingId)
+      .then((response) => {
+        const data = response?.data || response;
+        if (!cancelled && data?.qrToken) setBookingPass(data);
+      })
+      .catch((error) => {
+        console.error('Failed to generate booking pass:', error);
+        if (!cancelled) setBookingPass(null);
+      });
+    return () => { cancelled = true; };
+  }, [confirmedBookingId, user]);
 
+  const bookingPassUrl = confirmedBookingId && bookingPass?.qrToken
+    ? `${window.location.origin}/booking-pass/${encodeURIComponent(confirmedBookingId)}?token=${encodeURIComponent(bookingPass.qrToken)}`
+    : '';
+
+  return (
+    <div className="bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900 pb-28">
       {/* ── Sticky Progress Stepper Header (Pure White Background) ── */}
       {currentStep < 4 && (
-        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
+        <div className="sticky top-[var(--nav-h,72px)] z-30 bg-white/95 backdrop-blur-md shadow-xs">
           <div className="mx-auto max-w-[1440px] px-6 md:px-14 lg:px-20 py-6">
             <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
               {steps.map((step, idx) => {
@@ -767,7 +751,7 @@ export default function BookingCheckoutPage({
                   <div className="text-right">
                     <p className="text-[11px] font-semibold text-slate-500">Booking ID</p>
                     <p className="font-mono text-sm font-extrabold text-slate-900">
-                      {confirmedBookingId || 'See My Bookings'}
+                      {confirmedBookingId || '—'}
                     </p>
                   </div>
                 </div>
@@ -801,13 +785,15 @@ export default function BookingCheckoutPage({
                 <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
                   <div className="flex items-center gap-3.5">
                     <div className="h-16 w-16 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 border border-slate-100 shadow-2xs">
-                      {confirmedBookingId && (
+                      {bookingPassUrl ? (
                         <QRCodeSVG
-                          value={confirmedBookingId}
+                          value={bookingPassUrl}
                           size={54}
                           level="M"
                           marginSize={0}
                         />
+                      ) : (
+                        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                       )}
                     </div>
                     <div>
@@ -815,8 +801,8 @@ export default function BookingCheckoutPage({
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Show this QR code at venue counter</p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-extrabold text-lime-800 bg-lime-100 px-3 py-1 rounded-full shrink-0">
-                    VALID PASS
+                  <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full shrink-0 ${bookingPassUrl ? 'text-lime-800 bg-lime-100' : 'text-slate-500 bg-slate-100'}`}>
+                    {bookingPassUrl ? 'VALID PASS' : 'GENERATING PASS'}
                   </span>
                 </div>
               </div>
@@ -1528,7 +1514,7 @@ export default function BookingCheckoutPage({
                           Booking ID
                         </p>
                         <p className="font-mono text-sm font-extrabold text-slate-900">
-                          {confirmedBookingId || 'See My Bookings'}
+                          {confirmedBookingId || '—'}
                         </p>
                       </div>
                     </div>
@@ -1561,8 +1547,12 @@ export default function BookingCheckoutPage({
                     {/* QR Code Entry Badge */}
                     <div className="pt-4 flex items-center justify-between bg-white -mx-6 -mb-6 p-6 mt-4 shadow-2xs">
                       <div className="flex items-center gap-3">
-                        <div className="h-14 w-14 rounded-xl bg-slate-50 p-1.5 flex items-center justify-center shrink-0">
-                          <QrCode className="h-full w-full text-slate-900" />
+                        <div className="h-14 w-14 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-slate-100">
+                          {bookingPassUrl ? (
+                            <QRCodeSVG value={bookingPassUrl} size={48} level="M" marginSize={0} />
+                          ) : (
+                            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                          )}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900">Scan for Pitch Entry</p>
@@ -1898,9 +1888,6 @@ export default function BookingCheckoutPage({
           </div>
         </div>
       )}
-
-      {/* ── Footer ── */}
-      <Footer />
     </div>
   );
 }

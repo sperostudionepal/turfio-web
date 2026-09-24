@@ -12,7 +12,7 @@ import turfService from '../services/turfService';
  * without needing to log in. It verifies the QR token with the backend.
  */
 function BookingPassPublicPage() {
-  const { bookingId } = useParams();
+  const { id: bookingId } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   
