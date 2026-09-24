@@ -192,7 +192,7 @@ export default function Footer() {
 
         {/* Bottom Centered Copyright */}
         <div className="mt-14 pt-6 border-t border-slate-100 text-center text-sm font-medium text-slate-400">
-          © 2024 Turfio. All rights reserved.
+          © {new Date().getFullYear()} Turfio. All rights reserved.
         </div>
       </div>
     </footer>

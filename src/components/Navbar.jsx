@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell, ArrowRight, Globe, Clock, HelpCircle } from 'lucide-react';
-import useAuthStore from '../store/useAuthStore';
+import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell } from 'lucide-react';
+import Topbar from './Topbar';
 
 function getDisplayName(user) {
   if (!user) return '';
@@ -23,31 +23,22 @@ export default function Navbar({
   onDashboard,
   onProfile,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
   isInitializing = false,
   hideTopbar = false,
 }) {
-  const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [, setScrolled] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [avatarError, setAvatarError] = useState(false);
-  const [selectedLang, setSelectedLang] = useState({ code: 'EN', label: 'English' });
+  const lastScrollY = useRef(0);
 
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
-  const langRef = useRef(null);
 
   const displayName = getDisplayName(user);
-
-  const languages = [
-    { code: 'EN', label: 'English' },
-    { code: 'NP', label: 'नेपाली' },
-  ];
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -57,9 +48,6 @@ export default function Navbar({
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
         setNotificationsOpen(false);
       }
-      if (langRef.current && !langRef.current.contains(event.target)) {
-        setLangOpen(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -68,110 +56,44 @@ export default function Navbar({
   }, []);
 
   useEffect(() => {
+    let ticking = false;
+
     function handleScroll() {
-      setScrolled(window.scrollY > 10);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const rawY = window.scrollY || document.documentElement.scrollTop || 0;
+          const currentY = Math.max(0, rawY);
+          const lastY = lastScrollY.current;
+          const delta = currentY - lastY;
+
+          if (currentY <= 10) {
+            setIsVisible(true);
+          } else if (delta < 0 && Math.abs(delta) >= 2) {
+            setIsVisible(true);
+          } else if (delta > 0 && currentY > 60) {
+            setIsVisible(false);
+          }
+
+          lastScrollY.current = currentY;
+          ticking = false;
+        });
+        ticking = true;
+      }
     }
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)]">
-      {/* Contextual Top Banner: Turf Approval Banner for approved venue admins OR Marketing Topbar for non-logged-in visitors */}
-      {!hideTopbar && (user && user.isTurfAdmin && !user.turfApprovalBannerSeen ? (
-        /* Turf Approval Notification Banner */
-        <div className="border-b border-lime-100/40 bg-lime-50">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-10 text-[13px] font-medium text-slate-900">
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-base">🎉</span>
-              <span>Congratulations! Your turf listing request has been approved and your venue is ready.</span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onDashboard) onDashboard();
-                  else {
-                    window.history.pushState({}, '', '/dashboard');
-                    window.dispatchEvent(new Event('popstate'));
-                  }
-                }}
-                className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
-              >
-                Go to Dashboard <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => dismissTurfBanner()}
-              className="p-1 hover:bg-lime-100/80 rounded-full transition-colors cursor-pointer text-slate-500 hover:text-slate-800 shrink-0"
-              title="Dismiss notification"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      ) : !user || (user.role !== 'owner' && user.role !== 'admin' && !user.isTurfAdmin) ? (
-        /* Topbar — shown ONLY for logged out visitors and non-admin player accounts */
-        <div className="border-b border-lime-100/40 bg-lime-50">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-10">
-            {/* Left — announcement */}
-            <div className="flex items-center gap-2 text-[13px] font-medium text-slate-900">
-              <Clock className="h-3.5 w-3.5 shrink-0 text-lime-500" />
-              Book faster with our new AI Match Assistant
-              <a href="#" className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors">
-                Learn more <ArrowRight className="h-3 w-3" />
-              </a>
-            </div>
-
-            {/* Right — links + language */}
-            <div className="hidden sm:flex items-center gap-4 text-[13px] font-medium text-slate-900">
-              <button onClick={onListTurf} className="font-bold text-lime-500 hover:text-lime-600 transition-colors cursor-pointer">
-                List Your Turf
-              </button>
-              <span className="text-slate-300">|</span>
-              <a href="#" className="font-bold text-slate-900 hover:text-slate-800 transition-colors flex items-center gap-1.5">
-                <HelpCircle className="h-3.5 w-3.5 text-lime-500" />
-                Help Center
-              </a>
-              <span className="text-slate-300">|</span>
-              {/* Language dropdown */}
-              <div className="relative" ref={langRef}>
-                <button
-                  type="button"
-                  onClick={() => setLangOpen((o) => !o)}
-                  className="inline-flex items-center gap-1.5 hover:text-slate-800 transition-colors cursor-pointer"
-                >
-                  <Globe className="h-3.5 w-3.5 text-lime-500" />
-                  <span className="font-semibold">{selectedLang.code}</span>
-                  <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {langOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-36 rounded-xl bg-white border border-slate-100 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] overflow-hidden z-[9999]">
-                    {languages.map((lang) => (
-                      <button
-                        key={lang.code}
-                        type="button"
-                        onClick={() => { setSelectedLang(lang); setLangOpen(false); }}
-                        className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[12px] font-semibold transition-colors cursor-pointer ${
-                          selectedLang.code === lang.code
-                            ? 'bg-lime-50 text-lime-600'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Globe className="h-3.5 w-3.5 shrink-0 text-lime-500" />
-                        <span>{lang.label}</span>
-                        {selectedLang.code === lang.code && (
-                          <span className="ml-auto text-lime-500 font-bold">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null)}
+    <header className={`sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)] transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      {/* Topbar Component */}
+      <Topbar
+        user={user}
+        onDashboard={onDashboard}
+        onListTurf={onListTurf}
+        hideTopbar={hideTopbar}
+      />
 
       {/* Main Navbar Row */}
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 lg:px-10">
@@ -209,18 +131,11 @@ export default function Navbar({
             Find Turfs
           </a>
           <a
-            href="#popular-turfs"
+            href="#how-it-works"
             onClick={(e) => { e.preventDefault(); onHowItWorks?.(); }}
             className="transition-colors hover:text-slate-900"
           >
             How It Works
-          </a>
-          <a
-            href="#pricing"
-            onClick={(e) => { e.preventDefault(); onFeatures?.(); }}
-            className="transition-colors hover:text-slate-900"
-          >
-            Features
           </a>
           <a
             href="#pricing"
@@ -425,7 +340,7 @@ export default function Navbar({
               Find Turfs
             </a>
             <a
-              href="#popular-turfs"
+              href="#how-it-works"
               onClick={(e) => {
                 e.preventDefault();
                 setMobileMenuOpen(false);
@@ -434,17 +349,6 @@ export default function Navbar({
               className="py-1 transition-colors hover:text-lime-600"
             >
               How It Works
-            </a>
-            <a
-              href="#pricing"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onFeatures?.();
-              }}
-              className="py-1 transition-colors hover:text-lime-600"
-            >
-              Features
             </a>
             <a
               href="#pricing"
