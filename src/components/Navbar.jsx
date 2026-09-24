@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, X, User as UserIcon, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
 import Topbar from './Topbar';
+import { useNavHandlers } from '../hooks/useNavHandlers';
 
 function getDisplayName(user) {
   if (!user) return '';
@@ -13,30 +15,32 @@ function getDisplayName(user) {
   return f || user.username || 'Player';
 }
 
-export default function Navbar({
-  onLogin,
-  user,
-  onLogout,
-  onListTurf,
-  onHome,
-  onFindTurfs,
-  onDashboard,
-  onProfile,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
-  isInitializing = false,
-  hideTopbar = false,
-}) {
+export default function Navbar(props) {
+  const navHandlers = useNavHandlers();
+  const location = useLocation();
+
+  const user = props.user !== undefined ? props.user : navHandlers.user;
+  const onLogin = props.onLogin || navHandlers.onLogin;
+  const onLogout = props.onLogout || navHandlers.onLogout;
+  const onListTurf = props.onListTurf || navHandlers.onListTurf;
+  const onHome = props.onHome || navHandlers.onHome;
+  const onFindTurfs = props.onFindTurfs || navHandlers.onFindTurfs;
+  const onDashboard = props.onDashboard || navHandlers.onDashboard;
+  const onProfile = props.onProfile || (() => navHandlers.navigate('/profile'));
+  const onHowItWorks = props.onHowItWorks || navHandlers.onHowItWorks;
+  const onPricing = props.onPricing || navHandlers.onPricing;
+  const onAboutUs = props.onAboutUs || navHandlers.onAboutUs;
+
+  const isInitializing = props.isInitializing ?? false;
+  const hideTopbar = props.hideTopbar ?? (location.pathname === '/turfs');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
   const [avatarError, setAvatarError] = useState(false);
-  const lastScrollY = useRef(0);
 
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
+  const headerRef = useRef(null);
 
   const displayName = getDisplayName(user);
 
@@ -56,37 +60,21 @@ export default function Navbar({
   }, []);
 
   useEffect(() => {
-    let ticking = false;
-
-    function handleScroll() {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const rawY = window.scrollY || document.documentElement.scrollTop || 0;
-          const currentY = Math.max(0, rawY);
-          const lastY = lastScrollY.current;
-          const delta = currentY - lastY;
-
-          if (currentY <= 10) {
-            setIsVisible(true);
-          } else if (delta < 0 && Math.abs(delta) >= 2) {
-            setIsVisible(true);
-          } else if (delta > 0 && currentY > 60) {
-            setIsVisible(false);
-          }
-
-          lastScrollY.current = currentY;
-          ticking = false;
-        });
-        ticking = true;
+    if (!headerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.borderBoxSize?.[0]?.blockSize || entry.contentRect.height;
+        if (height) {
+          document.documentElement.style.setProperty('--nav-h', `${height}px`);
+        }
       }
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    });
+    observer.observe(headerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <header className={`sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)] transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+    <>
       {/* Topbar Component */}
       <Topbar
         user={user}
@@ -95,10 +83,12 @@ export default function Navbar({
         hideTopbar={hideTopbar}
       />
 
+      <header ref={headerRef} className="sticky top-0 z-50 bg-white shadow-[0_0_25px_rgba(0,0,0,0.04)]">
+
       {/* Main Navbar Row */}
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 sm:py-4 lg:px-10">
         {/* Brand Logo */}
-        <a href="#" onClick={(e) => { e.preventDefault(); onHome?.(); }} className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity">
+        <Link to="/" aria-label="Turfio home" className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity">
           <picture>
             <source srcSet="/logo.webp" type="image/webp" />
             <img
@@ -119,38 +109,34 @@ export default function Navbar({
               Futsal, your way
             </span>
           </span>
-        </a>
+        </Link>
 
         {/* Desktop Navigation Links */}
         <nav className="hidden items-center gap-9 text-[15px] font-medium text-slate-700 lg:flex">
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
+          <Link
+            to="/turfs"
             className="transition-colors hover:text-slate-900"
           >
             Find Turfs
-          </a>
-          <a
-            href="#how-it-works"
-            onClick={(e) => { e.preventDefault(); onHowItWorks?.(); }}
+          </Link>
+          <Link
+            to="/#how-it-works"
             className="transition-colors hover:text-slate-900"
           >
             How It Works
-          </a>
-          <a
-            href="#pricing"
-            onClick={(e) => { e.preventDefault(); onPricing?.(); }}
+          </Link>
+          <Link
+            to="/#pricing"
             className="transition-colors hover:text-slate-900"
           >
             Pricing
-          </a>
-          <a
-            href="#about-us"
-            onClick={(e) => { e.preventDefault(); onAboutUs?.(); }}
+          </Link>
+          <Link
+            to="/#about-us"
             className="transition-colors hover:text-slate-900"
           >
             About Us
-          </a>
+          </Link>
         </nav>
 
         {/* Desktop Action Buttons & Profile / Notifications */}
@@ -259,12 +245,7 @@ export default function Navbar({
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          if (onProfile) {
-                            onProfile();
-                          } else {
-                            window.history.pushState({}, '', '/profile');
-                            window.dispatchEvent(new Event('popstate'));
-                          }
+                          onProfile();
                         }}
                         className="w-full flex items-center gap-3 px-4.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-left"
                       >
@@ -295,20 +276,18 @@ export default function Navbar({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={onLogin}
+              <Link
+                to="/login"
                 className="hidden text-[15px] font-semibold text-slate-900 sm:block hover:text-slate-700 transition-colors cursor-pointer"
               >
                 Log In
-              </button>
-              <button
-                type="button"
-                onClick={onLogin}
+              </Link>
+              <Link
+                to="/signup"
                 className="hidden rounded-full bg-lime-400 px-5 py-2.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-lime-500 sm:inline-flex cursor-pointer"
               >
                 Sign Up
-              </button>
+              </Link>
             </>
           )}
 
@@ -328,50 +307,34 @@ export default function Navbar({
       {mobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 z-50 bg-white border-b border-slate-100/80 shadow-xl px-6 py-5 lg:hidden">
           <nav className="flex flex-col gap-3.5 text-sm font-semibold text-slate-800">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onFindTurfs?.();
-              }}
+            <Link
+              to="/turfs"
+              onClick={() => setMobileMenuOpen(false)}
               className="py-1 transition-colors hover:text-lime-600"
             >
               Find Turfs
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onHowItWorks?.();
-              }}
+            </Link>
+            <Link
+              to="/#how-it-works"
+              onClick={() => setMobileMenuOpen(false)}
               className="py-1 transition-colors hover:text-lime-600"
             >
               How It Works
-            </a>
-            <a
-              href="#pricing"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onPricing?.();
-              }}
+            </Link>
+            <Link
+              to="/#pricing"
+              onClick={() => setMobileMenuOpen(false)}
               className="py-1 transition-colors hover:text-lime-600"
             >
               Pricing
-            </a>
-            <a
-              href="#about-us"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onAboutUs?.();
-              }}
+            </Link>
+            <Link
+              to="/#about-us"
+              onClick={() => setMobileMenuOpen(false)}
               className="py-1 transition-colors hover:text-lime-600"
             >
               About Us
-            </a>
+            </Link>
 
             {/* Log In & Sign Up / Logout Buttons inside Mobile Popup */}
             <div className="mt-3 pt-4 border-t border-slate-100 flex items-center gap-3">
@@ -388,26 +351,20 @@ export default function Navbar({
                 </button>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      if (onLogin) onLogin();
-                    }}
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
                     className="flex-1 rounded-full border border-slate-200 py-2.5 text-sm font-semibold text-slate-900 text-center hover:bg-slate-50 transition-colors"
                   >
                     Log In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      if (onLogin) onLogin();
-                    }}
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
                     className="flex-1 rounded-full bg-lime-400 py-2.5 text-sm font-semibold text-slate-900 text-center hover:bg-lime-500 transition-colors"
                   >
                     Sign Up
-                  </button>
+                  </Link>
                 </>
               )}
             </div>
@@ -415,5 +372,6 @@ export default function Navbar({
         </div>
       )}
     </header>
+  </>
   );
 }

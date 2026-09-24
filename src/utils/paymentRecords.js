@@ -20,7 +20,7 @@ export const toNepalDateString = (value) => {
 };
 
 const customerName = (booking) =>
-  [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || booking.customer?.name || 'Customer';
+  booking.customerSnapshot?.name || [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || booking.customer?.name || 'Customer';
 
 const shortReference = (transactionId) => (transactionId ? `…${String(transactionId).slice(-8)}` : '');
 

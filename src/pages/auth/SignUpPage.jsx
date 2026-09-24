@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
-import Navbar from '../../components/Navbar';
 
-function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onPricing, onAboutUs }) {
+function SignUpPage({ onSignUp, onSwitchToLogin }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -96,23 +95,7 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
   };
 
   return (
-    <div className="min-h-screen w-screen bg-slate-50/60 text-slate-900 font-sans antialiased flex flex-col justify-between selection:bg-lime-300 selection:text-slate-900">
-      
-      {/* Top Navbar */}
-      <Navbar
-        onLogin={onSwitchToLogin}
-        onSignUp={() => {}}
-        onHome={onHome || onClose}
-        onListTurf={onListTurf}
-        onFindTurfs={onFindTurfs}
-        user={null}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
-
-      {/* Main Container */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
+    <div className="w-full flex flex-col items-center justify-center">
         <div className="w-full max-w-[448px] bg-white rounded-3xl p-7 sm:p-9 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
           
           {/* Headline */}
@@ -284,8 +267,6 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
           and{' '}
           <a href="#" className="text-lime-600 hover:underline">Privacy Policy</a>.
         </p>
-      </main>
-
     </div>
   );
 }

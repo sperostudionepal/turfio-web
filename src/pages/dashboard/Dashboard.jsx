@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import StatCards from '../../components/dashboard/StatCards';
@@ -31,9 +32,17 @@ import { deriveBookingStatus, isActiveBooking } from '../../utils/bookingStatus'
 import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../utils/reportExport';
 import { getTodayNepalString, formatDateDisplay } from '../../utils/dateTime';
 
+const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', Coupons: 'coupons', Announcements: 'announcements', Analytics: 'analytics', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
+const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab]));
+
 function Dashboard({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const section = location.pathname.replace(/^\/dashboard\/?/, '').split('/')[0];
+  const activeTab = PATH_TO_TAB[section] || 'Dashboard';
+  const setActiveTab = (tab) => navigate(`/dashboard${TAB_TO_PATH[tab] ? `/${TAB_TO_PATH[tab]}` : ''}`);
   const [venue, setVenue] = useState(null);
+  const [venues, setVenues] = useState([]);
   const [ownerBookings, setOwnerBookings] = useState([]);
   // Load state, so the page can show skeletons / errors / empty states instead of misleading zeros.
   const [venueStatus, setVenueStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
@@ -53,8 +62,9 @@ function Dashboard({ user, onLogout }) {
     const userId = user?._id || user?.id;
     if (!userId) return Promise.resolve(null);
     return turfService
-      .getTurfs({ owner: userId, limit: 1 })
+      .getOwnerTurfs()
       .then((turfs) => {
+        setVenues(turfs);
         setVenue(turfs[0] || null);
         setVenueStatus('ready');
         return turfs[0] || null;
@@ -303,7 +313,7 @@ function Dashboard({ user, onLogout }) {
               />
 
               {/* Top Row: 4 Metric Cards */}
-              <StatCards bookings={ownerBookings} venue={venue} period={period} />
+              <StatCards bookings={ownerBookings} venue={venue} venues={venues} period={period} />
 
               {/* Middle Row: Today's Schedule, Bookings Overview Bar Chart, Revenue Summary Donut */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

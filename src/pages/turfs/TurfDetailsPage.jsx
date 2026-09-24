@@ -28,8 +28,7 @@ import {
   Flag,
   Coffee,
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { useNavHandlers } from '../../hooks/useNavHandlers';
 import CustomDropdown from '../../components/common/CustomDropdown';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
@@ -301,19 +300,16 @@ const DURATION_OPTIONS = [
 export default function TurfDetailsPage({
   turf,
   onHome,
-  onLogin,
-  onLogout,
   onFindTurfs,
-  onListTurf,
-  onDashboard,
   onBookNow,
   onViewTurfDetails,
   onNavigateRoute,
   user,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
 }) {
+  const { onHome: defaultOnHome, onFindTurfs: defaultOnFindTurfs } = useNavHandlers();
+  const handleHome = onHome || defaultOnHome;
+  const handleFindTurfs = onFindTurfs || defaultOnFindTurfs;
+
   // Gallery state
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -609,7 +605,7 @@ export default function TurfDetailsPage({
         holdId: holdData?.holdId,
         holdToken: holdData?.holdToken,
         holdExpiresAt: holdData?.expiresAt,
-        ttlSeconds: holdData?.ttlSeconds || 600,
+        ttlSeconds: holdData?.ttlSeconds || 300,
       });
     } catch (err) {
       console.warn('Hold creation rejected:', err.message);
@@ -733,26 +729,13 @@ export default function TurfDetailsPage({
   const displayedSimilarTurfs = similarTurfs.length > 0 ? similarTurfs : allTurfs.filter((t) => t.id !== turf?.id);
 
   return (
-    <div className="min-h-screen bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900">
-      <Navbar
-        onLogin={onLogin}
-        user={user}
-        onLogout={onLogout}
-        onListTurf={onListTurf}
-        onHome={onHome}
-        onFindTurfs={onFindTurfs}
-        onDashboard={onDashboard}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
-
+    <div className="bg-white font-sans antialiased text-slate-900 selection:bg-lime-300 selection:text-slate-900">
       {/* ─── BREADCRUMB (ABOVE GALLERY) ─── */}
       <div className="mx-auto max-w-[1440px] px-6 pt-6 pb-3.5 lg:px-10">
         <nav className="flex items-center gap-2 text-xs md:text-sm font-medium text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
-            onClick={onHome}
+            onClick={handleHome}
             className="transition-colors hover:text-slate-900 cursor-pointer"
           >
             Home
@@ -760,7 +743,7 @@ export default function TurfDetailsPage({
           <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
           <button
             type="button"
-            onClick={onFindTurfs}
+            onClick={handleFindTurfs}
             className="transition-colors hover:text-slate-900 cursor-pointer"
           >
             Find Turfs
@@ -1458,7 +1441,7 @@ export default function TurfDetailsPage({
               </div>
               <button
                 type="button"
-                onClick={onFindTurfs}
+                onClick={handleFindTurfs}
                 className="text-sm font-semibold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 View all turfs
@@ -1574,8 +1557,6 @@ export default function TurfDetailsPage({
           </button>
         </div>
       </div>
-
-      <Footer />
 
       {/* ─── LIGHTBOX MODAL ─── */}
       {lightboxOpen && (

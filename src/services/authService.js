@@ -97,7 +97,8 @@ export const authService = {
    * @param {string} [roleContext] 'player' or 'owner'
    */
   async getCurrentUser(roleContext = 'player') {
-    const response = await apiClient.get('/auth/me', {
+    const endpoint = roleContext === 'owner' ? '/admin/auth/me' : '/auth/me';
+    const response = await apiClient.get(endpoint, {
       headers: { 'X-Role-Context': roleContext },
     });
     return response; // { success: true, message, data: { user } }

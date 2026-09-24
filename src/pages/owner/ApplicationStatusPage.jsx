@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Clock,
   CheckCircle2,
@@ -10,8 +11,6 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import ownerApplicationService from '../../services/ownerApplicationService';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 
 const STATUS_METADATA = {
   pending: {
@@ -64,18 +63,9 @@ const STATUS_METADATA = {
   },
 };
 
-export default function ApplicationStatusPage({
-  onLogin,
-  user,
-  onLogout,
-  onHome,
-  onFindTurfs,
-  onListTurf,
-  onDashboard,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
-}) {
+export default function ApplicationStatusPage({ onHome: onHomeProp }) {
+  const navigate = useNavigate();
+  const handleHome = onHomeProp || (() => navigate('/'));
   const [token, setToken] = useState('');
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
@@ -190,20 +180,6 @@ export default function ApplicationStatusPage({
           style={{ width: `${progress}%` }}
         />
       </div>
-
-      {/* Universal Navbar */}
-      <Navbar
-        onLogin={onLogin}
-        user={user}
-        onLogout={onLogout}
-        onHome={onHome}
-        onFindTurfs={onFindTurfs}
-        onListTurf={onListTurf}
-        onDashboard={onDashboard}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
 
       {/* Main Page Content */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 md:px-8 pt-16 md:pt-24 pb-12 md:pb-16">
@@ -325,7 +301,7 @@ export default function ApplicationStatusPage({
 
                 <button
                   type="button"
-                  onClick={onHome}
+                  onClick={handleHome}
                   className="w-full py-3.5 px-6 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-800 font-bold text-sm transition-all cursor-pointer text-center"
                 >
                   Return to Home
@@ -401,9 +377,6 @@ export default function ApplicationStatusPage({
       >
         <MessageSquare size={22} className="stroke-[2.2] text-white" />
       </a>
-
-      {/* Universal Footer */}
-      <Footer />
     </div>
   );
 }

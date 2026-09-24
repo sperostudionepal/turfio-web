@@ -21,8 +21,7 @@ import {
   ChevronUp,
   Eraser,
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import { useNavigate } from 'react-router-dom';
 import TurfMap from '../../components/turfs/TurfMap';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import CustomDropdown from '../../components/common/CustomDropdown';
@@ -110,19 +109,30 @@ const amenitiesList = [
 
 
 export default function TurfListingPage({
-  user,
   initialSearch,
-  onLogin,
-  onLogout,
-  onListTurf,
-  onHome,
-  onDashboard,
   onSelectTurf,
   onNavigateRoute,
-  onHowItWorks,
-  onPricing,
-  onAboutUs,
 }) {
+  const navigate = useNavigate();
+
+  const handleSelectTurf = (turfData) => {
+    if (onSelectTurf) {
+      onSelectTurf(turfData);
+    } else {
+      const turfId = turfData?.slug || turfData?.id || turfData?._id;
+      navigate(`/turfs/${turfId}`);
+    }
+  };
+
+  const handleNavigateRoute = (turfData) => {
+    if (onNavigateRoute) {
+      onNavigateRoute(turfData);
+    } else {
+      const turfId = turfData?.slug || turfData?.id || turfData?._id;
+      navigate(`/route?turfId=${turfId}`);
+    }
+  };
+
   // Search draft input parameters (user typing / selecting before clicking Search)
   const [locationInput, setLocationInput] = useState(initialSearch?.location || '');
   const [dateInput, setDateInput] = useState(initialSearch?.date || '');
@@ -573,25 +583,9 @@ export default function TurfListingPage({
   );
 
   return (
-    <div className="bg-white min-h-screen text-slate-900 font-sans flex flex-col justify-between">
-      <div>
-        <Navbar
-          onLogin={onLogin}
-          user={user}
-          onLogout={onLogout}
-          onListTurf={onListTurf}
-          onHome={onHome}
-          onDashboard={onDashboard}
-          onToggleSearch={() => setShowSearchBar((prev) => !prev)}
-          searchActive={showSearchBar}
-          onHowItWorks={onHowItWorks}
-          onPricing={onPricing}
-          onAboutUs={onAboutUs}
-          hideTopbar={true}
-        />
-
-        {/* ─── FLOATING ALWAYS-VISIBLE SEARCH BAR WIDGET + CONTROLS ─── */}
-        <section className="relative z-40 bg-white/95 backdrop-blur-md pt-10 pb-8">
+    <div className="bg-white min-h-screen text-slate-900 font-sans">
+      {/* ─── FLOATING ALWAYS-VISIBLE SEARCH BAR WIDGET + CONTROLS ─── */}
+      <section className="relative z-40 bg-white/95 backdrop-blur-md pt-10 pb-8">
           <div className="mx-auto max-w-[1440px] px-6 lg:px-10 flex flex-col lg:flex-row items-center justify-between gap-4">
             {/* Search Pill */}
             <div className="w-full max-w-[860px] rounded-full bg-white ring-1 ring-slate-100/60 shadow-[0_0_25px_rgba(0,0,0,0.04)] overflow-visible relative z-50">
@@ -785,7 +779,7 @@ export default function TurfListingPage({
                 LEFT STICKY MAP CONTAINER (ANIMATED COLLAPSE / EXPAND)
                ══════════════════════════════════════ */}
             <div
-              className={`hidden xl:block sticky top-[90px] self-start z-10 transition-all duration-300 ease-in-out overflow-hidden ${showMap
+              className={`hidden xl:block sticky top-[calc(var(--nav-h,72px)+16px)] self-start z-10 transition-all duration-300 ease-in-out overflow-hidden ${showMap
                 ? 'w-[48%] xl:w-[58%] 2xl:w-[60%] opacity-100 max-h-[700px]'
                 : 'w-0 opacity-0 max-h-0 pointer-events-none'
                 }`}
@@ -967,7 +961,7 @@ export default function TurfListingPage({
                             data-turf-id={turf.id}
                             onClick={() => {
                               setSelectedMapTurf(turf);
-                              onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
+                              handleSelectTurf({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                             }}
                             onMouseEnter={() => setHoveredFromListId(turf.id)}
                             onMouseLeave={() => setHoveredFromListId(null)}
@@ -1052,24 +1046,22 @@ export default function TurfListingPage({
                                 {turf.price}
                               </span>
                               <div className="flex items-center gap-1.5">
-                                {onNavigateRoute && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onNavigateRoute(turf);
-                                    }}
-                                    title="Get Directions"
-                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
-                                  >
-                                    <Navigation className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onSelectTurf?.({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
+                                    handleNavigateRoute(turf);
+                                  }}
+                                  title="Get Directions"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
+                                >
+                                  <Navigation className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectTurf({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                                   }}
                                   className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
                                 >
@@ -1327,9 +1319,6 @@ export default function TurfListingPage({
             </button>
           </div>
         </aside>
-      </div>
-
-      <Footer />
     </div>
   );
 }

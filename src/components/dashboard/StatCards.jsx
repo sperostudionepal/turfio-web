@@ -8,9 +8,10 @@ import {
   periodLabel,
 } from '../../utils/dashboardStats';
 
-function StatCards({ bookings = [], venue = null, period = 'month' }) {
-  const courtsCount = venue?.courts?.length || 1;
-  const options = { courtsCount, openingHours: venue?.openingHours };
+function StatCards({ bookings = [], venue = null, venues = [], period = 'month' }) {
+  const effectiveVenues = venues.length ? venues : (venue ? [venue] : []);
+  const courtsCount = effectiveVenues.reduce((sum, item) => sum + (item?.courts?.length || 0), 0);
+  const options = { venues: effectiveVenues, courtsCount, openingHours: venue?.openingHours };
 
   const range = getPeriodRange(period);
   const previousRange = getPreviousRange(period);

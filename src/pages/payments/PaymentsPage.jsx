@@ -36,19 +36,26 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const [payments, setPayments] = useState([]);
-  const [paymentStats, setPaymentStats] = useState({ totalCollected: 0, byMethod: {}, pendingSettlement: 0 });
+  const [paymentStats, setPaymentStats] = useState({ totalCollected: 0, byMethod: {}, outstandingBalance: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, pages: 1 });
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
 
   useEffect(() => {
-    turfService
-      .getOwnerPayments()
-      .then((result) => {
-        setPayments(result?.payments || []);
-        setPaymentStats(result?.stats || { totalCollected: 0, byMethod: {}, pendingSettlement: 0 });
-        setStatus('ready');
-      })
-      .catch(() => setStatus('error'));
-  }, []);
+    let cancelled = false;
+    setStatus('loading');
+    const timer = setTimeout(() => {
+      turfService.getOwnerPayments({ page: currentPage, limit: itemsPerPage, search: searchQuery, status: statusFilter })
+        .then((result) => {
+          if (cancelled) return;
+          setPayments(result?.payments || []);
+          setPaymentStats(result?.stats || { totalCollected: 0, byMethod: {}, outstandingBalance: 0 });
+          setPagination(result?.pagination || { page: 1, limit: itemsPerPage, total: 0, pages: 1 });
+          setStatus('ready');
+        })
+        .catch(() => !cancelled && setStatus('error'));
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [currentPage, itemsPerPage, searchQuery, statusFilter]);
 
   const onlinePayments = paymentStats.totalCollected - (paymentStats.byMethod['Pay at Venue'] || 0);
 
@@ -66,14 +73,14 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
       iconBg: 'bg-blue-50 text-blue-600',
     },
     {
-      title: 'Pending Settlements',
-      value: formatNpr(paymentStats.pendingSettlement),
+      title: 'Outstanding Balance',
+      value: formatNpr(paymentStats.outstandingBalance),
       icon: AlertCircle,
       iconBg: 'bg-amber-50 text-amber-600',
     },
     {
       title: 'Total Transactions',
-      value: payments.length.toLocaleString('en-IN'),
+      value: pagination.total.toLocaleString('en-IN'),
       icon: Receipt,
       iconBg: 'bg-purple-50 text-purple-600',
     },
@@ -87,6 +94,18 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
             <CheckCircle2 size={13} /> Completed
           </span>
         );
+      case 'RefundPending':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 w-fit">
+            <RefreshCw size={13} /> Refund pending
+          </span>
+        );
+      case 'RefundFailed':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 w-fit">
+            <AlertCircle size={13} /> Refund failed
+          </span>
+        );
       case 'Refunded':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 w-fit">
@@ -98,23 +117,13 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
     }
   };
 
-  const filteredPayments = payments.filter((p) => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch =
-      (p.paymentId || '').toLowerCase().includes(query) ||
-      (p.bookingId || '').toLowerCase().includes(query) ||
-      (p.customer?.name || '').toLowerCase().includes(query) ||
-      (p.customer?.phone || '').includes(searchQuery);
-    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
+  const filteredPayments = payments;
+  const totalPages = pagination.pages || 1;
+  const startIndex = payments.length ? (pagination.page - 1) * pagination.limit : 0;
+  const paginatedPayments = payments;
 
   return (
-    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-hidden select-none">
+    <div className="flex flex-col h-screen bg-[#fdfefe] text-slate-900 font-sans antialiased overflow-hidden select-none">
       {/* Top Header Bar across full window width */}
       <TopBar />
 
@@ -127,7 +136,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
+        <main className="flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8 space-y-6">
           {/* Header Action Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
@@ -135,7 +144,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
                 Payments & Transactions
               </h1>
               <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">
-                Track revenue, payment gateways, payouts, and transaction logs.
+                Track collected payments, outstanding customer balances, refunds, and transaction records.
               </p>
             </div>
 
@@ -146,7 +155,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
                   downloadCsv(`turfio-payments-${getTodayNepalString()}.csv`, buildPaymentsCsv(filteredPayments));
                 }}
                 disabled={filteredPayments.length === 0}
-                title={filteredPayments.length === 0 ? 'No payments to export' : `Download ${filteredPayments.length} payment${filteredPayments.length === 1 ? '' : 's'} as CSV`}
+                title={filteredPayments.length === 0 ? 'No payments on this page to export' : `Download ${filteredPayments.length} payment${filteredPayments.length === 1 ? '' : 's'} from this page as CSV`}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-white border border-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={14} />
@@ -206,7 +215,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
 
               {/* Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto py-0.5">
-                {['All', 'Completed', 'Refunded'].map((option) => (
+                {['All', 'Completed', 'RefundPending', 'Refunded'].map((option) => (
                   <button
                     key={option}
                     onClick={() => {
@@ -219,7 +228,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
                         : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
                     }`}
                   >
-                    {option}
+                    {option === 'RefundPending' ? 'Refund pending' : option}
                   </button>
                 ))}
               </div>
@@ -256,8 +265,8 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
                     </tr>
                   )}
                   {paginatedPayments.map((p) => (
-                    <tr key={p.paymentId} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3.5 pr-4 font-bold text-emerald-600 text-sm whitespace-nowrap">{p.paymentId}</td>
+                    <tr key={`${p.paymentId}-${p.bookingId}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3.5 pr-4 font-bold text-emerald-600 text-sm whitespace-nowrap">{p.paymentId || 'Unavailable'}</td>
                       <td className="py-3.5 pr-4 font-bold text-slate-800 text-sm whitespace-nowrap">{p.bookingId}</td>
                       <td className="py-3.5 pr-4">
                         <div>
@@ -301,9 +310,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3.5 border-t border-slate-100 text-xs text-slate-500 font-medium select-none">
               <div className="flex items-center gap-3">
                 <span>
-                  Showing <strong className="text-slate-900 font-bold">{filteredPayments.length === 0 ? 0 : startIndex + 1}</strong> to{' '}
-                  <strong className="text-slate-900 font-bold">{Math.min(startIndex + itemsPerPage, filteredPayments.length)}</strong> of{' '}
-                  <strong className="text-slate-900 font-bold">{filteredPayments.length}</strong> entries
+                  Showing <strong className="text-slate-900 font-bold">{pagination.total === 0 ? 0 : startIndex + 1}</strong> to{' '}
+                  <strong className="text-slate-900 font-bold">{Math.min(startIndex + payments.length, pagination.total)}</strong> of{' '}
+                  <strong className="text-slate-900 font-bold">{pagination.total}</strong> entries
                 </span>
 
                 <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
@@ -391,6 +400,16 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
                   <span className="text-slate-400 font-medium">Associated Booking</span>
                   <span className="font-bold text-emerald-600">{selectedPayment.bookingId}</span>
                 </div>
+                <div className="flex justify-between py-1.5 border-b border-slate-50">
+                  <span className="text-slate-400 font-medium">Venue</span>
+                  <span className="font-bold text-slate-900">{selectedPayment.turfName || '—'}</span>
+                </div>
+                {selectedPayment.customer?.email && (
+                  <div className="flex justify-between py-1.5 border-b border-slate-50 gap-4">
+                    <span className="text-slate-400 font-medium">Customer Email</span>
+                    <span className="font-bold text-slate-900 text-right break-all">{selectedPayment.customer.email}</span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1.5 border-b border-slate-50">
                   <span className="text-slate-400 font-medium">Payment Method</span>
                   <span className="font-bold text-slate-900">{selectedPayment.method}</span>

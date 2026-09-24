@@ -41,7 +41,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-white pt-12 pb-12 lg:pt-14 lg:pb-14 border-t border-slate-100/60 scroll-mt-36">
+    <section id="how-it-works" className="bg-white pt-8 pb-12 lg:pt-10 lg:pb-14 border-t border-slate-100/60 scroll-mt-[var(--nav-h,72px)]">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">

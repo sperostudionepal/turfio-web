@@ -101,16 +101,39 @@ const bookedHours = (booking) => {
   return (endMinutes - startMinutes) / 60;
 };
 
-const openHoursPerDay = (openingHours) => {
-  const hours = (parseTimeToMinutes(openingHours?.end) - parseTimeToMinutes(openingHours?.start)) / 60;
-  return hours > 0 ? hours : 16;
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+const hoursBetween = (start, end) => {
+  const hours = (parseTimeToMinutes(end) - parseTimeToMinutes(start)) / 60;
+  return hours > 0 ? hours : 0;
+};
+
+const venueCapacityForDate = (venue, dateStr) => {
+  const courtsCount = Math.max(0, venue?.courts?.length || 0);
+  if (!courtsCount) return 0;
+  const dayKey = DAY_KEYS[toUtcDate(dateStr).getUTCDay()];
+  const day = venue?.operatingHoursByDay?.[dayKey];
+  if (day) {
+    if (day.isClosed === true || day.isClosed === 'true') return 0;
+    return courtsCount * hoursBetween(day.open, day.close);
+  }
+  return courtsCount * hoursBetween(venue?.openingHours?.start, venue?.openingHours?.end);
+};
+
+const capacityHours = (venues, range) => {
+  if (!range) return null;
+  let total = 0;
+  for (let date = range.start; date <= range.end; date = addDays(date, 1)) {
+    for (const venue of venues) total += venueCapacityForDate(venue, date);
+  }
+  return total;
 };
 
 /**
  * Headline numbers for the bookings that fall inside `range` (all bookings when range is null).
  * Cancelled bookings never count. Occupancy is null when there is no bounded range to measure against.
  */
-export function summarizeBookings(bookings, range, { courtsCount = 1, openingHours = null } = {}) {
+export function summarizeBookings(bookings, range, { venues = [], courtsCount = 1, openingHours = null } = {}) {
   const inPeriod = bookings.filter((b) => isActiveBooking(b) && inRange(getBookingDateStr(b), range));
 
   let revenue = 0;
@@ -129,8 +152,9 @@ export function summarizeBookings(bookings, range, { courtsCount = 1, openingHou
 
   let occupancy = null;
   if (range) {
-    const availableHours = Math.max(1, courtsCount) * openHoursPerDay(openingHours) * range.days;
-    occupancy = Math.min(100, Math.round((hoursBooked / availableHours) * 100));
+    const normalizedVenues = venues.length ? venues : [{ courts: Array.from({ length: Math.max(1, courtsCount) }), openingHours }];
+    const availableHours = capacityHours(normalizedVenues, range);
+    occupancy = availableHours > 0 ? Math.min(100, Math.round((hoursBooked / availableHours) * 100)) : null;
   }
 
   return { revenue, due, bookings: inPeriod.length, occupancy, customers: customers.size, inPeriod };
