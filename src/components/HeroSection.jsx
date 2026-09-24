@@ -12,14 +12,6 @@ import {
   Zap,
 } from 'lucide-react';
 import Navbar from './Navbar';
-import HeroStats from './HeroStats';
-import TurfSection from './TurfSection';
-import HowItWorksAndDownloadSection from './HowItWorksAndDownloadSection';
-import PricingSection from './PricingSection';
-import ReviewsSection from './ReviewsSection';
-import AboutUsSection from './AboutUsSection';
-import CtaBannerSection from './CtaBannerSection';
-import Footer from './Footer';
 import { getTodayNepalString } from '../utils/dateTime';
 import CustomDatePicker from './common/CustomDatePicker';
 import CustomDropdown from './common/CustomDropdown';
@@ -64,9 +56,7 @@ export default function HeroSection({
   };
 
   const scrollToSection = (id) => {
-    const el = document.getElementById(id) || 
-      (id === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
-      (id === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+    const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -77,7 +67,7 @@ export default function HeroSection({
   const hasTopbar = !hasAdminAccess || isTurfBannerActive;
 
   return (
-    <div className="bg-white">
+    <>
       <Navbar
         onLogin={onLogin}
         onSignUp={onSignUp}
@@ -94,6 +84,7 @@ export default function HeroSection({
         onPricing={onPricing || (() => scrollToSection('pricing'))}
         onAboutUs={onAboutUs || (() => scrollToSection('about-us'))}
       />
+      <div className="bg-white">
       <section className="relative isolate overflow-hidden bg-white">
         {/* Low-Visibility Background Image Overlay */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
@@ -322,14 +313,7 @@ export default function HeroSection({
           </div>
         </div>
       </section>
-      <HeroStats />
-      <TurfSection onBookNow={onLogin} onViewDetails={onViewTurfDetails} />
-      <HowItWorksAndDownloadSection />
-      <PricingSection onExploreTurfs={onFindTurfs} />
-      <ReviewsSection />
-      <AboutUsSection />
-      <CtaBannerSection onBookNow={user ? onFindTurfs : onLogin} />
-      <Footer />
     </div>
-  );
+  </>
+);
 }

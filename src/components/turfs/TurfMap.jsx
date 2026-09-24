@@ -40,9 +40,12 @@ export default function TurfMap({
   const boundsDebounceTimerRef = useRef(null);
 
   const onSelectTurfRef = useRef(onSelectTurf);
-  onSelectTurfRef.current = onSelectTurf;
   const onHoverTurfRef = useRef(onHoverTurf);
-  onHoverTurfRef.current = onHoverTurf;
+
+  useEffect(() => {
+    onSelectTurfRef.current = onSelectTurf;
+    onHoverTurfRef.current = onHoverTurf;
+  }, [onSelectTurf, onHoverTurf]);
 
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
   const [isFullscreen, setIsFullscreen] = useState(false);

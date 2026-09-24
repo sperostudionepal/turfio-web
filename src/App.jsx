@@ -14,6 +14,14 @@ import SuperadminLoginPage from './pages/auth/SuperadminLoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import OnboardingPage from './pages/auth/OnboardingPage';
 import HeroSection from './components/HeroSection';
+import HeroStats from './components/HeroStats';
+import TurfSection from './components/TurfSection';
+import HowItWorksAndDownloadSection from './components/HowItWorksAndDownloadSection';
+import PricingSection from './components/PricingSection';
+import ReviewsSection from './components/ReviewsSection';
+import AboutUsSection from './components/AboutUsSection';
+import CtaBannerSection from './components/CtaBannerSection';
+import Footer from './components/Footer';
 import ListTurfPage from './pages/listTurf/ListTurfPage';
 import Dashboard from './pages/dashboard/Dashboard';
 import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
@@ -452,10 +460,7 @@ function App() {
       }
 
       attempts += 1;
-      const el =
-        document.getElementById(targetId) ||
-        (targetId === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
-        (targetId === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+      const el = document.getElementById(targetId);
 
       if (el) {
         clearInterval(scrollTimer);
@@ -902,10 +907,7 @@ function App() {
     window.history.pushState({}, '', `/#${sectionId}`);
 
     const scrollToEl = (id) => {
-      const el =
-        document.getElementById(id) ||
-        (id === 'popular-turfs' ? document.getElementById('how-it-works') : null) ||
-        (id === 'how-it-works' ? document.getElementById('popular-turfs') : null);
+      const el = document.getElementById(id);
 
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1137,7 +1139,7 @@ function App() {
             setCurrentPage('listTurf');
           }}
           onDashboard={handleOpenDashboard}
-          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onHowItWorks={() => handleNavigateToSection('how-it-works')}
           onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1175,7 +1177,7 @@ function App() {
               window.history.pushState({}, '', `/turfs/${turfId}`);
               setCurrentPage('turfDetails');
             }}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onHowItWorks={() => handleNavigateToSection('how-it-works')}
             onFeatures={() => handleNavigateToSection('pricing')}
             onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1262,7 +1264,7 @@ function App() {
           }}
           onListTurf={() => setCurrentPage('listTurf')}
           onFindTurfs={() => setCurrentPage('turfs')}
-          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onHowItWorks={() => handleNavigateToSection('how-it-works')}
           onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1300,7 +1302,7 @@ function App() {
               setSubmittedApplication(data);
               setCurrentPage('applicationSubmitted');
             }}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onHowItWorks={() => handleNavigateToSection('how-it-works')}
             onFeatures={() => handleNavigateToSection('pricing')}
             onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1392,7 +1394,7 @@ function App() {
               setCurrentPage('turfDetails');
             }}
             onNavigateRoute={handleNavigateRoute}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onHowItWorks={() => handleNavigateToSection('how-it-works')}
             onFeatures={() => handleNavigateToSection('pricing')}
             onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1449,7 +1451,7 @@ function App() {
               }
             }}
             onNavigateRoute={handleNavigateRoute}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onHowItWorks={() => handleNavigateToSection('how-it-works')}
             onFeatures={() => handleNavigateToSection('pricing')}
             onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1514,7 +1516,7 @@ function App() {
               setCurrentPage('turfListing');
             }}
             onNavigateRoute={handleNavigateRoute}
-            onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+            onHowItWorks={() => handleNavigateToSection('how-it-works')}
             onFeatures={() => handleNavigateToSection('pricing')}
             onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
@@ -1576,11 +1578,43 @@ function App() {
             window.history.pushState({}, '', '/profile');
             setCurrentPage('profile');
           }}
-          onHowItWorks={() => handleNavigateToSection('popular-turfs')}
+          onHowItWorks={() => handleNavigateToSection('how-it-works')}
           onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
+        <HeroStats />
+        <TurfSection
+          onBookNow={handleOpenLogin}
+          onViewDetails={(turf) => {
+            setSelectedTurf(turf);
+            const turfId = turf.slug || turf.id || turf._id;
+            window.history.pushState({}, '', `/turfs/${turfId}`);
+            setCurrentPage('turfDetails');
+          }}
+        />
+        <HowItWorksAndDownloadSection />
+        <PricingSection
+          onExploreTurfs={(search) => {
+            setTurfSearch(search || null);
+            window.history.pushState({}, '', '/turfs');
+            setCurrentPage('turfListing');
+          }}
+        />
+        <ReviewsSection />
+        <AboutUsSection />
+        <CtaBannerSection
+          onBookNow={
+            user
+              ? (search) => {
+                  setTurfSearch(search || null);
+                  window.history.pushState({}, '', '/turfs');
+                  setCurrentPage('turfListing');
+                }
+              : handleOpenLogin
+          }
+        />
+        <Footer />
 
         {showOnboardingModal && (
           <OnboardingPage

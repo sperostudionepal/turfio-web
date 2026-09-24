@@ -31,10 +31,21 @@ export default function LocationAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const searchTimeoutRef = useRef(null);
   const containerRef = useRef(null);
   const suggestionsRef = useRef(null);
   const geolocationPermissionAskedRef = useRef(localStorage.getItem('geolocation_permission_asked') === 'true');
+
+  useEffect(() => {
+    if (showSuggestions && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+      });
+    }
+  }, [showSuggestions]);
 
   // Debounced search function
   const performSearch = useCallback(async (query) => {
@@ -210,8 +221,8 @@ export default function LocationAutocomplete({
           id="location-suggestions"
           className="fixed z-[100000] min-w-[300px] rounded-2xl bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] overflow-hidden"
           style={{
-            top: `${containerRef.current?.getBoundingClientRect().bottom + 8}px`,
-            left: `${containerRef.current?.getBoundingClientRect().left}px`,
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
           }}
         >
           {/* "Nearby" Option (Always shown when focused) */}

@@ -15,12 +15,12 @@ const PAYMENT_STATUS_STYLES = {
  * `booking` is the Bookings page's mapped booking; `statusBadge` is the rendered status pill.
  */
 function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', onClose, onConfirm, onMarkPaid, onCancel, onApproveCancellation, onRejectCancellation }) {
-  if (!booking) return null;
-
   const [reviewNotes, setReviewNotes] = useState('');
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  if (!booking) return null;
 
   const hasPhone = booking.customerPhone && booking.customerPhone !== '—';
   const hasEmail = booking.customerEmail && booking.customerEmail !== '—';
