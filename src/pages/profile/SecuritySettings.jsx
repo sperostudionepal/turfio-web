@@ -43,12 +43,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
   }, []);
 
   // Password validation & strength calculation
-  // user.hasPassword can be stale (cached at login and only refreshed by actions that
-  // explicitly update it), so it's a best-effort guess, not authoritative. If the backend
-  // ever comes back with "current password is required", forcedCurrentPasswordRequired
-  // takes over and reveals the field regardless of what the cached flag says.
-  const [forcedCurrentPasswordRequired, setForcedCurrentPasswordRequired] = useState(false);
-  const isGoogleOnly = user?.provider === 'google' && !user?.hasPassword && !forcedCurrentPasswordRequired;
+  const isGoogleOnly = user?.provider === 'google' && !user?.hasPassword;
   const isPasswordMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
@@ -98,17 +93,10 @@ export default function SecuritySettings({ user, onChangePassword }) {
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        setForcedCurrentPasswordRequired(false);
       } else {
-        if (/current password is required/i.test(res.error || '')) {
-          setForcedCurrentPasswordRequired(true);
-        }
         showToast(res.error || 'Failed to change password.', 'error');
       }
     } catch (err) {
-      if (/current password is required/i.test(err.message || '')) {
-        setForcedCurrentPasswordRequired(true);
-      }
       showToast(err.message || 'Error changing password.', 'error');
     } finally {
       setIsChangingPassword(false);

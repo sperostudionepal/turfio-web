@@ -78,6 +78,15 @@ export default function ProfilePage({
     initialize();
   }, [initialize]);
 
+  // Re-fetch on entering Security & 2FA specifically: hasPassword (and other account-state
+  // flags) can go stale between the initial mount and whenever the user actually opens this
+  // tab, so this tab always renders off freshly-confirmed data instead of a cached guess.
+  useEffect(() => {
+    if (activeTab === 'security') {
+      initialize();
+    }
+  }, [activeTab, initialize]);
+
   useEffect(() => {
     if (activeTab !== 'bookings' || !user) return;
     setBookingsLoading(true);
