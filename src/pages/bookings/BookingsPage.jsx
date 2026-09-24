@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  QrCode,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
@@ -34,6 +35,7 @@ import { buildBookingsCsv, downloadCsv } from '../../utils/reportExport';
 import CancelBookingDialog from '../../components/bookings/CancelBookingDialog';
 import MarkPaidDialog from '../../components/bookings/MarkPaidDialog';
 import BookingDetailsModal from '../../components/bookings/BookingDetailsModal';
+import QRScannerModal from '../../components/bookings/QRScannerModal';
 import { ErrorNotice } from '../../components/dashboard/DashboardNotices';
 import PeriodSelect from '../../components/dashboard/PeriodSelect';
 
@@ -133,6 +135,7 @@ function BookingsPage({
   const selectedBooking = bookings.find((b) => b.id === selectedId) || null;
   const [actionBusyId, setActionBusyId] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Headline numbers from the real bookings. Cancelled and Refunded bookings don't count towards active stats.
   const liveBookings = bookings.filter((b) => b.bookingStatus !== 'Cancelled' && b.bookingStatus !== 'Refunded');
@@ -262,6 +265,12 @@ function BookingsPage({
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to reject cancellation');
     }
+  };
+
+  const handleQRScanSuccess = async (data) => {
+    // Refresh bookings list after successful check-in
+    await loadBookings();
+    if (refreshBookings) refreshBookings();
   };
 
   useEffect(() => {
@@ -541,6 +550,13 @@ function BookingsPage({
                 >
                   <Plus size={15} />
                   <span>New Booking</span>
+                </button>
+                <button
+                  onClick={() => setShowQRScanner(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-bold transition-all"
+                >
+                  <QrCode size={15} />
+                  <span>Scan QR</span>
                 </button>
               </div>
             </div>
@@ -1137,6 +1153,14 @@ function BookingsPage({
             </form>
           </div>
         </div>
+      )}
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <QRScannerModal
+          onClose={() => setShowQRScanner(false)}
+          onScanSuccess={handleQRScanSuccess}
+        />
       )}
     </>
   );
