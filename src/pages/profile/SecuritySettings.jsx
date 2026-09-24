@@ -43,7 +43,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
   }, []);
 
   // Password validation & strength calculation
-  const isGoogleOnly = user?.provider === 'google' && !user?.password;
+  const isGoogleOnly = user?.provider === 'google' && !user?.hasPassword;
   const isPasswordMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);

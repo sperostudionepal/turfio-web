@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Star, Compass, Users, Car } from 'lucide-react';
+import { Star, Compass, Users, Car } from 'lucide-react';
 import turfService from '../services/turfService';
+
+// A curated teaser row on the landing page, not the full catalog -- see TurfListingPage for that.
+const FEATURED_TURFS_LIMIT = 8;
 
 /*
 const turfs = [
@@ -180,7 +183,7 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
   useEffect(() => {
     if (!turfsData) {
       let isMounted = true;
-      turfService.getTurfs()
+      turfService.getTurfs({ limit: FEATURED_TURFS_LIMIT })
         .then((data) => {
           if (isMounted) {
             setFetchedTurfs(data || []);
@@ -200,33 +203,23 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
   const activeTurfs = turfsData || fetchedTurfs;
   const isLoading = propLoading || (loadingRealTurfs && activeTurfs.length === 0);
   return (
-    <section id="popular-turfs" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16 scroll-mt-20">
+    <section id="popular-turfs" className="bg-white pt-12 pb-14 lg:pt-14 lg:pb-16 scroll-mt-36">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-8">
-          {/* Left Column: Heading & Info */}
-          <div className="flex flex-col justify-center lg:col-span-3 lg:pt-2">
-            <span className="text-sm font-semibold text-lime-500">
-              Top rated turfs
-            </span>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl lg:leading-[1.15]">
-              Popular Turfs Near You
-            </h2>
-            <p className="mt-3 text-sm font-medium text-slate-500 sm:text-base">
-              Your go-to futsal companion for life.
-            </p>
-            <div className="mt-6">
-              <a
-                href="#"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-lime-500 transition-colors hover:text-lime-600"
-              >
-                View case study
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
+        {/* Header, centered above the card grid */}
+        <div className="text-center">
+          <span className="text-sm font-semibold text-lime-500">
+            Top rated turfs
+          </span>
+          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+            Popular Turfs Near You
+          </h2>
+          <p className="mt-3 text-sm font-medium text-slate-500 sm:text-base">
+            Your go-to futsal companion for life.
+          </p>
+        </div>
 
-          {/* Right Column: Turf Cards Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-9 lg:grid-cols-4">
+        {/* Turf Cards Grid */}
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, index) => (
                 <div
@@ -363,7 +356,6 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
                 </div>
               ))
             )}
-          </div>
         </div>
       </div>
     </section>

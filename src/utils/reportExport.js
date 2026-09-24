@@ -1,5 +1,6 @@
 import { deriveBookingStatus, getBookingDateStr } from './bookingStatus';
 import { inRange, paidAmount } from './dashboardStats';
+import { formatNepalDateTime } from './dateTime';
 
 /**
  * CSV export of the bookings in a dashboard period (all bookings when range is null).
@@ -58,6 +59,36 @@ export function buildBookingsCsv(bookings = [], range = null, options = {}) {
   });
 
   return [COLUMNS, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+}
+
+const PAYMENT_COLUMNS = [
+  'Payment ID',
+  'Booking ID',
+  'Customer',
+  'Phone',
+  'Amount (NRs)',
+  'Method',
+  'Status',
+  'Transaction ID',
+  'Date & Time',
+];
+
+// Every payment record here is money already received (or refunded), so there's no
+// period filter like buildBookingsCsv's -- the caller passes whatever list it wants exported.
+export function buildPaymentsCsv(payments = []) {
+  const rows = payments.map((p) => [
+    p.paymentId,
+    p.bookingId,
+    p.customer?.name,
+    p.customer?.phone,
+    Number(p.amount || 0),
+    p.method,
+    p.status,
+    p.transactionId || '',
+    formatNepalDateTime(p.paidAt),
+  ]);
+
+  return [PAYMENT_COLUMNS, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
 }
 
 /** Triggers a browser download. The BOM makes Excel read the file as UTF-8. */

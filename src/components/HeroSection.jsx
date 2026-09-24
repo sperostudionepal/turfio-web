@@ -40,7 +40,6 @@ export default function HeroSection({
   onDashboard,
   onProfile,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
   isInitializing = false,
@@ -80,7 +79,6 @@ export default function HeroSection({
         onDashboard={onDashboard}
         onProfile={onProfile}
         onHowItWorks={onHowItWorks || (() => scrollToSection('popular-turfs'))}
-        onFeatures={onFeatures || (() => scrollToSection('pricing'))}
         onPricing={onPricing || (() => scrollToSection('pricing'))}
         onAboutUs={onAboutUs || (() => scrollToSection('about-us'))}
       />

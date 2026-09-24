@@ -3,7 +3,7 @@ import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import Navbar from '../../components/Navbar';
 
-function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onFeatures, onPricing, onAboutUs }) {
+function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onPricing, onAboutUs }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,6 +12,37 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
+
+  // Same strength requirements as the change-password form (SecuritySettings.jsx),
+  // so registering and changing a password expect the same thing.
+  const isPasswordMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const hasComplexity = hasUppercase || hasNumber;
+
+  const getPasswordStrength = () => {
+    if (!password) return { score: 0, label: '', color: 'bg-slate-200', textColor: 'text-slate-400' };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    if (hasUppercase && hasNumber) score += 1;
+    if (hasSpecial) score += 1;
+
+    switch (score) {
+      case 1:
+        return { score: 1, label: 'Weak', color: 'bg-rose-500', textColor: 'text-rose-600' };
+      case 2:
+        return { score: 2, label: 'Fair', color: 'bg-amber-500', textColor: 'text-amber-600' };
+      case 3:
+        return { score: 3, label: 'Good', color: 'bg-lime-500', textColor: 'text-lime-600' };
+      case 4:
+        return { score: 4, label: 'Strong', color: 'bg-emerald-500', textColor: 'text-emerald-600' };
+      default:
+        return { score: 1, label: 'Weak', color: 'bg-rose-500', textColor: 'text-rose-600' };
+    }
+  };
+  const strength = getPasswordStrength();
 
   const handleGoogleClick = () => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -36,8 +67,13 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
       return;
     }
 
-    if (password.length < 8) {
+    if (!isPasswordMinLength) {
       showToast('Password must be at least 8 characters long.', 'error');
+      return;
+    }
+
+    if (!hasComplexity) {
+      showToast('Password must include a number or an uppercase letter.', 'error');
       return;
     }
 
@@ -71,7 +107,6 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
         onFindTurfs={onFindTurfs}
         user={null}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />
@@ -141,7 +176,7 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password (min 8 chars)"
+                  placeholder="Min. 8 chars with number/uppercase"
                   className="w-full pl-11 pr-11 py-3.5 rounded-2xl border border-slate-200 bg-white text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition-all placeholder:text-slate-400"
                   required
                   minLength={8}
@@ -154,6 +189,30 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+
+              {/* Password Strength Meter */}
+              {password && (
+                <div className="mt-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-500">Password Strength</span>
+                    <span className={`text-[11px] font-extrabold ${strength.textColor}`}>{strength.label}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5 h-1.5">
+                    <div className={`rounded-full transition-colors ${strength.score >= 1 ? strength.color : 'bg-slate-100'}`} />
+                    <div className={`rounded-full transition-colors ${strength.score >= 2 ? strength.color : 'bg-slate-100'}`} />
+                    <div className={`rounded-full transition-colors ${strength.score >= 3 ? strength.color : 'bg-slate-100'}`} />
+                    <div className={`rounded-full transition-colors ${strength.score >= 4 ? strength.color : 'bg-slate-100'}`} />
+                  </div>
+                  <div className="flex flex-col gap-1 text-[11px] pt-1">
+                    <span className={isPasswordMinLength ? 'text-lime-600 font-bold' : 'text-slate-400'}>
+                      {isPasswordMinLength ? '✓' : '○'} At least 8 characters
+                    </span>
+                    <span className={hasComplexity ? 'text-lime-600 font-bold' : 'text-slate-400'}>
+                      {hasComplexity ? '✓' : '○'} Includes number or uppercase letter
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Terms & Conditions Checkbox */}

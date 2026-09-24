@@ -73,7 +73,6 @@ export default function ApplicationStatusPage({
   onListTurf,
   onDashboard,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -202,7 +201,6 @@ export default function ApplicationStatusPage({
         onListTurf={onListTurf}
         onDashboard={onDashboard}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

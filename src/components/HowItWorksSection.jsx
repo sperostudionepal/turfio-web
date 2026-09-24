@@ -41,18 +41,18 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section className="bg-white pt-12 pb-12 lg:pt-14 lg:pb-14 border-t border-slate-100/60">
+    <section id="how-it-works" className="bg-white pt-12 pb-12 lg:pt-14 lg:pb-14 border-t border-slate-100/60 scroll-mt-36">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         {/* Header */}
         <div className="text-center">
           <span className="text-sm font-semibold text-lime-500">
-            Top rated turfs
+            Get Started
           </span>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Popular Turfs Near You
+            How It Works
           </h2>
           <p className="mt-3 text-base font-medium text-slate-500">
-            Your go-to futsal companion for life.
+            Book your next match in three simple steps.
           </p>
         </div>
 
