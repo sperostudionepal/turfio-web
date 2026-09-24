@@ -51,7 +51,6 @@ export const usePlayerAuth = create((set, get) => ({
         token,
         isAuthenticated: true,
         isLoading: false,
-        isInitializing: false,
       });
     } catch (err) {
       console.warn('Player auth initialization failed:', err.message);
@@ -61,8 +60,10 @@ export const usePlayerAuth = create((set, get) => ({
         token: null,
         isAuthenticated: false,
         isLoading: false,
-        isInitializing: false,
+        error: err.message,
       });
+    } finally {
+      set({ isInitializing: false });
     }
   },
 
@@ -310,7 +311,6 @@ export const useOwnerAuth = create((set) => ({
         token,
         isAuthenticated: true,
         isLoading: false,
-        isInitializing: false,
       });
     } catch (err) {
       console.warn('Owner auth initialization failed:', err.message);
@@ -320,8 +320,9 @@ export const useOwnerAuth = create((set) => ({
         token: null,
         isAuthenticated: false,
         isLoading: false,
-        isInitializing: false,
       });
+    } finally {
+      set({ isInitializing: false });
     }
   },
 
@@ -340,6 +341,7 @@ export const useOwnerAuth = create((set) => ({
         token,
         isAuthenticated: true,
         isLoading: false,
+        isInitializing: false,
         error: null,
       });
 
@@ -354,6 +356,37 @@ export const useOwnerAuth = create((set) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authService.loginSuperadmin({ email, password });
+      const { user, token, mfaRequired, tempToken } = response.data || {};
+
+      if (mfaRequired) {
+        set({ isLoading: false, isInitializing: false, error: null });
+        return { success: true, mfaRequired: true, tempToken };
+      }
+
+      if (token) {
+        setStoredSession(OWNER_SESSION_KEY, token, user);
+      }
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        isInitializing: false,
+        error: null,
+      });
+
+      return { success: true, user, token, redirectTo: '/superadmin/dashboard' };
+    } catch (err) {
+      set({ isLoading: false, error: err.message });
+      return { success: false, error: err.message };
+    }
+  },
+
+  verifyMfaLogin: async ({ tempToken, code }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.verifyMfaLogin({ tempToken, code });
       const { user, token } = response.data || {};
 
       if (token) {

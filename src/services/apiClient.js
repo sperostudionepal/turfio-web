@@ -29,31 +29,18 @@ const parseSessionToken = (key) => {
 // Request Interceptor: Attach role-scoped JWT Bearer Token
 apiClient.interceptors.request.use(
   (config) => {
-    const roleContext = config.headers?.['X-Role-Context'];
-    const isAdminPort =
-      typeof window !== 'undefined' &&
-      window.location.port === (import.meta.env.VITE_ADMIN_PORT || '5174');
+    const roleContext = config.authScope || config.headers?.['X-Role-Context'];
 
     const isOwnerRequest =
-      isAdminPort ||
       roleContext === 'owner' ||
       config.url?.includes('/admin') ||
+      config.url?.includes('/superadmin') ||
       config.url?.includes('/bookings/owner') ||
       config.url?.includes('/owner-applications');
 
     const tokenKey = isOwnerRequest ? 'turfio_owner_session' : 'turfio_player_session';
     let token = parseSessionToken(tokenKey);
 
-    // Fallback: If no token under primary key, try alternate token or legacy key
-    if (!token && isOwnerRequest) {
-      token = parseSessionToken('turfio_player_session');
-    } else if (!token && !isOwnerRequest) {
-      token = parseSessionToken('turfio_owner_session');
-    }
-
-    if (!token) {
-      token = localStorage.getItem('turfio_token');
-    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -81,15 +68,12 @@ apiClient.interceptors.response.use(
     // Auto clear namespaced token on 401 Unauthorized
     if (error.response?.status === 401) {
       const config = error.config || {};
-      const roleContext = config.headers?.['X-Role-Context'];
-      const isAdminPort =
-        typeof window !== 'undefined' &&
-        window.location.port === (import.meta.env.VITE_ADMIN_PORT || '5174');
+      const roleContext = config.authScope || config.headers?.['X-Role-Context'];
 
       const isOwnerRequest =
-        isAdminPort ||
         roleContext === 'owner' ||
         config.url?.includes('/admin') ||
+        config.url?.includes('/superadmin') ||
         config.url?.includes('/bookings/owner') ||
         config.url?.includes('/owner-applications');
 
@@ -98,7 +82,6 @@ apiClient.interceptors.response.use(
       } else {
         localStorage.removeItem('turfio_player_session');
       }
-      localStorage.removeItem('turfio_token');
     }
 
     return Promise.reject(new Error(errorMessage));

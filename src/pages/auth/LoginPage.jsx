@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
-import Navbar from '../../components/Navbar';
 import useAuthStore from '../../store/useAuthStore';
 
-function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onPricing, onAboutUs }) {
+function LoginPage({ onLogin, onSwitchToSignUp }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -90,23 +89,7 @@ function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onF
   };
 
   return (
-    <div className="min-h-screen w-screen bg-slate-50/60 text-slate-900 font-sans antialiased flex flex-col justify-between selection:bg-lime-300 selection:text-slate-900">
-      
-      {/* Top Navbar */}
-      <Navbar
-        onLogin={() => {}}
-        onSignUp={onSwitchToSignUp}
-        onHome={onHome || onClose}
-        onListTurf={onListTurf}
-        onFindTurfs={onFindTurfs}
-        user={null}
-        onHowItWorks={onHowItWorks}
-        onPricing={onPricing}
-        onAboutUs={onAboutUs}
-      />
-
-      {/* Main Container */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
+    <div className="w-full flex flex-col items-center justify-center">
         <div className="w-full max-w-[430px] bg-white rounded-3xl p-7 sm:p-9 shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
           
           {mfaRequired ? (
@@ -301,8 +284,6 @@ function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onF
           and{' '}
           <a href="#" className="text-lime-600 hover:underline">Privacy Policy</a>.
         </p>
-      </main>
-
     </div>
   );
 }
