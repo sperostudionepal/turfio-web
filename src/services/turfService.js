@@ -428,8 +428,23 @@ export const turfService = {
       return { item: null };
     }
   },
+
+  /**
+   * Generate booking pass with QR code
+   */
+  async generateBookingPass(bookingId) {
+    const response = await apiClient.get(`/bookings/${bookingId}/booking-pass`);
+    // Backend returns { success: true, data: { booking, qrToken, expiresAt }, message: "..." }
+    return response;
+  },
+
+  /**
+   * Verify booking QR code (admin)
+   */
+  async verifyBookingQR(token) {
+    const response = await apiClient.post('/bookings/verify-qr', { token });
+    return response.data;
+  },
 };
 
 export default turfService;
-
-

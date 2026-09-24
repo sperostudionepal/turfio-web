@@ -2,6 +2,7 @@ import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, Banknote, XCircle
 import { formatNepalDateTime } from '../../utils/dateTime';
 import { canConfirm, canMarkPaid, canCancel } from '../../utils/bookingActions';
 import { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const money = (value) => `NRs. ${Number(value || 0).toLocaleString('en-NP')}`;
 
@@ -121,11 +122,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                   <p className="text-[11px] text-slate-500 mt-1">
                     Requested {formatNepalDateTime(booking.cancellationRequest.requestedAt)}
                   </p>
-                  {booking.cancellationRequest.reviewNotes && (
-                    <p className="text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200">
-                      <span className="font-bold">Admin Notes:</span> {booking.cancellationRequest.reviewNotes}
-                    </p>
-                  )}
+                 
                   {booking.refund && booking.cancellationRequest.status === 'Approved' && (
                     <div className="mt-3 pt-3 border-t border-emerald-200 space-y-1 text-xs">
                       <div className="flex justify-between">
@@ -166,33 +163,53 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
           )}
 
           {/* Customer */}
-          <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-2.5">
-            <div className="flex items-center gap-3">
-              <img
-                src={booking.avatar || '/logo.png'}
-                alt={booking.customerName}
-                className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs shrink-0"
-              />
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate">{booking.customerName}</h4>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {hasPhone ? (
-                <a
-                  href={`tel:${booking.customerPhone}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
-                >
-                  <Phone size={12} /> {booking.customerPhone}
-                </a>
-              ) : (
-                <span className="text-[11px] text-slate-400 font-medium">No phone on file</span>
-              )}
-              {hasEmail && (
-                <a
-                  href={`mailto:${booking.customerEmail}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 max-w-full truncate"
-                >
-                  <Mail size={12} /> <span className="truncate">{booking.customerEmail}</span>
-                </a>
+          <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100">
+            <div className="flex items-center gap-3 justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <img
+                  src={booking.avatar || '/logo.png'}
+                  alt={booking.customerName}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate">{booking.customerName}</h4>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {hasPhone ? (
+                      <a
+                        href={`tel:${booking.customerPhone}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        <Phone size={12} /> {booking.customerPhone}
+                      </a>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 font-medium">No phone on file</span>
+                    )}
+                    {hasEmail && (
+                      <a
+                        href={`mailto:${booking.customerEmail}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 max-w-full truncate"
+                      >
+                        <Mail size={12} /> <span className="truncate">{booking.customerEmail}</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* QR Code */}
+              {booking.raw?.qrToken && booking.bookingStatus !== 'Cancelled' && (
+                <div className="bg-white p-2 rounded-lg border-2 border-lime-300 shadow-sm shrink-0">
+                  <QRCodeSVG
+                    value={JSON.stringify({
+                      token: booking.raw.qrToken,
+                      type: 'booking_verification',
+                      timestamp: Date.now(),
+                    })}
+                    size={80}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
               )}
             </div>
           </div>

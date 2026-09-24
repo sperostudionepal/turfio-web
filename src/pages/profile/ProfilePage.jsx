@@ -24,6 +24,7 @@ import {
   LogIn,
   ArrowRight,
   ChevronRight,
+  ChevronLeft,
   HelpCircle,
   Key,
   ShieldCheck,
@@ -31,6 +32,8 @@ import {
   Star,
   Eye,
 } from 'lucide-react';
+import { formatNepalDateTime } from '../../utils/dateTime';
+import { getPageItems } from '../../utils/pagination';
 
 export default function ProfilePage({
   onHome,
@@ -63,6 +66,8 @@ export default function ProfilePage({
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const wishlistItems = useWishlistStore((s) => s.items);
   const wishlistLoading = useWishlistStore((s) => s.isLoading);
   const isWishlistLoaded = useWishlistStore((s) => s.isLoaded);
@@ -433,134 +438,211 @@ export default function ProfilePage({
                         <p className="text-sm text-slate-500 mt-1">Book your first turf to get started</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-slate-50/50 border-b border-slate-100">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Booking ID
-                              </th>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Venue & Court
-                              </th>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Date & Time
-                              </th>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Amount
-                              </th>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Payment Status
-                              </th>
-                              <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50">
-                            {bookings.map((booking) => {
-                              const totalAmount = Number(booking.totalAmount || 0);
-                              const paidAmount = Number(booking.totalPaidAmount || 0);
-                              const dueAmount = Math.max(0, totalAmount - paidAmount);
-                              
-                              return (
-                                <tr key={booking._id} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase">ID</span>
-                                        <span className="text-xs font-black text-slate-900 font-mono">
-                                          {booking.bookingId || booking.shortCode || '—'}
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-slate-50/50 border-b border-slate-100">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Booking ID
+                                </th>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Venue & Court
+                                </th>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Date & Time
+                                </th>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Amount
+                                </th>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Payment Status
+                                </th>
+                                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Status
+                                </th>
+                                <th className="px-6 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {(() => {
+                                const totalPages = Math.max(1, Math.ceil(bookings.length / itemsPerPage));
+                                const page = Math.min(currentPage, totalPages);
+                                const startIndex = (page - 1) * itemsPerPage;
+                                const paginatedBookings = bookings.slice(startIndex, startIndex + itemsPerPage);
+                                
+                                return paginatedBookings.map((booking) => {
+                                  const totalAmount = Number(booking.totalAmount || 0);
+                                  const paidAmount = Number(booking.totalPaidAmount || 0);
+                                  const dueAmount = Math.max(0, totalAmount - paidAmount);
+                                  
+                                  return (
+                                    <tr key={booking._id} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                          <p className="text-sm font-bold text-lime-600">
+                                            {booking.bookingId || booking.shortCode || '—'}
+                                          </p>
+                                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                            {formatNepalDateTime(booking.createdAt)}
+                                          </p>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-bold text-slate-900 truncate">
+                                            {booking.turf?.name || 'Turf booking'}
+                                          </p>
+                                          <p className="text-xs text-slate-500 font-medium">
+                                            {booking.court?.name || 'Court 1'}
+                                          </p>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div>
+                                          <p className="text-xs font-bold text-slate-900">
+                                            {booking.dateStr || new Date(booking.date).toLocaleDateString()}
+                                          </p>
+                                          <p className="text-xs text-slate-500 font-medium">
+                                            {booking.timeSlot}
+                                          </p>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div>
+                                          <p className="text-sm font-black text-slate-900">
+                                            NPR {totalAmount.toLocaleString()}
+                                          </p>
+                                          {dueAmount > 0 && (
+                                            <p className="text-[10px] font-bold text-amber-600 mt-0.5">
+                                              Due: NPR {dueAmount.toLocaleString()}
+                                            </p>
+                                          )}
+                                          {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
+                                            <p className="text-[10px] font-medium text-emerald-600 mt-0.5">
+                                              Deposit: NPR {Number(booking.depositAmount).toLocaleString()}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div className="flex flex-col gap-1">
+                                          <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold w-fit ${
+                                            booking.paymentStatus === 'Paid'
+                                              ? 'bg-emerald-100 text-emerald-700'
+                                              : booking.paymentStatus === 'Partial'
+                                              ? 'bg-amber-100 text-amber-700'
+                                              : 'bg-slate-100 text-slate-700'
+                                          }`}>
+                                            {booking.paymentStatus}
+                                          </span>
+                                          <span className="text-[10px] font-medium text-slate-500">
+                                            {booking.paymentMethod || 'eSewa'}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                          booking.status === 'Confirmed'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : booking.status === 'Completed'
+                                            ? 'bg-slate-100 text-slate-700'
+                                            : booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed'
+                                            ? 'bg-purple-100 text-purple-700'
+                                            : booking.status === 'Cancelled'
+                                            ? 'bg-rose-100 text-rose-700'
+                                            : 'bg-rose-100 text-rose-700'
+                                        }`}>
+                                          {booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed' ? 'Refunded' : booking.status}
                                         </span>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-bold text-slate-900 truncate">
-                                        {booking.turf?.name || 'Turf booking'}
-                                      </p>
-                                      <p className="text-xs text-slate-500 font-medium">
-                                        {booking.court?.name || 'Court 1'}
-                                      </p>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <div>
-                                      <p className="text-xs font-bold text-slate-900">
-                                        {booking.dateStr || new Date(booking.date).toLocaleDateString()}
-                                      </p>
-                                      <p className="text-xs text-slate-500 font-medium">
-                                        {booking.timeSlot}
-                                      </p>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <div>
-                                      <p className="text-sm font-black text-slate-900">
-                                        NPR {totalAmount.toLocaleString()}
-                                      </p>
-                                      {dueAmount > 0 && (
-                                        <p className="text-[10px] font-bold text-amber-600 mt-0.5">
-                                          Due: NPR {dueAmount.toLocaleString()}
-                                        </p>
-                                      )}
-                                      {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
-                                        <p className="text-[10px] font-medium text-emerald-600 mt-0.5">
-                                          Deposit: NPR {Number(booking.depositAmount).toLocaleString()}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <div className="flex flex-col gap-1">
-                                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold w-fit ${
-                                        booking.paymentStatus === 'Paid'
-                                          ? 'bg-emerald-100 text-emerald-700'
-                                          : booking.paymentStatus === 'Partial'
-                                          ? 'bg-amber-100 text-amber-700'
-                                          : 'bg-slate-100 text-slate-700'
-                                      }`}>
-                                        {booking.paymentStatus}
-                                      </span>
-                                      <span className="text-[10px] font-medium text-slate-500">
-                                        {booking.paymentMethod || 'eSewa'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                      booking.status === 'Confirmed'
-                                        ? 'bg-blue-100 text-blue-700'
-                                        : booking.status === 'Completed'
-                                        ? 'bg-slate-100 text-slate-700'
-                                        : booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : booking.status === 'Cancelled'
-                                        ? 'bg-rose-100 text-rose-700'
-                                        : 'bg-rose-100 text-rose-700'
-                                    }`}>
-                                      {booking.status === 'Cancelled' && booking.refund && booking.refund.status === 'Processed' ? 'Refunded' : booking.status}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 text-center">
+                                      </td>
+                                      <td className="px-6 py-4 text-center">
+                                        <button
+                                          onClick={() => setSelectedBooking(booking)}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-500 text-xs font-bold text-slate-900 transition-all"
+                                        >
+                                          <Eye className="h-3.5 w-3.5" />
+                                          View Details
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {bookings.length > 0 && (
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-slate-100 text-xs text-slate-500 font-medium">
+                            <div className="flex items-center gap-3">
+                              <span>
+                                Showing <strong className="text-slate-900 font-bold">{bookings.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to{' '}
+                                <strong className="text-slate-900 font-bold">{Math.min(currentPage * itemsPerPage, bookings.length)}</strong> of{' '}
+                                <strong className="text-slate-900 font-bold">{bookings.length}</strong> entries
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span>Rows:</span>
+                                <select
+                                  value={itemsPerPage}
+                                  onChange={(e) => {
+                                    setItemsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-lime-500/20 focus:border-lime-500 transition-all"
+                                >
+                                  <option value={5}>5</option>
+                                  <option value={10}>10</option>
+                                  <option value={20}>20</option>
+                                  <option value={50}>50</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-lime-50 hover:text-lime-600 hover:border-lime-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:cursor-not-allowed transition-all"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </button>
+                              {(() => {
+                                const totalPages = Math.max(1, Math.ceil(bookings.length / itemsPerPage));
+                                return getPageItems(currentPage, totalPages).map((item) =>
+                                  typeof item === 'number' ? (
                                     <button
-                                      onClick={() => setSelectedBooking(booking)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-400 hover:bg-lime-500 text-xs font-bold text-slate-900 transition-all"
+                                      key={item}
+                                      onClick={() => setCurrentPage(item)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                        currentPage === item
+                                          ? 'bg-lime-400 text-slate-900 border border-lime-500'
+                                          : 'border border-slate-200 text-slate-600 hover:bg-lime-50 hover:text-lime-600 hover:border-lime-200'
+                                      }`}
                                     >
-                                      <Eye className="h-3.5 w-3.5" />
-                                      View Details
+                                      {item}
                                     </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                                  ) : (
+                                    <span key={item.key} className="px-2 text-slate-400">
+                                      …
+                                    </span>
+                                  )
+                                );
+                              })()}
+                              <button
+                                disabled={currentPage >= Math.ceil(bookings.length / itemsPerPage)}
+                                onClick={() => setCurrentPage(Math.min(Math.ceil(bookings.length / itemsPerPage), currentPage + 1))}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-lime-50 hover:text-lime-600 hover:border-lime-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:cursor-not-allowed transition-all"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

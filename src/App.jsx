@@ -21,6 +21,7 @@ import TurfListingPage from './pages/turfs/TurfListingPage';
 import BookingCheckoutPage from './pages/bookings/BookingCheckoutPage';
 import TurfDetailsPage from './pages/turfs/TurfDetailsPage';
 import TurfRoutePage from './pages/turfs/TurfRoutePage';
+import BookingPassPublicPage from './pages/BookingPassPublicPage';
 import turfService from './services/turfService';
 import { useToast } from './components/common/toastContext';
 import ApplicationStatusPage from './pages/owner/ApplicationStatusPage';
@@ -259,6 +260,8 @@ function App() {
       setCurrentPage('adminLogin');
     } else if (pathname.includes('/superadmin/login') || searchParams.get('page') === 'superadmin-login') {
       setCurrentPage('superadminLogin');
+    } else if (pathname.includes('/booking-pass/')) {
+      setCurrentPage('bookingPass');
     } else if (pathname === '/login' || searchParams.get('page') === 'login') {
       setAuthMode('login');
     } else if (pathname === '/signup' || pathname === '/register' || searchParams.get('page') === 'signup') {
@@ -359,6 +362,10 @@ function App() {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
         setCurrentPage('applicationStatus');
+      } else if (path.includes('/booking-pass/')) {
+        setSelectedTurf(null);
+        setSelectedTurfForBooking(null);
+        setCurrentPage('bookingPass');
       } else if (path === '/profile' || params.get('page') === 'profile') {
         setSelectedTurf(null);
         setSelectedTurfForBooking(null);
@@ -1143,6 +1150,11 @@ function App() {
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
       );
+    }
+
+    // Booking Pass Public Page (Accessible via QR code scan)
+    if (currentPage === 'bookingPass') {
+      return <BookingPassPublicPage />;
     }
 
     if (currentPage === 'profile') {

@@ -1,6 +1,9 @@
-import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Phone, Mail, Users, Banknote } from 'lucide-react';
-import { useState } from 'react';
+import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Phone, Mail, Users, Banknote, Download, QrCode } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { formatNepalDateTime } from '../../utils/dateTime';
+import BookingPassModal from './BookingPassModal';
+import turfService from '../../services/turfService';
 
 const money = (value) => `NRs. ${Number(value || 0).toLocaleString('en-NP')}`;
 
@@ -14,8 +17,36 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showBookingPass, setShowBookingPass] = useState(false);
+  const [bookingPassData, setBookingPassData] = useState(null);
+  const [qrToken, setQrToken] = useState(null);
+  const [isLoadingQR, setIsLoadingQR] = useState(true); // Start as loading
 
   if (!booking) return null;
+
+  // SIMPLE: Just fetch QR token when modal opens
+  useEffect(() => {
+    if (booking.status === 'Confirmed' && !booking.cancellationRequest) {
+      setIsLoadingQR(true);
+      
+      turfService.generateBookingPass(booking._id || booking.id)
+        .then((response) => {
+          const data = response?.data || response;
+          if (data.qrToken) {
+            setQrToken(data.qrToken);
+            setBookingPassData(data);
+          }
+        })
+        .catch((error) => {
+          console.error('QR fetch error:', error);
+        })
+        .finally(() => {
+          setIsLoadingQR(false);
+        });
+    } else {
+      setIsLoadingQR(false);
+    }
+  }, []);
 
   const totalAmount = Number(booking.totalAmount || 0);
   const paidAmount = Number(booking.totalPaidAmount || 0);
@@ -49,6 +80,18 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
     }
   };
 
+  const handleDownloadPass = async () => {
+    if (!bookingPassData && qrToken) {
+      // If we have qrToken but not full pass data, create it
+      setBookingPassData({
+        booking: booking,
+        qrToken: qrToken,
+        expiresAt: booking.qrTokenExpiresAt,
+      });
+    }
+    setShowBookingPass(true);
+  };
+
   return (
     <>
       <div
@@ -65,7 +108,12 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
           <div className="p-5 pb-4 border-b border-slate-100/80 flex items-center justify-between bg-white/60 sticky top-0 z-10">
             <div className="min-w-0">
               <span className="font-black text-lg text-slate-900 tracking-tight block truncate">Booking {booking.bookingId || booking.shortCode}</span>
-              <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Booked on {formatNepalDateTime(booking.createdAt)}</p>
+              <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                {booking.dateStr} · {booking.timeSlot}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Booked on {formatNepalDateTime(booking.createdAt)}
+              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
@@ -228,8 +276,56 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
               </p>
             )}
 
+            {/* QR Code Section */}
+            {displayStatus === 'Confirmed' && !booking.cancellationRequest && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-lime-50 to-emerald-50 border-2 border-lime-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <QrCode size={16} className="text-lime-700" />
+                  <h4 className="font-bold text-sm text-slate-900">Booking QR Code</h4>
+                </div>
+                <div className="flex justify-center">
+                  <div className="bg-white p-3 rounded-xl border-2 border-lime-300 shadow-sm">
+                    {qrToken ? (
+                      <QRCodeSVG
+                        value={JSON.stringify({
+                          token: qrToken,
+                          type: 'booking_verification',
+                          timestamp: Date.now(),
+                        })}
+                        size={150}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    ) : isLoadingQR ? (
+                      <div className="w-[150px] h-[150px] flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600"></div>
+                        <span>Generating QR...</span>
+                      </div>
+                    ) : (
+                      <div className="w-[150px] h-[150px] flex flex-col items-center justify-center text-rose-500 text-xs gap-2 p-4 text-center">
+                        <AlertCircle size={24} className="text-rose-500" />
+                        <span>Failed to load QR. Please refresh.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-center text-slate-600 mt-3">
+                  {qrToken ? 'Present this QR code at the venue for check-in' : isLoadingQR ? 'Generating your unique QR code...' : 'Unable to generate QR code'}
+                </p>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="pt-1 space-y-2">
+              {displayStatus === 'Confirmed' && !booking.cancellationRequest && qrToken && (
+                <button
+                  onClick={handleDownloadPass}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-500 text-slate-900 font-bold transition-all"
+                >
+                  <Download size={14} />
+                  Download Booking Pass
+                </button>
+              )}
               {canRequestCancellation && (
                 <button
                   onClick={() => setShowCancelDialog(true)}
@@ -256,6 +352,18 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
           </div>
         </div>
       </div>
+
+      {/* Booking Pass Modal */}
+      {showBookingPass && bookingPassData && (
+        <BookingPassModal
+          booking={bookingPassData.booking}
+          qrToken={bookingPassData.qrToken}
+          onClose={() => {
+            setShowBookingPass(false);
+            setBookingPassData(null);
+          }}
+        />
+      )}
 
       {/* Cancellation Request Dialog */}
       {showCancelDialog && (
