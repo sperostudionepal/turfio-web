@@ -4,7 +4,7 @@ import { useToast } from '../../components/common/toastContext';
 import Navbar from '../../components/Navbar';
 import useAuthStore from '../../store/useAuthStore';
 
-function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onFeatures, onPricing, onAboutUs }) {
+function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onPricing, onAboutUs }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -101,7 +101,6 @@ function LoginPage({ onLogin, onSwitchToSignUp, onClose, onHome, onListTurf, onF
         onFindTurfs={onFindTurfs}
         user={null}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

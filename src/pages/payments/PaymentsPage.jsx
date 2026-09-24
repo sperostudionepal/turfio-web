@@ -15,7 +15,8 @@ import {
   Receipt,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
-import { formatNepalDateTimeParts } from '../../utils/dateTime';
+import { formatNepalDateTimeParts, getTodayNepalString } from '../../utils/dateTime';
+import { buildPaymentsCsv, downloadCsv } from '../../utils/reportExport';
 
 const METHOD_BADGE = {
   eSewa: 'bg-emerald-600 text-white',
@@ -139,7 +140,15 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '' }) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-white border border-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+              <button
+                onClick={() => {
+                  if (filteredPayments.length === 0) return;
+                  downloadCsv(`turfio-payments-${getTodayNepalString()}.csv`, buildPaymentsCsv(filteredPayments));
+                }}
+                disabled={filteredPayments.length === 0}
+                title={filteredPayments.length === 0 ? 'No payments to export' : `Download ${filteredPayments.length} payment${filteredPayments.length === 1 ? '' : 's'} as CSV`}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-white border border-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Download size={14} />
                 <span>Export Statement</span>
               </button>

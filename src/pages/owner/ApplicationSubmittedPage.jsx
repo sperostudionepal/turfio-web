@@ -17,7 +17,6 @@ export default function ApplicationSubmittedPage({
   onListTurf,
   onFindTurfs,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -57,7 +56,6 @@ export default function ApplicationSubmittedPage({
         onFindTurfs={onFindTurfs}
         user={null}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

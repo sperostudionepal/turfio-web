@@ -311,7 +311,6 @@ export default function TurfDetailsPage({
   onNavigateRoute,
   user,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -744,7 +743,6 @@ export default function TurfDetailsPage({
         onFindTurfs={onFindTurfs}
         onDashboard={onDashboard}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

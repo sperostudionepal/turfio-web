@@ -44,7 +44,6 @@ export default function ProfilePage({
   onDashboard,
   onViewTurfDetails,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -133,7 +132,6 @@ export default function ProfilePage({
         onListTurf={onListTurf}
         onDashboard={onDashboard}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

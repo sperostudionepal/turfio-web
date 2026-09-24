@@ -3,7 +3,7 @@ import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import Navbar from '../../components/Navbar';
 
-function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onFeatures, onPricing, onAboutUs }) {
+function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, onFindTurfs, onHowItWorks, onPricing, onAboutUs }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -71,7 +71,6 @@ function SignUpPage({ onSignUp, onSwitchToLogin, onClose, onHome, onListTurf, on
         onFindTurfs={onFindTurfs}
         user={null}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

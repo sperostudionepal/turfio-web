@@ -76,7 +76,6 @@ export default function BookingCheckoutPage({
   onViewTurfDetails,
   onNavigateRoute,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -630,7 +629,6 @@ export default function BookingCheckoutPage({
         onHome={onHome}
         onDashboard={onDashboard}
         onHowItWorks={onHowItWorks}
-        onFeatures={onFeatures}
         onPricing={onPricing}
         onAboutUs={onAboutUs}
       />

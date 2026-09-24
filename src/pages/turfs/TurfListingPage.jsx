@@ -120,7 +120,6 @@ export default function TurfListingPage({
   onSelectTurf,
   onNavigateRoute,
   onHowItWorks,
-  onFeatures,
   onPricing,
   onAboutUs,
 }) {
@@ -586,7 +585,6 @@ export default function TurfListingPage({
           onToggleSearch={() => setShowSearchBar((prev) => !prev)}
           searchActive={showSearchBar}
           onHowItWorks={onHowItWorks}
-          onFeatures={onFeatures}
           onPricing={onPricing}
           onAboutUs={onAboutUs}
           hideTopbar={true}

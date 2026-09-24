@@ -894,6 +894,7 @@ function App() {
     }
     window.history.pushState({}, '', '/');
     setCurrentPage('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   /**
@@ -1051,7 +1052,6 @@ function App() {
             setCurrentPage('turfListing');
           }}
           onHowItWorks={() => handleNavigateToSection('how-it-works')}
-          onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
@@ -1088,7 +1088,6 @@ function App() {
             setCurrentPage('turfListing');
           }}
           onHowItWorks={() => handleNavigateToSection('how-it-works')}
-          onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
@@ -1147,7 +1146,6 @@ function App() {
           }}
           onDashboard={handleOpenDashboard}
           onHowItWorks={() => handleNavigateToSection('how-it-works')}
-          onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
@@ -1190,8 +1188,7 @@ function App() {
               setCurrentPage('turfDetails');
             }}
             onHowItWorks={() => handleNavigateToSection('how-it-works')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
+              onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
@@ -1277,7 +1274,6 @@ function App() {
           onListTurf={() => setCurrentPage('listTurf')}
           onFindTurfs={() => setCurrentPage('turfs')}
           onHowItWorks={() => handleNavigateToSection('how-it-works')}
-          onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
@@ -1315,8 +1311,7 @@ function App() {
               setCurrentPage('applicationSubmitted');
             }}
             onHowItWorks={() => handleNavigateToSection('how-it-works')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
+              onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
@@ -1407,8 +1402,7 @@ function App() {
             }}
             onNavigateRoute={handleNavigateRoute}
             onHowItWorks={() => handleNavigateToSection('how-it-works')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
+              onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
@@ -1464,8 +1458,7 @@ function App() {
             }}
             onNavigateRoute={handleNavigateRoute}
             onHowItWorks={() => handleNavigateToSection('how-it-works')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
+              onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
@@ -1529,8 +1522,7 @@ function App() {
             }}
             onNavigateRoute={handleNavigateRoute}
             onHowItWorks={() => handleNavigateToSection('how-it-works')}
-            onFeatures={() => handleNavigateToSection('pricing')}
-            onPricing={() => handleNavigateToSection('pricing')}
+              onPricing={() => handleNavigateToSection('pricing')}
             onAboutUs={() => handleNavigateToSection('about-us')}
           />
 
@@ -1570,10 +1562,7 @@ function App() {
             window.history.pushState({}, '', '/list-turf');
             setCurrentPage('listTurf');
           }}
-          onHome={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentPage('home');
-          }}
+          onHome={handleNavigateHome}
           onViewTurfDetails={(turf) => {
             setSelectedTurf(turf);
             const turfId = turf.slug || turf.id || turf._id;
@@ -1591,7 +1580,6 @@ function App() {
             setCurrentPage('profile');
           }}
           onHowItWorks={() => handleNavigateToSection('how-it-works')}
-          onFeatures={() => handleNavigateToSection('pricing')}
           onPricing={() => handleNavigateToSection('pricing')}
           onAboutUs={() => handleNavigateToSection('about-us')}
         />
