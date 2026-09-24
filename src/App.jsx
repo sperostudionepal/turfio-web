@@ -16,7 +16,8 @@ import OnboardingPage from './pages/auth/OnboardingPage';
 import HeroSection from './components/HeroSection';
 import HeroStats from './components/HeroStats';
 import TurfSection from './components/TurfSection';
-import HowItWorksAndDownloadSection from './components/HowItWorksAndDownloadSection';
+import HowItWorksSection from './components/HowItWorksSection';
+import DownloadAppSection from './components/DownloadAppSection';
 import PricingSection from './components/PricingSection';
 import ReviewsSection from './components/ReviewsSection';
 import AboutUsSection from './components/AboutUsSection';
@@ -1593,7 +1594,8 @@ function App() {
             setCurrentPage('turfDetails');
           }}
         />
-        <HowItWorksAndDownloadSection />
+        <HowItWorksSection />
+        <DownloadAppSection />
         <PricingSection
           onExploreTurfs={(search) => {
             setTurfSearch(search || null);

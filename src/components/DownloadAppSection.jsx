@@ -1,109 +1,11 @@
-import { Clock, Star, Users, Search, Calendar } from 'lucide-react';
+import { Clock, Star, Users } from 'lucide-react';
 
-const steps = [
-  {
-    id: 1,
-    title: 'Search Turfs',
-    description: 'Find futsal courts near you',
-    icon: Search,
-  },
-  {
-    id: 2,
-    title: 'Choose Time',
-    description: 'Pick your preferred date and time',
-    icon: Calendar,
-  },
-  {
-    id: 3,
-    title: 'Play & Enjoy',
-    description: 'Show up and enjoy your game',
-    customIcon: (
-      <svg
-        className="h-8 w-8 text-slate-900 stroke-[1.8]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 2a10 10 0 0 0-4 1.5M12 2a10 10 0 0 1 4 1.5" />
-        <path d="M12 22a10 10 0 0 0-4-1.5M12 22a10 10 0 0 1 4-1.5" />
-        <polygon points="12,7 16,10 14.5,15 9.5,15 8,10" />
-        <line x1="12" y1="7" x2="12" y2="2" />
-        <line x1="16" y1="10" x2="20.5" y2="8.5" />
-        <line x1="14.5" y1="15" x2="17" y2="18" />
-        <line x1="9.5" y1="15" x2="7" y2="18" />
-        <line x1="8" y1="10" x2="3.5" y2="8.5" />
-      </svg>
-    ),
-  },
-];
-
-export default function HowItWorksAndDownloadSection() {
+export default function DownloadAppSection() {
   return (
-    <section id="how-it-works" className="bg-white pt-10 pb-8 lg:pt-12 lg:pb-10 border-t border-slate-100/60 overflow-hidden scroll-mt-36">
+    <section className="bg-white pt-8 pb-12 lg:pt-10 lg:pb-16 overflow-hidden">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        {/* Header */}
-        <div className="text-center">
-          <span className="text-sm font-semibold text-lime-500">
-            Top rated turfs
-          </span>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Popular Turfs Near You
-          </h2>
-          <p className="mt-3 text-base font-medium text-slate-500">
-            Your go-to futsal companion for life.
-          </p>
-        </div>
-
-        {/* 3-Step Process Flow with Connecting Dashed Lines */}
-        <div className="mt-12 flex flex-col items-center justify-center gap-10 md:flex-row md:gap-4 lg:gap-8">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <div key={step.id} className="contents">
-                {/* Step Item */}
-                <div className="flex items-center gap-4">
-                  {/* Circle Icon Badge */}
-                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-lime-400 bg-white">
-                    {step.customIcon ? (
-                      step.customIcon
-                    ) : (
-                      <Icon className="h-8 w-8 text-slate-900 stroke-[1.8]" />
-                    )}
-                    <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-xs font-bold text-slate-900">
-                      {step.id}
-                    </span>
-                  </div>
-
-                  {/* Text */}
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      {step.title}
-                    </h3>
-                    <p className="mt-0.5 max-w-[160px] text-xs font-medium leading-snug text-slate-500">
-                      {step.description}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Connecting Dashed Line between step items */}
-                {index < steps.length - 1 && (
-                  <>
-                    {/* Mobile Vertical Dashed Line aligned under circle icon */}
-                    <div className="flex w-20 justify-center md:hidden my-1">
-                      <div className="h-8 w-0.5 border-l-2 border-dashed border-lime-400" />
-                    </div>
-                    {/* Desktop Horizontal Dashed Line */}
-                    <div className="hidden h-0.5 flex-1 max-w-[120px] border-t-2 border-dashed border-lime-400 md:block" />
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
         {/* Download App Grid (Side-by-side on iPad and Desktop) */}
-        <div className="mt-12 grid grid-cols-1 items-center gap-8 md:grid-cols-12 md:gap-6 lg:gap-8 pt-4">
+        <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-12 md:gap-6 lg:gap-8">
           {/* Left Column: Text, App Store Buttons, QR Code (Centered on Mobile) */}
           <div className="flex flex-col justify-center items-center text-center md:items-start md:text-left md:col-span-5">
             <span className="text-sm font-semibold text-lime-500">
