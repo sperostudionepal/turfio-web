@@ -1,5 +1,8 @@
 import apiClient from './apiClient';
 
+// Owner/admin calls explicitly select the staff credential namespace. Never infer identity from URL shape.
+const ownerRequest = { authScope: 'owner' };
+
 /**
  * Fallback images for venues that don't have custom uploaded photos yet.
  */
@@ -120,6 +123,13 @@ export const turfService = {
     }
   },
 
+  /** Fetch turfs belonging to the authenticated staff account. Ownership is resolved server-side. */
+  async getOwnerTurfs() {
+    const response = await apiClient.get('/turfs/owner', ownerRequest);
+    const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    return items.map(transformTurf);
+  },
+
   /**
    * Fetch a single turf by ID from backend and transform with adapter
    */
@@ -224,13 +234,28 @@ export const turfService = {
     return response?.data || response;
   },
 
-  async getOwnerBookings() {
-    const response = await apiClient.get('/bookings/owner');
+  async getBookingById(bookingId) {
+    const response = await apiClient.get(`/bookings/${encodeURIComponent(bookingId)}`);
     return response?.data || response;
   },
 
-  async getOwnerPayments() {
-    const response = await apiClient.get('/payments/owner');
+  async getOwnerBookings() {
+    const response = await apiClient.get('/bookings/owner', ownerRequest);
+    return response?.data || response;
+  },
+
+  async getOwnerCustomers(params = {}) {
+    const response = await apiClient.get('/customers/owner', { ...ownerRequest, params });
+    return response?.data || response;
+  },
+
+  async createOwnerCustomer(customerData) {
+    const response = await apiClient.post('/customers/owner', customerData, ownerRequest);
+    return response?.data || response;
+  },
+
+  async getOwnerPayments(params = {}) {
+    const response = await apiClient.get('/payments/owner', { ...ownerRequest, params });
     return response?.data || response;
   },
 
@@ -238,7 +263,7 @@ export const turfService = {
    * Update editable venue fields (name, description, address city/area, pricePerHour, amenities)
    */
   async updateTurf(turfId, updates) {
-    const response = await apiClient.put(`/turfs/${turfId}`, updates);
+    const response = await apiClient.put(`/turfs/${turfId}`, updates, ownerRequest);
     return transformTurf(response?.data || response);
   },
 
@@ -251,12 +276,12 @@ export const turfService = {
    * Owner records that the customer paid the outstanding balance in person (Pay at Venue)
    */
   async markBookingPaid(bookingId) {
-    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/payment`, { paymentStatus: 'Paid' });
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/payment`, { paymentStatus: 'Paid' }, ownerRequest);
     return response?.data || response;
   },
 
   async confirmBooking(bookingId) {
-    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/confirm`);
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/confirm`, {}, ownerRequest);
     return response?.data || response;
   },
 
@@ -272,7 +297,7 @@ export const turfService = {
    * Approve cancellation request (admin side)
    */
   async approveCancellation(bookingId, reviewNotes) {
-    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/approve-cancellation`, { reviewNotes });
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/approve-cancellation`, { reviewNotes }, ownerRequest);
     return response?.data || response;
   },
 
@@ -280,12 +305,12 @@ export const turfService = {
    * Reject cancellation request (admin side)
    */
   async rejectCancellation(bookingId, reviewNotes) {
-    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/reject-cancellation`, { reviewNotes });
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/reject-cancellation`, { reviewNotes }, ownerRequest);
     return response?.data || response;
   },
 
   async createManualBooking(bookingData) {
-    const response = await apiClient.post('/bookings/manual', bookingData);
+    const response = await apiClient.post('/bookings/manual', bookingData, ownerRequest);
     return response?.data || response;
   },
 
@@ -348,7 +373,7 @@ export const turfService = {
    * Add a new court to a turf
    */
   async addCourt(turfId, courtData) {
-    const response = await apiClient.post(`/turfs/${turfId}/courts`, courtData);
+    const response = await apiClient.post(`/turfs/${turfId}/courts`, courtData, ownerRequest);
     return response?.data || response;
   },
 
@@ -356,7 +381,7 @@ export const turfService = {
    * Update court details
    */
   async updateCourt(turfId, courtId, courtData) {
-    const response = await apiClient.put(`/turfs/${turfId}/courts/${courtId}`, courtData);
+    const response = await apiClient.put(`/turfs/${turfId}/courts/${courtId}`, courtData, ownerRequest);
     return response?.data || response;
   },
 
@@ -364,7 +389,7 @@ export const turfService = {
    * Delete a court
    */
   async deleteCourt(turfId, courtId) {
-    const response = await apiClient.delete(`/turfs/${turfId}/courts/${courtId}`);
+    const response = await apiClient.delete(`/turfs/${turfId}/courts/${courtId}`, ownerRequest);
     return response?.data || response;
   },
 
@@ -376,6 +401,7 @@ export const turfService = {
     formData.append('image', file);
     const response = await apiClient.post(`/turfs/${turfId}/courts/${courtId}/image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      authScope: 'owner',
     });
     return response?.data || response;
   },
@@ -389,6 +415,7 @@ export const turfService = {
     });
     const response = await apiClient.post(`/turfs/${turfId}/images`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      authScope: 'owner',
     });
     const item = response?.data || response;
     return transformTurf(item);
@@ -400,6 +427,7 @@ export const turfService = {
   async deleteTurfImage(turfId, imageUrl) {
     const response = await apiClient.delete(`/turfs/${turfId}/images`, {
       data: { imageUrl },
+      authScope: 'owner',
     });
     const item = response?.data || response;
     return transformTurf(item);
@@ -409,7 +437,7 @@ export const turfService = {
    * Reorder turf images array
    */
   async reorderTurfImages(turfId, images) {
-    const response = await apiClient.put(`/turfs/${turfId}/images/reorder`, { images });
+    const response = await apiClient.put(`/turfs/${turfId}/images/reorder`, { images }, ownerRequest);
     const item = response?.data || response;
     return transformTurf(item);
   },
@@ -442,7 +470,7 @@ export const turfService = {
    * Verify booking QR code (admin)
    */
   async verifyBookingQR(token) {
-    const response = await apiClient.post('/bookings/verify-qr', { token });
+    const response = await apiClient.post('/bookings/verify-qr', { token }, ownerRequest);
     return response.data;
   },
 };
