@@ -68,7 +68,10 @@ const routes = [
                 <Outlet />
               </RequirePlayer>
             ),
-            children: [{ path: '/profile', lazy: lazyPage(pageLoaders.profile) }],
+            children: [
+              { path: '/profile', lazy: lazyPage(pageLoaders.profile) },
+              { path: '/bookings/:bookingId/confirmation', lazy: lazyPage(pageLoaders.confirmation) },
+            ],
           },
         ],
       },
@@ -83,19 +86,6 @@ const routes = [
     ],
   },
   { path: '/booking-pass/:id', lazy: lazyPage(pageLoaders.bookingPass) },
-  {
-    element: (
-      <RequirePlayer>
-        <Outlet />
-      </RequirePlayer>
-    ),
-    children: [
-      {
-        path: '/bookings/:bookingId/confirmation',
-        lazy: lazyPage(pageLoaders.confirmation),
-      },
-    ],
-  },
   { path: '/payment-success', lazy: lazyPage(pageLoaders.paymentSuccess) },
   { path: '/payment-failure', lazy: lazyPage(pageLoaders.paymentFailure) },
   { path: '/admin/login', element: <RedirectWithSearch to="/owner/login" /> },
