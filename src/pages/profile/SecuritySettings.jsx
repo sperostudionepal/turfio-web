@@ -126,7 +126,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
         </div>
         <div>
           <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Security & Authentication</h3>
-          <p className="text-xs font-medium text-slate-500">Manage password, session security, and two-factor protection</p>
+          <p className="text-xs font-medium text-slate-500">Manage your password and account security</p>
         </div>
       </div>
 

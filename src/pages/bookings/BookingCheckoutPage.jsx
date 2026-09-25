@@ -731,7 +731,7 @@ export default function BookingCheckoutPage({
               Booking Confirmed!
             </h1>
             <p className="text-slate-500 text-sm font-medium mt-1.5 leading-relaxed">
-              Thank you for booking <span className="font-extrabold text-slate-900">{venueTitle}</span>. A copy of your match pass along with SMS pass details has been sent to <span className="font-bold text-slate-900">+977 {formData.phone || '98XXXXXXXX'}</span>.
+              Thank you for booking <span className="font-extrabold text-slate-900">{venueTitle}</span>. Your match pass is ready below and saved in My Bookings.
             </p>
           </div>
 
@@ -1008,7 +1008,7 @@ export default function BookingCheckoutPage({
                         1. Contact Person
                       </h2>
                       <p className="text-sm font-medium text-slate-500 mt-1">
-                        We will send your digital Match Pass, entry QR code, and SMS updates here.
+                        Your digital Match Pass and entry QR code will be saved in My Bookings.
                       </p>
                     </div>
 
@@ -1495,8 +1495,7 @@ export default function BookingCheckoutPage({
                       You're All Set to Play!
                     </h2>
                     <p className="mt-1 text-sm font-medium text-slate-500 max-w-md mx-auto">
-                      Your futsal slot at {venueTitle} has been successfully locked in. An SMS pass
-                      has been dispatched to +977 {formData.phone || '98XXXXXXXX'}.
+                      Your futsal slot at {venueTitle} has been successfully locked in. Your match pass is ready below and saved in My Bookings.
                     </p>
                   </div>
 

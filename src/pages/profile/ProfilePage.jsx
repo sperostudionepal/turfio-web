@@ -44,7 +44,6 @@ export default function ProfilePage() {
     uploadAvatar,
     changePassword,
     updatePreferences,
-    toggleTwoFactor,
     deleteAccount,
   } = useAuthStore();
   const { showToast } = useToast();
@@ -63,7 +62,7 @@ export default function ProfilePage() {
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
 
-  // Re-fetch on entering Security & 2FA specifically: hasPassword (and other account-state
+  // Re-fetch on entering the Security tab specifically: hasPassword (and other account-state
   // flags) can go stale between the initial mount and whenever the user actually opens this
   // tab, so this tab always renders off freshly-confirmed data instead of a cached guess.
   useEffect(() => {
@@ -110,7 +109,7 @@ export default function ProfilePage() {
     { id: 'savedTurfs', label: 'Saved Turfs', icon: Heart },
     { id: 'playerProfile', label: 'Skill Set & Style', icon: Trophy },
     { id: 'preferences', label: 'App Preferences', icon: Bell },
-    { id: 'security', label: 'Security & 2FA', icon: Shield },
+    { id: 'security', label: 'Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: AlertTriangle, danger: true },
   ];
 
@@ -316,7 +315,7 @@ export default function ProfilePage() {
                       >
                         <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-semibold text-slate-800">
                           <ShieldCheck className="h-4 w-4 text-slate-400" />
-                          <span>Two-Factor Authentication</span>
+                          <span>Password & Security</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                       </button>
@@ -372,7 +371,6 @@ export default function ProfilePage() {
                   <SecuritySettings
                     user={user}
                     onChangePassword={changePassword}
-                    onToggleTwoFactor={toggleTwoFactor}
                   />
                 )}
 
