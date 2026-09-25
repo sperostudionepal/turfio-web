@@ -1,7 +1,15 @@
-// Accepts a turf object or a bare id/slug; map components pass the whole turf.
-export function getTurfRoutePath(turfOrId) {
-  const id = turfOrId && typeof turfOrId === 'object'
+// Callers pass either a turf object (cards, maps, "View Arena") or a bare id/slug.
+const turfKey = (turfOrId) =>
+  turfOrId && typeof turfOrId === 'object'
     ? turfOrId.slug || turfOrId.id || turfOrId._id
     : turfOrId;
-  return id ? `/route?turfId=${encodeURIComponent(id)}` : '/route';
+
+export function getTurfRoutePath(turfOrId) {
+  const key = turfKey(turfOrId);
+  return key ? `/route?turfId=${encodeURIComponent(key)}` : '/route';
+}
+
+export function getTurfDetailsPath(turfOrId) {
+  const key = turfKey(turfOrId);
+  return key ? `/turfs/${encodeURIComponent(key)}` : '/turfs';
 }
