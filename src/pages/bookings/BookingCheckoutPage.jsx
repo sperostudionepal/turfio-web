@@ -63,6 +63,13 @@ function EsewaIcon({ className = 'h-5 w-5' }) {
   );
 }
 
+// Checkout is entered at ?step=1 (slot just selected), which is the first form step (2).
+// Anything outside 1-4 is not a checkout step.
+const parseStepParam = (value) => {
+  const step = parseInt(value, 10);
+  return step >= 1 && step <= 4 ? Math.max(step, 2) : null;
+};
+
 export default function BookingCheckoutPage({
   user,
   turf,
@@ -80,8 +87,8 @@ export default function BookingCheckoutPage({
   const [currentStep, setCurrentStep] = useState(() => {
     // Check URL search params first (e.g. ?step=3)
     const searchParams = new URLSearchParams(window.location.search);
-    const stepParam = parseInt(searchParams.get('step'), 10);
-    if (stepParam && stepParam >= 2 && stepParam <= 4) return stepParam;
+    const stepParam = parseStepParam(searchParams.get('step'));
+    if (stepParam) return stepParam;
 
     return initialStep;
   });
@@ -150,8 +157,8 @@ export default function BookingCheckoutPage({
   useEffect(() => {
     const onPop = () => {
       const params = new URLSearchParams(window.location.search);
-      const s = parseInt(params.get('step'), 10);
-      if (s && s >= 2 && s <= 4) {
+      const s = parseStepParam(params.get('step'));
+      if (s) {
         setCurrentStep(s);
       }
     };
@@ -162,8 +169,8 @@ export default function BookingCheckoutPage({
   // Sync step if URL param changes or turf has bookingId
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const s = parseInt(params.get('step'), 10);
-    if (s && s >= 2 && s <= 4 && s !== currentStep) {
+    const s = parseStepParam(params.get('step'));
+    if (s && s !== currentStep) {
       setCurrentStep(s);
     } else if (turf?.bookingId && currentStep !== 4) {
       setCurrentStep(4);

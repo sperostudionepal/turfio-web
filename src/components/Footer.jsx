@@ -103,11 +103,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/#about-us" className="transition-colors hover:text-slate-900">
-                  Features
-                </Link>
-              </li>
-              <li>
                 <Link to="/#pricing" className="transition-colors hover:text-slate-900">
                   Pricing
                 </Link>
@@ -147,9 +142,9 @@ export default function Footer() {
             <h4 className="text-[15px] font-extrabold text-slate-900">Company</h4>
             <ul className="mt-4 space-y-3 text-sm font-medium text-slate-600">
               <li>
-                <a href="#" className="transition-colors hover:text-slate-900">
+                <Link to="/#about-us" className="transition-colors hover:text-slate-900">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="transition-colors hover:text-slate-900">
