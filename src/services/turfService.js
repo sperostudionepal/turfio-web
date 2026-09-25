@@ -207,7 +207,7 @@ export const turfService = {
   },
 
   /**
-   * Update the current step (2, 3, 4) on an active hold
+   * Update the current checkout step (1 = details, 2 = review) on an active hold
    */
   async updateHoldStep(id, holdToken, step) {
     if (!id || !holdToken || !step) return null;
