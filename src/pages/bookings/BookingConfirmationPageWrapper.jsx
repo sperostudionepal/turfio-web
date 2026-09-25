@@ -13,6 +13,25 @@ export default function BookingConfirmationPageWrapper() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // eSewa adds a cross-origin history entry that the app cannot delete. Keep a
+    // same-document sentinel immediately behind the visible confirmation page.
+    // Browser Back lands on the sentinel first, where popstate can synchronously
+    // replace the document with My Bookings instead of traversing into eSewa.
+    const currentUrl = window.location.href;
+    const state = window.history.state || {};
+    if (!state.turfioConfirmationSentinel) {
+      window.history.replaceState({ ...state, turfioConfirmationBase: true }, '', currentUrl);
+      window.history.pushState({ turfioConfirmationSentinel: true }, '', currentUrl);
+    }
+
+    const onPopState = () => {
+      window.location.replace('/profile');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     turfService.getBookingById(bookingId)
       .then((data) => { if (!cancelled) setBooking(data); })
