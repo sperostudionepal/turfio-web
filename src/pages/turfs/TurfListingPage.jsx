@@ -25,9 +25,7 @@ import CustomDropdown from '../../components/common/CustomDropdown';
 import LocationAutocomplete from '../../components/common/LocationAutocomplete';
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
-import { parseTurfSearch } from '../../utils/turfSearch';
-
-const normalizePlayersFilter = (players) => players === 'Random' ? 'Any Size' : (players || 'Any Size');
+import { parseTurfSearch, normalizePlayersFilter, TIME_SLOT_OPTIONS } from '../../utils/turfSearch';
 
 const parseTimeToMinutes = (value) => {
   if (!value) return null;
@@ -73,18 +71,6 @@ const isTurfAvailableAt = (turf, day, requestedMinutes) => {
   }
   return true;
 };
-
-// Available time slots for search and filtering
-const ALL_TIME_SLOTS = [
-  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
-  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
-  '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM', '10:00 PM', '11:00 PM',
-];
-
-const TIME_SLOT_OPTIONS = ALL_TIME_SLOTS.map((slot) => ({
-  value: slot,
-  label: slot,
-}));
 
 // Available amenities for filtering
 const amenitiesList = [

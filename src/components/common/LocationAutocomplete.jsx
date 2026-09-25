@@ -19,6 +19,7 @@ import { MapPin, Loader2, Navigation } from 'lucide-react';
  * - onSelect: Called when user selects a suggestion { lat, lon, display_name }
  * - placeholder: Input placeholder text
  * - className: Additional CSS classes for the container
+ * - inputClassName: Overrides the input's own classes (defaults to the Find Turfs look)
  */
 export default function LocationAutocomplete({
   value = '',
@@ -26,6 +27,7 @@ export default function LocationAutocomplete({
   onSelect,
   placeholder = 'Search location',
   className = '',
+  inputClassName = 'w-full border-0 bg-transparent p-0 text-[14px] font-medium text-slate-400 outline-none placeholder:text-slate-400',
 }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -201,7 +203,7 @@ export default function LocationAutocomplete({
           setShowSuggestions(true);
         }}
         placeholder={placeholder}
-        className="w-full border-0 bg-transparent p-0 text-[14px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
+        className={inputClassName}
         aria-autocomplete="list"
         aria-expanded={showSuggestions}
         aria-controls="location-suggestions"

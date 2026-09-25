@@ -14,26 +14,27 @@ import {
 import { getTodayNepalString } from '../utils/dateTime';
 import CustomDatePicker from './common/CustomDatePicker';
 import CustomDropdown from './common/CustomDropdown';
+import LocationAutocomplete from './common/LocationAutocomplete';
+import { TIME_SLOT_OPTIONS } from '../utils/turfSearch';
 
+// Starts empty like the Find Turfs search bar.
 const initialForm = {
-  location: 'Hattiban, Lalitpur',
-  date: getTodayNepalString(),
-  time: '09:00 AM',
-  players: 'Random',
+  location: '',
+  date: '',
+  time: '',
+  players: 'Any Size',
 };
-
-const TIME_OPTIONS = [
-  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM',
-  '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
-].map((value) => ({ value, label: value }));
 
 export default function HeroSection({
   onFindTurfs,
 }) {
   const [form, setForm] = useState(initialForm);
+  // Set when a suggestion is picked; only used while the text still matches it, like Find Turfs.
+  const [selectedLocation, setSelectedLocation] = useState(null);
 
   const submitSearch = () => {
-    onFindTurfs?.(form);
+    const coords = selectedLocation && selectedLocation.name === form.location.trim() ? selectedLocation.coords : null;
+    onFindTurfs?.({ ...form, coords });
   };
 
   const updateField = (field, value) => {
@@ -196,11 +197,21 @@ export default function HeroSection({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-bold text-slate-900">Location</span>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
                       value={form.location}
-                      onChange={(event) => updateField('location', event.target.value)}
-                      className="mt-0.5 w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
+                      onChange={(value) => updateField('location', value)}
+                      onSelect={(location) => {
+                        const lat = Number(location.lat);
+                        const lng = Number(location.lon ?? location.lng);
+                        const name = location.display_name || '';
+                        updateField('location', name);
+                        setSelectedLocation(
+                          Number.isFinite(lat) && Number.isFinite(lng) ? { name, coords: { lat, lng } } : null
+                        );
+                      }}
+                      placeholder="Search location"
+                      className="mt-0.5"
+                      inputClassName="w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
                     />
                   </span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
@@ -227,7 +238,8 @@ export default function HeroSection({
                     icon={Clock}
                     value={form.time}
                     onChange={(value) => updateField('time', value)}
-                    options={TIME_OPTIONS}
+                    options={TIME_SLOT_OPTIONS}
+                    placeholder="HH:MM"
                   />
                 </div>
 
@@ -244,7 +256,7 @@ export default function HeroSection({
                       onChange={(event) => updateField('players', event.target.value)}
                       className="mt-0.5 w-full appearance-none border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none cursor-pointer"
                     >
-                      <option value="Random">Random</option>
+                      <option value="Any Size">Random</option>
                       <option value="5v5">5v5</option>
                       <option value="7v7">7v7</option>
                     </select>
