@@ -1,4 +1,4 @@
-import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Phone, Mail, Users, Banknote, Download, QrCode } from 'lucide-react';
+import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Users, Download, QrCode } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatNepalDateTime } from '../../utils/dateTime';
@@ -21,12 +21,11 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
   const [bookingPassData, setBookingPassData] = useState(null);
   const [qrToken, setQrToken] = useState(null);
   const [isLoadingQR, setIsLoadingQR] = useState(true); // Start as loading
-
-  if (!booking) return null;
+  const [qrTimestamp] = useState(() => Date.now());
 
   // SIMPLE: Just fetch QR token when modal opens
   useEffect(() => {
-    if (booking.status === 'Confirmed' && !booking.cancellationRequest) {
+    if (booking?.status === 'Confirmed' && !booking.cancellationRequest) {
       setIsLoadingQR(true);
       
       turfService.generateBookingPass(booking._id || booking.id)
@@ -47,6 +46,8 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
       setIsLoadingQR(false);
     }
   }, []);
+
+  if (!booking) return null;
 
   const totalAmount = Number(booking.totalAmount || 0);
   const paidAmount = Number(booking.totalPaidAmount || 0);
@@ -290,7 +291,7 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
                         value={JSON.stringify({
                           token: qrToken,
                           type: 'booking_verification',
-                          timestamp: Date.now(),
+                          timestamp: qrTimestamp,
                         })}
                         size={150}
                         level="H"

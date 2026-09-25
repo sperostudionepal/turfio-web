@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import turfService from '../services/turfService';
 
 export function useTurf() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const idOrSlug = slug || searchParams.get('turfId') || searchParams.get('id');
 

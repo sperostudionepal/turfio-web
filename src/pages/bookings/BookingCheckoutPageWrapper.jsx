@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTurf } from '../../hooks/useTurf';
 import BookingCheckoutPage from './BookingCheckoutPage';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getTurfRoutePath } from '../../utils/turfPaths';
 import turfService from '../../services/turfService';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -121,5 +122,5 @@ export default function BookingCheckoutPageWrapper() {
     return <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4"><h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Session Unavailable</h2><p className="text-slate-600 mb-6 text-center max-w-lg">{contextError || error || 'Unable to load checkout for this venue.'}</p><button onClick={() => navigate(`/turfs/${turf?.slug || turf?.id || ''}`)} className="px-6 py-2.5 bg-slate-900 text-white font-semibold rounded-full hover:bg-slate-800 transition-colors">Select a Slot</button></div>;
   }
 
-  return <BookingCheckoutPage user={user} turf={hydratedTurf} initialBooking={hydratedTurf?.confirmedBooking} onBack={() => navigate(-1)} onViewTurfDetails={(id) => navigate(`/turfs/${id}`)} onNavigateRoute={(id) => navigate(`/route?turfId=${id}`)} onBookingConfirmed={(id) => navigate(`/bookings/${encodeURIComponent(id)}/confirmation`, { replace: true })} />;
+  return <BookingCheckoutPage user={user} turf={hydratedTurf} initialBooking={hydratedTurf?.confirmedBooking} onBack={() => navigate(-1)} onViewTurfDetails={(id) => navigate(`/turfs/${id}`)} onNavigateRoute={(turfOrId) => navigate(getTurfRoutePath(turfOrId))} onHome={() => navigate('/')} onBookingConfirmed={(id) => navigate(`/bookings/${encodeURIComponent(id)}/confirmation`, { replace: true })} />;
 }

@@ -69,6 +69,7 @@ export default function BookingCheckoutPage({
   onBack,
   onViewTurfDetails,
   onNavigateRoute,
+  onHome,
   initialBooking = null,
   initialStep = 2,
   onBookingConfirmed,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getTurfRoutePath } from '../../utils/turfPaths';
 import BookingCheckoutPage from './BookingCheckoutPage';
 import turfService from '../../services/turfService';
 import useAuthStore from '../../store/useAuthStore';
@@ -43,5 +44,5 @@ export default function BookingConfirmationPageWrapper() {
     totalAmount: booking.totalAmount,
   };
 
-  return <BookingCheckoutPage user={user} turf={turf} initialBooking={booking} initialStep={4} onBack={() => navigate('/profile')} onViewTurfDetails={(id) => navigate(`/turfs/${id}`)} onNavigateRoute={(id) => navigate(`/route?turfId=${id}`)} />;
+  return <BookingCheckoutPage user={user} turf={turf} initialBooking={booking} initialStep={4} onBack={() => navigate('/profile')} onViewTurfDetails={(id) => navigate(`/turfs/${id}`)} onNavigateRoute={(turfOrId) => navigate(getTurfRoutePath(turfOrId))} onHome={() => navigate('/')} />;
 }

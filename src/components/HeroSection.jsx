@@ -29,8 +29,6 @@ const TIME_OPTIONS = [
 
 export default function HeroSection({
   onFindTurfs,
-  onListTurf,
-  onViewTurfDetails,
 }) {
   const [form, setForm] = useState(initialForm);
 

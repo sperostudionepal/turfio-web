@@ -1,11 +1,10 @@
 import { X, QrCode, CheckCircle2, XCircle, AlertCircle, Download } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import turfService from '../../services/turfService';
 import BookingPassModal from './BookingPassModal';
 
 function QRScannerModal({ onClose, onScanSuccess }) {
-  const scannerRef = useRef(null);
   const [html5QrCode, setHtml5QrCode] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState(null);
@@ -75,7 +74,7 @@ function QRScannerModal({ onClose, onScanSuccess }) {
             });
           }
         },
-        (errorMessage) => {
+        () => {
           // Ignore scanning errors (they happen continuously)
         }
       );

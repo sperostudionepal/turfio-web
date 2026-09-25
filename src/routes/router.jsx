@@ -19,11 +19,10 @@ import LoginPage from '../pages/auth/LoginPage';
 import SignUpPage from '../pages/auth/SignUpPage';
 import StaffLoginPage from '../pages/auth/StaffLoginPage';
 import SetupDashboardPage from '../pages/owner/SetupDashboardPage';
-import Dashboard from '../pages/dashboard/Dashboard';
-import SuperadminDashboard from '../pages/superadmin/SuperadminDashboard';
+import { DashboardWrapper, SuperadminDashboardWrapper } from './DashboardRoutes';
 import NotFoundPage from '../pages/NotFoundPage';
 
-import { RequirePlayer, RequireOwner, RequireSuperadmin } from '../components/auth/RouteGuards';
+import { RequirePlayer } from '../components/auth/RouteGuards';
 import { usePlayerAuth, useOwnerAuth } from '../store/useAuthStore';
 
 const handleLoginSuccess = async (credentials) => {
@@ -51,24 +50,6 @@ const handleAdminLoginSuccess = async (credentials) => {
 const handleSuperadminLoginSuccess = async (credentials) => {
   return useOwnerAuth.getState().loginSuperadmin(credentials);
 };
-
-function DashboardWrapper() {
-  const ownerAuth = useOwnerAuth();
-  return (
-    <RequireOwner>
-      <Dashboard user={ownerAuth.user} onLogout={ownerAuth.logout} />
-    </RequireOwner>
-  );
-}
-
-function SuperadminDashboardWrapper() {
-  const ownerAuth = useOwnerAuth();
-  return (
-    <RequireSuperadmin>
-      <SuperadminDashboard onLogout={ownerAuth.logout} />
-    </RequireSuperadmin>
-  );
-}
 
 const routes = [
   {

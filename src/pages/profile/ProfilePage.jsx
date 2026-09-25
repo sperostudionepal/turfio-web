@@ -94,7 +94,7 @@ export default function ProfilePage({
       setBookings(updatedBookings);
       setSelectedBooking(null);
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to submit cancellation request');
+      throw new Error(error.response?.data?.message || 'Failed to submit cancellation request', { cause: error });
     }
   };
 
@@ -137,7 +137,7 @@ export default function ProfilePage({
             </p>
             <button
               type="button"
-              onClick={onLogin}
+              onClick={() => navigate('/login?redirectTo=%2Fprofile')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-lime-400 text-sm font-bold text-slate-900 hover:bg-lime-500 transition-all cursor-pointer shadow-xs"
             >
               Log In to Account

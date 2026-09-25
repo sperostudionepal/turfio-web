@@ -7,7 +7,6 @@ import {
   Minimize2,
   Plus,
   Minus,
-  Compass,
 } from 'lucide-react';
 import {
   MAPTILER_KEY,
@@ -49,7 +48,6 @@ export default function TurfMap({
 
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mapHasBeenMoved, setMapHasBeenMoved] = useState(false);
 
   // Helper to get active style spec / URL
   const getActiveStyle = useCallback(
@@ -75,7 +73,6 @@ export default function TurfMap({
       try {
         const bounds = map.getBounds();
         if (bounds) {
-          setMapHasBeenMoved(true);
           onBoundsChange({
             north: bounds.getNorth(),
             south: bounds.getSouth(),

@@ -1,6 +1,7 @@
 import { useTurf } from '../../hooks/useTurf';
 import TurfDetailsPage from './TurfDetailsPage';
 import { useNavigate } from 'react-router-dom';
+import { getTurfRoutePath } from '../../utils/turfPaths';
 import useAuthStore from '../../store/useAuthStore';
 
 export default function TurfDetailsPageWrapper() {
@@ -49,8 +50,8 @@ export default function TurfDetailsPageWrapper() {
     navigate(`/turfs/${turfId}/book${search}`);
   };
 
-  const handleNavigateRoute = (turfId) => {
-    navigate(`/route?turfId=${turfId}`);
+  const handleNavigateRoute = (turfOrId) => {
+    navigate(getTurfRoutePath(turfOrId));
   };
 
   const handleViewTurfDetails = (turfId) => {

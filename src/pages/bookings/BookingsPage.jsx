@@ -141,7 +141,6 @@ function BookingsPage({
   const liveBookings = bookings.filter((b) => b.bookingStatus !== 'Cancelled' && b.bookingStatus !== 'Refunded');
   const refundedCount = bookings.filter((b) => b.bookingStatus === 'Refunded').length;
   const cancelledCount = bookings.filter((b) => b.bookingStatus === 'Cancelled').length;
-  const inactiveCount = refundedCount + cancelledCount;
   const stats = [
     {
       title: 'Total Bookings',
@@ -253,7 +252,7 @@ function BookingsPage({
       await loadBookings();
       if (refreshBookings) refreshBookings();
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to approve cancellation');
+      throw new Error(error.response?.data?.message || 'Failed to approve cancellation', { cause: error });
     }
   };
 
@@ -263,11 +262,11 @@ function BookingsPage({
       await loadBookings();
       if (refreshBookings) refreshBookings();
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to reject cancellation');
+      throw new Error(error.response?.data?.message || 'Failed to reject cancellation', { cause: error });
     }
   };
 
-  const handleQRScanSuccess = async (data) => {
+  const handleQRScanSuccess = async () => {
     // Refresh bookings list after successful check-in
     await loadBookings();
     if (refreshBookings) refreshBookings();

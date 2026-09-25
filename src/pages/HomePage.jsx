@@ -18,11 +18,7 @@ export default function HomePage() {
 
   return (
     <>
-      <HeroSection
-        onFindTurfs={onFindTurfs}
-        onListTurf={onListTurf}
-        onViewTurfDetails={handleViewTurfDetails}
-      />
+      <HeroSection onFindTurfs={onFindTurfs} />
       <HeroStats />
       <TurfSection onViewTurfDetails={handleViewTurfDetails} />
       <HowItWorksSection />

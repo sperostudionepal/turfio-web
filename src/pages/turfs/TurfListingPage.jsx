@@ -43,12 +43,6 @@ const parseTimeToMinutes = (value) => {
   return hours * 60 + minutes;
 };
 
-const addDaysToDate = (dateValue, days) => {
-  const date = new Date(`${dateValue}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
 const getDayName = (dateValue) => {
   if (!dateValue) return '';
   return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' })
@@ -161,9 +155,6 @@ export default function TurfListingPage({
   const [maxPrice, setMaxPrice] = useState(2500);
   const [selectedAmenities, setSelectedAmenities] = useState([]);
 
-  // Search bar visibility toggle (defaults to false or expandable)
-  const [showSearchBar, setShowSearchBar] = useState(false);
-
   // Sorting
   const [sortBy, setSortBy] = useState('rating');
 
@@ -200,31 +191,6 @@ export default function TurfListingPage({
     setAppliedTime(timeInput);
     setAppliedPlayers(normalizePlayersFilter(playersInput));
     setCurrentPage(1);
-  };
-
-  const findDefaultSearchSlot = async () => {
-    const today = getTodayNepalString();
-    const datesToCheck = Array.from({ length: 14 }, (_, index) => addDaysToDate(today, index));
-
-    for (const date of datesToCheck) {
-      const entries = date === appliedDate && Object.keys(availabilityByTurf).length
-        ? Object.entries(availabilityByTurf)
-        : await Promise.all(turfs.map(async (turf) => {
-          try {
-            return [turf.id, await turfService.getTurfAvailability(turf.id, date)];
-          } catch {
-            return [turf.id, null];
-          }
-        }));
-
-      const availableSlot = entries
-        .flatMap(([, availability]) => (availability?.slots || []).filter((slot) => slot.isAvailable && slot.state === 'available'))
-        .sort((first, second) => first.startMinutes - second.startMinutes)[0];
-
-      if (availableSlot) return { date, time: availableSlot.time };
-    }
-
-    return { date: today, time: '07:00 PM' };
   };
 
   const handleClearSearch = async () => {
@@ -393,7 +359,6 @@ export default function TurfListingPage({
 
     // filteringTier === 'date-and-time'
     const requestedMinutes = parseTimeToMinutes(appliedTime);
-    const requestedDay = getDayName(appliedDate);
     const availability = availabilityByTurf[turf.id];
 
     if (!availability) {
