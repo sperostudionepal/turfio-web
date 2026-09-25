@@ -60,6 +60,8 @@ export default function PaymentSuccess() {
           console.error('Failed to update session storage', e);
         }
 
+        sessionStorage.removeItem('turfio_esewa_in_progress');
+        sessionStorage.removeItem('turfio_pending_booking');
         navigate(`/bookings/${encodeURIComponent(verifiedBooking.bookingId)}/confirmation`, { replace: true });
       })
       .catch((err) => {
