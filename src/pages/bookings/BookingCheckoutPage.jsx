@@ -24,6 +24,8 @@ import {
   PhoneCall,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
+import CustomDropdown from '../../components/common/CustomDropdown';
+import CustomDatePicker from '../../components/common/CustomDatePicker';
 import { getTodayNepalString } from '../../utils/dateTime';
 import { useToast } from '../../components/common/toastContext';
 
@@ -63,11 +65,11 @@ function EsewaIcon({ className = 'h-5 w-5' }) {
   );
 }
 
-// Checkout is entered at ?step=1 (slot just selected), which is the first form step (2).
-// Anything outside 1-4 is not a checkout step.
+// Checkout has two editable steps: 1 = Add Details, 2 = Review & Pay.
+// Step 4 is retained only for the legacy in-component confirmation fallback.
 const parseStepParam = (value) => {
   const step = parseInt(value, 10);
-  return step >= 1 && step <= 4 ? Math.max(step, 2) : null;
+  return [1, 2, 4].includes(step) ? step : null;
 };
 
 export default function BookingCheckoutPage({
@@ -78,14 +80,15 @@ export default function BookingCheckoutPage({
   onNavigateRoute,
   onHome,
   initialBooking = null,
-  initialStep = 2,
+  initialStep = 1,
   onBookingConfirmed,
+  onHoldReplaced,
 }) {
   // Persist and restore step and form data across reloads
   const storageKey = turf?.id ? `turfio_checkout_state_${turf.id}` : 'turfio_checkout_state';
 
   const [currentStep, setCurrentStep] = useState(() => {
-    // Check URL search params first (e.g. ?step=3)
+    // Check URL search params first (e.g. ?step=2)
     const searchParams = new URLSearchParams(window.location.search);
     const stepParam = parseStepParam(searchParams.get('step'));
     if (stepParam) return stepParam;
@@ -148,7 +151,7 @@ export default function BookingCheckoutPage({
   useEffect(() => {
     const holdToken = turf?.holdToken || new URLSearchParams(window.location.search).get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
     const turfId = turf?.id || turf?._id;
-    if (turfId && holdToken && currentStep >= 2 && currentStep <= 4) {
+    if (turfId && holdToken && currentStep >= 1 && currentStep <= 2) {
       turfService.updateHoldStep(turfId, holdToken, currentStep);
     }
   }, [currentStep, turf]);
@@ -176,6 +179,85 @@ export default function BookingCheckoutPage({
       setCurrentStep(4);
     }
   }, [turf?.bookingId]);
+
+  // Schedule editing stays inside Add Details. The existing hold remains active while
+  // the user browses dates; choosing a new valid time atomically replaces it server-side.
+  const [scheduleDate, setScheduleDate] = useState(turf?.selectedDate || getTodayNepalString());
+  const [scheduleTime, setScheduleTime] = useState(turf?.selectedTime || '');
+  const [scheduleAvailability, setScheduleAvailability] = useState(null);
+  const [editingSchedule, setEditingSchedule] = useState(null); // 'date' | 'time' | null
+  const [isReplacingHold, setIsReplacingHold] = useState(false);
+  const [activeHold, setActiveHold] = useState(() => ({
+    holdToken: turf?.holdToken,
+    holdId: turf?.holdId,
+    expiresAt: turf?.holdExpiresAt,
+  }));
+
+  useEffect(() => {
+    setScheduleDate(turf?.selectedDate || getTodayNepalString());
+    setScheduleTime(turf?.selectedTime || '');
+    setActiveHold({ holdToken: turf?.holdToken, holdId: turf?.holdId, expiresAt: turf?.holdExpiresAt });
+  }, [turf?.selectedDate, turf?.selectedTime, turf?.holdToken, turf?.holdId, turf?.holdExpiresAt]);
+
+  useEffect(() => {
+    if (currentStep !== 1 || !scheduleDate) return;
+    let cancelled = false;
+    const turfId = turf?.id || turf?._id;
+    turfService.getTurfAvailability(
+      turfId,
+      scheduleDate,
+      turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
+      activeHold.holdToken,
+    ).then((data) => { if (!cancelled) setScheduleAvailability(data); })
+      .catch(() => { if (!cancelled) setScheduleAvailability(null); });
+    return () => { cancelled = true; };
+  }, [currentStep, scheduleDate, turf, activeHold.holdToken]);
+
+  const scheduleTimeOptions = useMemo(() => {
+    const slots = scheduleAvailability?.slots || [];
+    const durationMinutes = Math.max(60, Math.round(Number(turf?.duration || 1) * 60));
+    const closeMinutes = scheduleAvailability?.openingHours?.closeMinutes ?? Number.POSITIVE_INFINITY;
+    const occupied = scheduleAvailability?.occupiedIntervals || [];
+    return slots.filter((slot) => {
+      if (!slot.isAvailable) return false;
+      const end = slot.startMinutes + durationMinutes;
+      if (end > closeMinutes) return false;
+      return !occupied.some((interval) => interval.startMinutes < end && interval.endMinutes > slot.startMinutes);
+    }).map((slot) => ({ value: slot.time, label: slot.time }));
+  }, [scheduleAvailability, turf?.duration]);
+
+  const replaceScheduleHold = async (nextTime) => {
+    if (!nextTime || isReplacingHold) return;
+    const turfId = turf?.id || turf?._id;
+    try {
+      setIsReplacingHold(true);
+      const response = await turfService.createSlotHold(turfId, {
+        date: scheduleDate,
+        startTime: nextTime,
+        duration: turf?.duration || 1,
+        courtId: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
+        courtName: turf?.courtName || turf?.selectedCourt?.name || turf?.court?.name || 'Court 1',
+        replaceHoldToken: activeHold.holdToken,
+      });
+      const hold = response?.data || response;
+      const next = { holdToken: hold.holdToken, holdId: hold.id || hold._id, expiresAt: hold.expiresAt };
+      setScheduleTime(nextTime);
+      setActiveHold(next);
+      localStorage.setItem('turfio_guest_hold_token', hold.holdToken);
+      const url = new URL(window.location.href);
+      url.searchParams.set('holdToken', hold.holdToken);
+      url.searchParams.set('step', '1');
+      window.history.replaceState({}, '', url.toString());
+      onHoldReplaced?.({ ...next, selectedDate: scheduleDate, selectedTime: nextTime });
+      window.dispatchEvent(new Event('turfio_hold_created'));
+      setEditingSchedule(null);
+      triggerToast('Slot updated. Your new time is reserved.', 'success');
+    } catch (err) {
+      triggerToast(err?.message || 'Unable to reserve that time. Your previous hold is still active.', 'error');
+    } finally {
+      setIsReplacingHold(false);
+    }
+  };
 
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -224,23 +306,23 @@ export default function BookingCheckoutPage({
 
   // Live Countdown Timer wired to real hold expiry timestamp
   const [secondsRemaining, setSecondsRemaining] = useState(() => {
-    if (turf?.holdExpiresAt) {
-      const diffSec = Math.floor((new Date(turf.holdExpiresAt).getTime() - Date.now()) / 1000);
+    if (activeHold.expiresAt || turf?.holdExpiresAt) {
+      const diffSec = Math.floor((new Date(activeHold.expiresAt || turf.holdExpiresAt).getTime() - Date.now()) / 1000);
       return Math.min(300, Math.max(0, diffSec));
     }
     return 0; // never invent/restart a hold timer without a server expiry
   });
 
   useEffect(() => {
-    if (turf?.holdExpiresAt) {
-      const diffSec = Math.floor((new Date(turf.holdExpiresAt).getTime() - Date.now()) / 1000);
+    if (activeHold.expiresAt || turf?.holdExpiresAt) {
+      const diffSec = Math.floor((new Date(activeHold.expiresAt || turf.holdExpiresAt).getTime() - Date.now()) / 1000);
       setSecondsRemaining(Math.min(300, Math.max(0, diffSec)));
     }
-  }, [turf?.holdExpiresAt]);
+  }, [turf?.holdExpiresAt, activeHold.expiresAt]);
 
   useEffect(() => {
-    if (!turf?.holdExpiresAt || currentStep >= 4) return;
-    const expiresAtMs = new Date(turf.holdExpiresAt).getTime();
+    if (!(activeHold.expiresAt || turf?.holdExpiresAt) || currentStep >= 4) return;
+    const expiresAtMs = new Date(activeHold.expiresAt || turf.holdExpiresAt).getTime();
     const update = () => {
       const next = Math.max(0, Math.min(300, Math.floor((expiresAtMs - Date.now()) / 1000)));
       setSecondsRemaining(next);
@@ -248,7 +330,7 @@ export default function BookingCheckoutPage({
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [turf?.holdExpiresAt, currentStep]);
+  }, [turf?.holdExpiresAt, activeHold.expiresAt, currentStep]);
 
   const formattedTimer = useMemo(() => {
     const mins = Math.floor(secondsRemaining / 60);
@@ -296,9 +378,9 @@ export default function BookingCheckoutPage({
   const courtDimension = turf?.courtDimension || turf?.selectedCourt?.dimension || turf?.court?.dimension || '25m x 15m (Standard 5v5)';
 
   const selectedDateStr = useMemo(() => {
-    if (turf?.selectedDate) {
+    if (scheduleDate) {
       try {
-        const d = new Date(turf.selectedDate);
+        const d = new Date(scheduleDate);
         if (!isNaN(d.getTime())) {
           return d.toLocaleDateString('en-US', {
             weekday: 'short',
@@ -310,7 +392,7 @@ export default function BookingCheckoutPage({
       } catch {
         // ignore
       }
-      return turf.selectedDate;
+      return scheduleDate;
     }
     const today = new Date();
     return today.toLocaleDateString('en-US', {
@@ -319,9 +401,9 @@ export default function BookingCheckoutPage({
       month: 'short',
       year: 'numeric',
     });
-  }, [turf?.selectedDate]);
+  }, [scheduleDate]);
 
-  const selectedTimeStr = turf?.selectedTime || '07:00 PM';
+  const selectedTimeStr = scheduleTime || turf?.selectedTime || '07:00 PM';
   const duration = turf?.duration || 1;
 
   // Calculate End Time
@@ -400,9 +482,9 @@ export default function BookingCheckoutPage({
   ];
 
   const steps = [
-    { id: 1, title: 'Select Time', subtitle: 'Choose your slot' },
-    { id: 2, title: 'Add Details', subtitle: "Who's playing?" },
-    { id: 3, title: 'Review & Pay', subtitle: 'Confirm & pay' },
+    { id: 0, title: 'Select Time', subtitle: 'Choose your slot' },
+    { id: 1, title: 'Add Details', subtitle: "Who's playing?" },
+    { id: 2, title: 'Review & Pay', subtitle: 'Confirm & pay' },
   ];
 
   const handleInputChange = (field, value) => {
@@ -437,13 +519,13 @@ export default function BookingCheckoutPage({
     }
     const holdToken = turf?.holdToken || new URLSearchParams(window.location.search).get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
     const turfId = turf?.id || turf?._id;
-    if (turfId && holdToken && newStep >= 2 && newStep <= 4) {
+    if (turfId && holdToken && newStep >= 1 && newStep <= 2) {
       turfService.updateHoldStep(turfId, holdToken, newStep);
     }
   };
 
   const handleNext = async () => {
-    if (currentStep === 2) {
+    if (currentStep === 1) {
       if (!formData.fullName.trim()) {
         triggerToast('Please enter your full name');
         return;
@@ -452,9 +534,9 @@ export default function BookingCheckoutPage({
         triggerToast('Please enter your contact phone number');
         return;
       }
-      updateStep(3);
+      updateStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (currentStep === 3) {
+    } else if (currentStep === 2) {
       if (!formData.termsAgreed) {
         triggerToast('Please agree to terms and rules before proceeding');
         return;
@@ -476,7 +558,7 @@ export default function BookingCheckoutPage({
           if (venueSize.includes('5')) matchType = '5v5';
           else if (venueSize.includes('11')) matchType = '11v11';
 
-          let bookingDate = turf?.selectedDate;
+          let bookingDate = scheduleDate;
           if (!bookingDate) {
             bookingDate = getTodayNepalString();
           }
@@ -492,8 +574,8 @@ export default function BookingCheckoutPage({
             // This whole branch only runs when eSewa is the selected gateway (even for a
             // venue-deposit booking, the deposit itself is charged through eSewa) -- the
             // "at venue" part is captured by paymentType/remainingBalance, not this field.
-            holdToken: turf?.holdToken,
-            holdId: turf?.holdId,
+            holdToken: activeHold.holdToken || turf?.holdToken,
+            holdId: activeHold.holdId || turf?.holdId,
             idempotencyKey,
             court: {
               id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
@@ -519,15 +601,15 @@ export default function BookingCheckoutPage({
 
           // Initiate eSewa payment directly using active hold token/id or booking payload
           const urlParams = new URLSearchParams(window.location.search);
-          const effectiveHoldToken = turf?.holdToken || urlParams.get('holdToken') || localStorage.getItem('turfio_guest_hold_token');
+          const effectiveHoldToken = activeHold.holdToken || urlParams.get('holdToken') || turf?.holdToken || localStorage.getItem('turfio_guest_hold_token');
           const effectiveBookingId = turf?.bookingId || turf?.id || urlParams.get('bookingId');
-          const holdIdentifier = effectiveHoldToken || turf?.holdId || effectiveBookingId;
+          const holdIdentifier = effectiveHoldToken || activeHold.holdId || turf?.holdId || effectiveBookingId;
 
           const initRes = await turfService.initiateEsewaPayment(
             holdIdentifier,
             payAmount,
             {
-              isHold: !!effectiveHoldToken || !!turf?.holdId,
+              isHold: !!effectiveHoldToken || !!activeHold.holdId || !!turf?.holdId,
               holdToken: effectiveHoldToken,
               bookingId: effectiveBookingId,
               bookingData: bookingPayload,
@@ -560,13 +642,13 @@ export default function BookingCheckoutPage({
 
         const bookingPayload = {
           turf: turf?.id || turf?._id,
-          date: turf?.selectedDate || getTodayNepalString(),
+          date: scheduleDate || getTodayNepalString(),
           timeSlot: `${selectedTimeStr} - ${endTimeStr}`,
           matchType,
           teamSize: formData.expectedPlayers || 10,
           paymentType: formData.paymentType || 'venue',
-          holdToken: turf?.holdToken,
-          holdId: turf?.holdId,
+          holdToken: activeHold.holdToken || turf?.holdToken,
+          holdId: activeHold.holdId || turf?.holdId,
           idempotencyKey,
           court: {
             id: turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?.id,
@@ -592,12 +674,12 @@ export default function BookingCheckoutPage({
   };
 
   const handleBack = () => {
-    if (currentStep === 2) {
+    if (currentStep === 1) {
       if (onBack) {
         onBack();
       }
-    } else if (currentStep > 2 && currentStep < 4) {
-      updateStep(currentStep - 1);
+    } else if (currentStep === 2) {
+      updateStep(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -642,7 +724,7 @@ export default function BookingCheckoutPage({
                     {/* Step Item */}
                     <div
                       onClick={() => {
-                        if (step.id === 1) {
+                        if (step.id === 0) {
                           if (onBack) onBack();
                         } else if (step.id < currentStep) {
                           updateStep(step.id);
@@ -999,7 +1081,7 @@ export default function BookingCheckoutPage({
               {/* ────────────────────────────────────────────────
                   STEP 2: ADD DETAILS (WHO'S PLAYING + PAYMENT TYPE)
                  ──────────────────────────────────────────────── */}
-              {currentStep === 2 && (
+              {currentStep === 1 && (
                 <>
                   {/* ── Section 1: Contact Person (At the Top) ── */}
                   <div className="space-y-6">
@@ -1318,7 +1400,7 @@ export default function BookingCheckoutPage({
               {/* ────────────────────────────────────────────────
                 STEP 3: REVIEW & PAY
                ──────────────────────────────────────────────── */}
-              {currentStep === 3 && (
+              {currentStep === 2 && (
                 <div className="space-y-8 animate-fadeIn">
                   {/* Review Overview Section */}
                   <div className="space-y-6">
@@ -1678,16 +1760,28 @@ export default function BookingCheckoutPage({
                         </div>
                       </div>
 
-                      {onBack && currentStep === 2 && (
+                      {currentStep === 1 && (
                         <button
                           type="button"
-                          onClick={onBack}
+                          onClick={() => setEditingSchedule(editingSchedule === 'date' ? null : 'date')}
                           className="text-xs font-bold text-lime-700 hover:text-lime-800 transition-colors cursor-pointer"
                         >
-                          Change
+                          {editingSchedule === 'date' ? 'Done' : 'Change'}
                         </button>
                       )}
                     </div>
+                    {editingSchedule === 'date' && (
+                      <div className="pl-12 pr-1 pb-1">
+                        <CustomDatePicker
+                          label="Match Date"
+                          value={scheduleDate}
+                          onChange={(value) => { setScheduleDate(value); setScheduleTime(''); setEditingSchedule('time'); }}
+                          minDate={getTodayNepalString()}
+                          availableDays={scheduleAvailability?.availableDays}
+                        />
+                        <p className="mt-2 text-[11px] text-slate-500">Your current hold stays reserved until you choose a new time.</p>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1705,16 +1799,28 @@ export default function BookingCheckoutPage({
                         </div>
                       </div>
 
-                      {onBack && currentStep === 2 && (
+                      {currentStep === 1 && (
                         <button
                           type="button"
-                          onClick={onBack}
+                          onClick={() => setEditingSchedule(editingSchedule === 'time' ? null : 'time')}
                           className="text-xs font-bold text-lime-700 hover:text-lime-800 transition-colors cursor-pointer"
                         >
-                          Change
+                          {editingSchedule === 'time' ? 'Done' : 'Change'}
                         </button>
                       )}
                     </div>
+                    {editingSchedule === 'time' && (
+                      <div className="pl-12 pr-1 pb-1">
+                        <CustomDropdown
+                          label="Start Time"
+                          options={scheduleTimeOptions}
+                          value={scheduleTime}
+                          onChange={replaceScheduleHold}
+                          placeholder={scheduleTimeOptions.length ? 'Select a time' : 'No times available'}
+                        />
+                        {isReplacingHold && <p className="mt-2 text-[11px] font-semibold text-lime-700">Reserving new slot…</p>}
+                      </div>
+                    )}
                   </div>
 
                   <div className="h-px bg-slate-100" />
@@ -1858,7 +1964,7 @@ export default function BookingCheckoutPage({
             </div>
 
             {/* Primary CTA */}
-            {currentStep === 2 ? (
+            {currentStep === 1 ? (
               <button
                 type="button"
                 onClick={handleNext}
