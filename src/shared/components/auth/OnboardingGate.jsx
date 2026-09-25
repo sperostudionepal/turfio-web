@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePlayerAuth, useOwnerAuth } from '../../store/useAuthStore';
-import OnboardingPage from '../../pages/auth/OnboardingPage';
+import OnboardingPage from '../../../player/pages/auth/OnboardingPage';
 
 export default function OnboardingGate({ isOwner = false }) {
   const playerAuth = usePlayerAuth();
