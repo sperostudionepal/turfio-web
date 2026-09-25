@@ -22,8 +22,8 @@ import {
   ShieldCheck,
   Check
 } from 'lucide-react';
-import turfService from '../../services/turfService';
-import { getTodayNepalString } from '../../utils/dateTime';
+import turfService from '../../../shared/services/turfService';
+import { getTodayNepalString } from '../../../shared/utils/dateTime';
 
 function InvoicesPage({ user, activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');

@@ -14,11 +14,11 @@ import {
   X,
   DollarSign
 } from 'lucide-react';
-import turfService from '../../services/turfService';
-import CustomDatePicker from '../../components/common/CustomDatePicker';
-import CustomDropdown from '../../components/common/CustomDropdown';
-import { getTodayNepalString, getNepalCurrentDateTime, parseSlotInterval, processFutureSlots } from '../../utils/dateTime';
-import { addDays } from '../../utils/dashboardStats';
+import turfService from '../../../shared/services/turfService';
+import CustomDatePicker from '../../../shared/components/common/CustomDatePicker';
+import CustomDropdown from '../../../shared/components/common/CustomDropdown';
+import { getTodayNepalString, getNepalCurrentDateTime, parseSlotInterval, processFutureSlots } from '../../../shared/utils/dateTime';
+import { addDays } from '../../../shared/utils/dashboardStats';
 
 function SchedulePage({ user, activeTab, setActiveTab }) {
   const [selectedDate, setSelectedDate] = useState(getTodayNepalString());

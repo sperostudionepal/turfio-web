@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import { Users, Search, Plus, Download, X, UserCheck, DollarSign, CalendarDays, AlertCircle, Loader2 } from 'lucide-react';
-import turfService from '../../services/turfService';
+import turfService from '../../../shared/services/turfService';
 
 const money = (n) => `NRs. ${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
 const csvCell = (v) => `"${String(v ?? '').replaceAll('"', '""')}"`;

@@ -17,11 +17,11 @@ import {
   Type,
   ZoomIn,
 } from 'lucide-react';
-import turfService from '../../services/turfService';
+import turfService from '../../../shared/services/turfService';
 import useAccessibilityStore, {
   FONT_OPTIONS,
   FONT_SIZES,
-} from '../../store/useAccessibilityStore';
+} from '../../../shared/store/useAccessibilityStore';
 
 // "06:00" (24h, as stored on the venue) -> "6:00 AM"
 const formatClock = (value) => {
