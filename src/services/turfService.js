@@ -147,10 +147,11 @@ export const turfService = {
   /**
    * Fetch dynamic availability for a turf on a given date (opening window, bookable slots, booked/held ranges)
    */
-  async getTurfAvailability(id, date, courtId = null) {
+  async getTurfAvailability(id, date, courtId = null, holdToken = null) {
     try {
       const params = { date };
       if (courtId) params.courtId = courtId;
+      if (holdToken) params.holdToken = holdToken;
       const response = await apiClient.get(`/turfs/${id}/availability`, {
         params,
       });
@@ -178,13 +179,14 @@ export const turfService = {
   /**
    * Create an atomic 5-minute hold on a slot range
    */
-  async createSlotHold(id, { date, startTime, duration, courtId, courtName }) {
+  async createSlotHold(id, { date, startTime, duration, courtId, courtName, replaceHoldToken }) {
     const response = await apiClient.post(`/turfs/${id}/holds`, {
       date,
       startTime,
       duration,
       courtId,
       courtName,
+      replaceHoldToken,
     });
     return response?.data || response;
   },
