@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, ChevronDown, Plus, Menu, X, CheckCircle2, Image as ImageIcon, Building2, Sparkles, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOwnerContext } from '../../context/ownerContext';
 
 function TopBar(props) {
+  const navigate = useNavigate();
   // Explicit props win; otherwise fall back to the owner dashboard context so every page shows the same venue.
   const ctx = useOwnerContext();
   const { userVenues, onSelectVenue } = props;
@@ -223,8 +225,7 @@ function TopBar(props) {
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      window.history.pushState({}, '', '/list-turf');
-                      window.dispatchEvent(new Event('popstate'));
+                      navigate('/list-turf');
                     }}
                     className="w-full flex items-center justify-start px-2.5 py-2 rounded-md text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-left"
                   >

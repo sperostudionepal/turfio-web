@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, ArrowRight, Globe, Clock, HelpCircle, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 
 export default function Topbar({
@@ -8,6 +9,7 @@ export default function Topbar({
   onListTurf,
   hideTopbar = false,
 }) {
+  const navigate = useNavigate();
   const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
   const [langOpen, setLangOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState({ code: 'EN', label: 'English' });
@@ -44,10 +46,7 @@ export default function Topbar({
               type="button"
               onClick={() => {
                 if (onDashboard) onDashboard();
-                else {
-                  window.history.pushState({}, '', '/dashboard');
-                  window.dispatchEvent(new Event('popstate'));
-                }
+                else navigate('/dashboard');
               }}
               className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
             >

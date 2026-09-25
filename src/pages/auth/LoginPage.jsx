@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import useAuthStore from '../../store/useAuthStore';
+import { safeRedirectPath } from '../../utils/redirect';
 
 function LoginPage({ onLogin, onSwitchToSignUp: onSwitchToSignUpProp }) {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ function LoginPage({ onLogin, onSwitchToSignUp: onSwitchToSignUpProp }) {
           showToast(res.error || 'Login failed. Please check your credentials.', 'error');
         } else {
           showToast('Welcome back! Logged in successfully.', 'success');
+          navigate(safeRedirectPath(res?.redirectTo || redirectTo), { replace: true });
         }
       }
     } catch (err) {
@@ -82,6 +84,7 @@ function LoginPage({ onLogin, onSwitchToSignUp: onSwitchToSignUpProp }) {
       const res = await verifyMfaLogin({ tempToken, code: mfaCode.trim() });
       if (res && res.success) {
         showToast('Welcome back! Logged in successfully.', 'success');
+        navigate(safeRedirectPath(res.redirectTo || new URLSearchParams(location.search).get('redirectTo')), { replace: true });
       } else {
         showToast(res.error || 'Invalid 2FA code. Please try again.', 'error');
       }

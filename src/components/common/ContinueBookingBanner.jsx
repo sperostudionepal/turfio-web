@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Clock, Calendar, ArrowRight, AlertCircle, X } from 'lucide-react';
 
 import turfService from '../../services/turfService';
@@ -6,6 +7,8 @@ import useAuthStore from '../../store/useAuthStore';
 
 const ContinueBookingBanner = ({ onResume }) => {
   const { user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [resumableData, setResumableData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
@@ -38,14 +41,12 @@ const ContinueBookingBanner = ({ onResume }) => {
       fetchResumable();
     };
 
-    window.addEventListener('popstate', handleLocationOrHoldChange);
     window.addEventListener('turfio_hold_created', handleLocationOrHoldChange);
 
     return () => {
-      window.removeEventListener('popstate', handleLocationOrHoldChange);
       window.removeEventListener('turfio_hold_created', handleLocationOrHoldChange);
     };
-  }, [user]);
+  }, [user, location.pathname]);
 
 
   // Countdown timer for holds
@@ -72,8 +73,8 @@ const ContinueBookingBanner = ({ onResume }) => {
   }, [resumableData]);
 
   // Restrict banner display strictly to Find Turfs page (/turfs, /find-turfs, page=turfs, page=turfListing)
-  const pathname = window.location.pathname;
-  const searchParams = new URLSearchParams(window.location.search);
+  const pathname = location.pathname;
+  const searchParams = new URLSearchParams(location.search);
   const isFindTurfsPage =
     pathname.includes('/turfs') ||
     pathname.includes('/find-turfs') ||
@@ -136,8 +137,7 @@ const ContinueBookingBanner = ({ onResume }) => {
     if (isExpired) {
       // Navigate to turf details page to pick a new slot
       if (turfIdentifier) {
-        window.history.pushState({}, '', `/turfs/${turfIdentifier}`);
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        navigate(`/turfs/${turfIdentifier}`);
       }
       setDismissed(true);
       return;
@@ -154,16 +154,14 @@ const ContinueBookingBanner = ({ onResume }) => {
         courtName: courtName || '',
         step: targetStep,
       });
-      window.history.pushState({}, '', `/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate(`/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
       if (onResume) onResume(resumableData);
     } else if (type === 'booking' && bookingId && turfIdentifier) {
       const searchParams = new URLSearchParams({
         bookingId,
         step: targetStep,
       });
-      window.history.pushState({}, '', `/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate(`/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
       if (onResume) onResume(resumableData);
     }
   };

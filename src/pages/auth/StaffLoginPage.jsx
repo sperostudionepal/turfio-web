@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import { useOwnerAuth } from '../../store/useAuthStore';
+import { safeRedirectPath } from '../../utils/redirect';
 
 export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN PORTAL', targetRole = 'admin' }) {
   const navigate = useNavigate();
@@ -96,12 +97,8 @@ export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN P
           showToast(res.error || 'Invalid credentials.', 'error');
         } else {
           showToast('Authentication verified. Welcome back!', 'success');
-          const dest = res?.redirectTo || (targetRole === 'superadmin' ? '/superadmin/dashboard' : '/dashboard');
-          if (dest.startsWith('http://') || dest.startsWith('https://')) {
-            window.location.href = dest;
-          } else {
-            navigate(dest, { replace: true });
-          }
+          const fallback = targetRole === 'superadmin' ? '/superadmin/dashboard' : '/dashboard';
+          navigate(safeRedirectPath(res?.redirectTo, fallback), { replace: true });
         }
       }
     } catch (err) {
