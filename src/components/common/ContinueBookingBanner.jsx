@@ -5,13 +5,28 @@ import { Clock, Calendar, ArrowRight, AlertCircle, X } from 'lucide-react';
 import turfService from '../../services/turfService';
 import useAuthStore from '../../store/useAuthStore';
 
+const DISMISSED_KEY = 'turfio_dismissed_resumables';
+const readDismissed = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(DISMISSED_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+const rememberDismissed = (id) => {
+  try {
+    sessionStorage.setItem(DISMISSED_KEY, JSON.stringify([...readDismissed(), String(id)].slice(-20)));
+  } catch {
+    /* storage unavailable: the notice just reappears on next navigation */
+  }
+};
+
 const ContinueBookingBanner = ({ onResume }) => {
   const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [resumableData, setResumableData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(null);
 
   const fetchResumable = async () => {
@@ -19,11 +34,10 @@ const ContinueBookingBanner = ({ onResume }) => {
       const guestHoldToken = localStorage.getItem('turfio_guest_hold_token');
       const res = await turfService.getResumableBooking(guestHoldToken);
       const item = res?.data || res?.item || res;
-      if (item && item.type) {
-        setResumableData(item);
-      } else {
-        setResumableData(null);
-      }
+      // Only a running hold (with its timer) or a just-expired hold is worth surfacing here.
+      // A confirmed booking has nothing left to resume at checkout.
+      const usable = item && (item.type === 'hold' || item.type === 'expired_hold') && !readDismissed().includes(String(item.id));
+      setResumableData(usable ? item : null);
 
     } catch (err) {
       console.warn('[ContinueBookingBanner] Error fetching resumable booking:', err);
@@ -37,7 +51,6 @@ const ContinueBookingBanner = ({ onResume }) => {
     fetchResumable();
 
     const handleLocationOrHoldChange = () => {
-      setDismissed(false);
       fetchResumable();
     };
 
@@ -86,12 +99,19 @@ const ContinueBookingBanner = ({ onResume }) => {
     pathname.includes('/book') ||
     (pathname.match(/\/turfs\/[a-zA-Z0-9_-]+/) && !pathname.endsWith('/turfs'));
 
-  if (loading || dismissed || !resumableData || !isFindTurfsPage || isTurfDetailsOrCheckout) {
+  if (loading || !resumableData || !isFindTurfsPage || isTurfDetailsOrCheckout) {
     return null;
   }
 
 
-  const { type, isExpired, turf, date, dateStr, startTime, duration, courtName, holdToken, bookingId, step } = resumableData;
+  const { type, turf, date, dateStr, startTime, duration, courtName, holdToken, step } = resumableData;
+  // The server reports a just-expired hold as type "expired_hold"; the countdown flips isExpired locally.
+  const isExpired = Boolean(resumableData.isExpired) || type === 'expired_hold';
+
+  const closeBanner = () => {
+    rememberDismissed(resumableData.id);
+    setResumableData(null);
+  };
   const rawDate = dateStr || date;
 
 
@@ -119,7 +139,7 @@ const ContinueBookingBanner = ({ onResume }) => {
 
   const handleDismiss = async (e) => {
     e.stopPropagation();
-    setDismissed(true);
+    closeBanner();
 
     if (type === 'hold' && holdToken && turf?.id && !isExpired) {
       try {
@@ -139,11 +159,11 @@ const ContinueBookingBanner = ({ onResume }) => {
       if (turfIdentifier) {
         navigate(`/turfs/${turfIdentifier}`);
       }
-      setDismissed(true);
+      closeBanner();
       return;
     }
 
-    const targetStep = step || (type === 'booking' ? 3 : 2);
+    const targetStep = step || 2;
 
     if (type === 'hold' && turfIdentifier) {
       const searchParams = new URLSearchParams({
@@ -152,13 +172,6 @@ const ContinueBookingBanner = ({ onResume }) => {
         startTime: startTime || '',
         duration: duration || 1,
         courtName: courtName || '',
-        step: targetStep,
-      });
-      navigate(`/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
-      if (onResume) onResume(resumableData);
-    } else if (type === 'booking' && bookingId && turfIdentifier) {
-      const searchParams = new URLSearchParams({
-        bookingId,
         step: targetStep,
       });
       navigate(`/turfs/${turfIdentifier}/book?${searchParams.toString()}`);
@@ -196,13 +209,22 @@ const ContinueBookingBanner = ({ onResume }) => {
               Search again
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handleDismiss}
+            aria-label="Dismiss"
+            className="shrink-0 w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
     );
   }
 
 
-  // Active Hold or Unpaid Booking Banner (Minimal Pill Style matching screenshot)
+  // Active hold banner (minimal pill style)
   return (
     <div
       onClick={handleAction}
@@ -214,7 +236,7 @@ const ContinueBookingBanner = ({ onResume }) => {
       <div className="relative w-12 h-12 shrink-0 flex items-center justify-center">
 
         {(() => {
-          const currentStep = step || (type === 'booking' ? 3 : 2);
+          const currentStep = step || 2;
           const totalSteps = 3;
           const progressPercent = Math.min(100, Math.max(1, (currentStep / totalSteps) * 100));
           const radius = 17;
