@@ -17,7 +17,7 @@ import {
   ChevronUp,
   Eraser,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import TurfMap from '../../components/turfs/TurfMap';
 import TurfCard from '../../components/turfs/TurfCard';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
@@ -25,6 +25,7 @@ import CustomDropdown from '../../components/common/CustomDropdown';
 import LocationAutocomplete from '../../components/common/LocationAutocomplete';
 import turfService from '../../services/turfService';
 import { getTodayNepalString } from '../../utils/dateTime';
+import { parseTurfSearch } from '../../utils/turfSearch';
 
 const normalizePlayersFilter = (players) => players === 'Random' ? 'Any Size' : (players || 'Any Size');
 
@@ -100,11 +101,19 @@ const amenitiesList = [
 
 
 export default function TurfListingPage({
-  initialSearch,
+  initialSearch: initialSearchProp,
   onSelectTurf,
   onNavigateRoute,
 }) {
   const navigate = useNavigate();
+
+  // A search coming from the landing page arrives in the URL (?location=&date=&time=&players=).
+  const [urlSearchParams] = useSearchParams();
+  const urlQuery = urlSearchParams.toString();
+  const initialSearch = useMemo(
+    () => initialSearchProp || parseTurfSearch(new URLSearchParams(urlQuery)),
+    [initialSearchProp, urlQuery]
+  );
 
   const handleSelectTurf = (turfData) => {
     if (onSelectTurf) {

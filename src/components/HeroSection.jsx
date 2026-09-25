@@ -87,7 +87,7 @@ export default function HeroSection({
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
+                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
                   className="inline-flex items-center gap-2 rounded-full bg-lime-400 px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-transform hover:-translate-y-0.5 hover:bg-lime-500"
                 >
                   Book a Turf
@@ -95,7 +95,7 @@ export default function HeroSection({
                 </a>
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
+                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-slate-50"
                 >
                   Explore near me

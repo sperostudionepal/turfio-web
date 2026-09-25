@@ -8,6 +8,7 @@ import ReviewsSection from '../components/ReviewsSection';
 import AboutUsSection from '../components/AboutUsSection';
 import CtaBannerSection from '../components/CtaBannerSection';
 import { useNavHandlers } from '../hooks/useNavHandlers';
+import { buildTurfSearchPath } from '../utils/turfSearch';
 import { getTurfRoutePath } from '../utils/turfPaths';
 
 export default function HomePage() {
@@ -19,7 +20,7 @@ export default function HomePage() {
 
   return (
     <>
-      <HeroSection onFindTurfs={onFindTurfs} />
+      <HeroSection onFindTurfs={(search) => navigate(buildTurfSearchPath(search))} />
       <HeroStats />
       <TurfSection onViewDetails={handleViewTurfDetails} onNavigateRoute={(turf) => navigate(getTurfRoutePath(turf))} />
       <HowItWorksSection />
