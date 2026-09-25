@@ -24,6 +24,7 @@ import {
   PhoneCall,
 } from 'lucide-react';
 import turfService from '../../services/turfService';
+import authService from '../../services/authService';
 import CustomDropdown from '../../components/common/CustomDropdown';
 import CustomDatePicker from '../../components/common/CustomDatePicker';
 import { getTodayNepalString } from '../../utils/dateTime';
@@ -146,6 +147,23 @@ export default function BookingCheckoutPage({
       console.error(e);
     }
   }, [currentStep, formData, storageKey]);
+
+  // If the player returns from eSewa with the browser Back action instead of a
+  // callback, treat that payment attempt as abandoned and release the hold.
+  useEffect(() => {
+    const onPageShow = async () => {
+      let pending = null;
+      try { pending = JSON.parse(sessionStorage.getItem('turfio_esewa_in_progress') || 'null'); } catch { /* ignore */ }
+      if (!pending?.holdToken) return;
+      try { await turfService.cancelEsewaAttempt(pending.holdToken); } catch (err) { console.error(err); }
+      sessionStorage.removeItem('turfio_esewa_in_progress');
+      sessionStorage.removeItem('turfio_pending_booking');
+      triggerToast('Payment was cancelled and your slot hold was released.');
+      onBack?.();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [onBack]);
 
   // Sync hold step to backend when currentStep changes
   useEffect(() => {
@@ -374,7 +392,7 @@ export default function BookingCheckoutPage({
     (turf?.gallery && turf.gallery[0]) ||
     'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80';
 
-  const courtName = turf?.courtName || turf?.selectedCourt?.name || turf?.court?.name || 'Court 1';
+  const courtName = turf?.courtName || turf?.selectedCourt?.name || turf?.court?.name || 'Selected court';
   const courtDimension = turf?.courtDimension || turf?.selectedCourt?.dimension || turf?.court?.dimension || '25m x 15m (Standard 5v5)';
 
   const selectedDateStr = useMemo(() => {
@@ -534,6 +552,16 @@ export default function BookingCheckoutPage({
         triggerToast('Please enter your contact phone number');
         return;
       }
+      const profilePhone = user?.phone || user?.phoneNumber || '';
+      if (user && formData.phone.trim() && formData.phone.trim() !== String(profilePhone || '').trim()) {
+        try {
+          await authService.updateProfile({ ...user, phone: formData.phone.trim() });
+        } catch (err) {
+          console.error('Failed to save booking phone to profile:', err);
+          triggerToast('Could not save the phone number to your profile. Please try again.');
+          return;
+        }
+      }
       updateStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentStep === 2) {
@@ -620,7 +648,16 @@ export default function BookingCheckoutPage({
           const paymentFormData = initRes?.formData || initRes?.data?.formData;
           const paymentUrl = initRes?.paymentUrl || initRes?.data?.paymentUrl;
           if (paymentFormData && paymentUrl) {
-            turfService.submitEsewaForm(paymentUrl, paymentFormData);
+            try {
+              sessionStorage.setItem('turfio_esewa_in_progress', JSON.stringify({
+                holdToken: effectiveHoldToken,
+                turfId: turf?.id || turf?._id,
+                startedAt: Date.now(),
+              }));
+            } catch (e) { console.error(e); }
+            // Native form navigation intentionally replaces this checkout history entry so
+            // eSewa runs in the same tab and stale payment pages are not revisited later.
+            turfService.submitEsewaForm(paymentUrl, paymentFormData, { replaceHistory: true });
             return;
           } else {
             throw new Error(initRes?.message || 'Failed to retrieve payment form data from server');
@@ -1107,8 +1144,9 @@ export default function BookingCheckoutPage({
                             required
                             placeholder="e.g. Saugat Shahi"
                             value={formData.fullName}
-                            onChange={(e) => handleInputChange('fullName', e.target.value)}
-                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
+                            disabled
+                            readOnly
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-100 cursor-not-allowed text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
                           />
                         </div>
                       </div>
@@ -1126,7 +1164,6 @@ export default function BookingCheckoutPage({
                           <input
                             type="tel"
                             required
-                            placeholder="98XXXXXXXX"
                             value={formData.phone}
                             onChange={(e) => handleInputChange('phone', e.target.value)}
                             className="w-full px-3.5 py-3.5 bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0"
@@ -1146,8 +1183,9 @@ export default function BookingCheckoutPage({
                             type="email"
                             placeholder="saugat@example.com"
                             value={formData.email}
-                            onChange={(e) => handleInputChange('email', e.target.value)}
-                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
+                            disabled
+                            readOnly
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-slate-100 cursor-not-allowed text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-slate-100/80 transition-all"
                           />
                         </div>
                       </div>

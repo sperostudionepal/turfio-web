@@ -342,7 +342,7 @@ export const turfService = {
   /**
    * Submit eSewa form programmatically
    */
-  submitEsewaForm(paymentUrl, formData) {
+  submitEsewaForm(paymentUrl, formData, { replaceHistory = false } = {}) {
     const form = document.createElement('form');
     form.setAttribute('method', 'POST');
     form.setAttribute('action', paymentUrl);
@@ -357,7 +357,16 @@ export const turfService = {
     });
 
     document.body.appendChild(form);
+    if (replaceHistory) {
+      window.history.replaceState({ turfioPaymentRedirect: true }, '', window.location.href);
+    }
     form.submit();
+  },
+
+  async cancelEsewaAttempt(holdToken) {
+    if (!holdToken) return null;
+    const response = await apiClient.post('/payments/cancel-attempt', { holdToken });
+    return response?.data || response;
   },
 
   /**

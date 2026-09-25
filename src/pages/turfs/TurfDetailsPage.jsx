@@ -481,6 +481,42 @@ export default function TurfDetailsPage({
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   }, [availabilityData?.availableDays, turf?.availableDays]);
 
+  const todayOperatingStatus = useMemo(() => {
+    const { date: nepalDate, minutes: current } = getNepalCurrentDateTime();
+    const [year, month, dayOfMonth] = nepalDate.split('-').map(Number);
+    const nepalCalendarDate = new Date(year, month - 1, dayOfMonth);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const day = dayNames[nepalCalendarDate.getDay()];
+    const schedule = turf?.operatingHoursByDay?.[day] || turf?.operatingHoursByDay?.[day.toLowerCase()];
+    const isClosed = schedule?.isClosed === true || schedule?.closed === true;
+    const open = schedule?.open || turf?.openingHours?.start;
+    const close = schedule?.close || turf?.openingHours?.end;
+    const toMinutes = (value) => {
+      if (!value) return null;
+      const match = String(value).trim().match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+      if (!match) return null;
+      let hour = Number(match[1]);
+      const minute = Number(match[2]);
+      const period = match[3]?.toUpperCase();
+      if (period) { if (hour === 12) hour = 0; if (period === 'PM') hour += 12; }
+      return hour * 60 + minute;
+    };
+    const format = (value) => {
+      const minutes = toMinutes(value);
+      if (minutes == null) return value || '';
+      const hour24 = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+      const period = hour24 >= 12 ? 'PM' : 'AM';
+      const hour = hour24 % 12 || 12;
+      return `${hour}:${String(minute).padStart(2, '0')} ${period}`;
+    };
+    if (isClosed || !open || !close) return { isOpen: false, label: 'Closed Today', hours: '' };
+    const openMin = toMinutes(open);
+    const closeMin = toMinutes(close);
+    const isOpen = openMin != null && closeMin != null && current >= openMin && current < closeMin;
+    return { isOpen, label: isOpen ? 'Open Now' : 'Closed Now', hours: `${format(open)} – ${format(close)}` };
+  }, [turf?.operatingHoursByDay, turf?.openingHours]);
+
   // Check if current selected date is a holiday/closed day
   const isSelectedDateHoliday = useMemo(() => {
     if (!selectedDate) return false;
@@ -977,8 +1013,8 @@ export default function TurfDetailsPage({
                         <span className="text-slate-300">•</span>
                       </>
                     )}
-                    <span className="font-semibold text-lime-600">
-                      Open Now ({turf.openingHours?.start || '6:00 AM'} – {turf.openingHours?.end || '10:30 PM'})
+                    <span className={`font-semibold ${todayOperatingStatus.isOpen ? 'text-lime-600' : 'text-slate-500'}`}>
+                      {todayOperatingStatus.label}{todayOperatingStatus.hours ? ` (${todayOperatingStatus.hours})` : ''}
                     </span>
                   </div>
                 </div>
