@@ -8,6 +8,7 @@ import ReviewsSection from '../components/ReviewsSection';
 import AboutUsSection from '../components/AboutUsSection';
 import CtaBannerSection from '../components/CtaBannerSection';
 import { useNavHandlers } from '../hooks/useNavHandlers';
+import { getTurfRoutePath } from '../utils/turfPaths';
 
 export default function HomePage() {
   const { onFindTurfs, navigate } = useNavHandlers();
@@ -20,7 +21,7 @@ export default function HomePage() {
     <>
       <HeroSection onFindTurfs={onFindTurfs} />
       <HeroStats />
-      <TurfSection onViewDetails={handleViewTurfDetails} />
+      <TurfSection onViewDetails={handleViewTurfDetails} onNavigateRoute={(turf) => navigate(getTurfRoutePath(turf))} />
       <HowItWorksSection />
       <DownloadAppSection />
       <PricingSection />

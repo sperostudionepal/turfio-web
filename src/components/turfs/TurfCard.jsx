@@ -1,14 +1,15 @@
-import { Compass, Users, Car, Star, MapPin } from 'lucide-react';
+import { Compass, Users, Car, Star, MapPin, Navigation } from 'lucide-react';
 
 /**
  * Shared turf card used by the landing page and the Find Turfs listing.
- * The location line sits under the rating; optional `status` renders below it; `actions` renders on the right of the price row.
+ * Card click and "Book Now" call onSelect(turf); the arrow button calls onDirections(turf).
+ * The location line sits under the rating; optional `status` renders below it.
  * Extra props (data-*, mouse handlers) are forwarded to the root element.
  */
-export default function TurfCard({ turf, onClick, status = null, actions = null, className = '', ...rootProps }) {
+export default function TurfCard({ turf, onSelect, onDirections, status = null, className = '', ...rootProps }) {
   return (
     <div
-      onClick={onClick}
+      onClick={() => onSelect?.(turf)}
       className={`group flex flex-col justify-between bg-white cursor-pointer ${className}`}
       {...rootProps}
     >
@@ -75,7 +76,29 @@ export default function TurfCard({ turf, onClick, status = null, actions = null,
 
       <div className="pt-3 px-0 pb-1 flex items-center justify-between">
         <span className="text-sm font-semibold text-slate-600">{turf.price}</span>
-        {actions}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDirections?.(turf);
+            }}
+            title="Get Directions"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
+          >
+            <Navigation className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(turf);
+            }}
+            className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
+          >
+            Book Now
+          </button>
+        </div>
       </div>
     </div>
   );

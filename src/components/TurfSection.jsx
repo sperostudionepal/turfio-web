@@ -176,7 +176,7 @@ const turfs = [
 ];
 */
 
-export default function TurfSection({ onViewDetails, isLoading: propLoading = false, turfsData = null }) {
+export default function TurfSection({ onViewDetails, onNavigateRoute, isLoading: propLoading = false, turfsData = null }) {
   const [fetchedTurfs, setFetchedTurfs] = useState([]);
   const [loadingRealTurfs, setLoadingRealTurfs] = useState(!turfsData);
 
@@ -275,19 +275,8 @@ export default function TurfSection({ onViewDetails, isLoading: propLoading = fa
                 <TurfCard
                   key={turf.id}
                   turf={turf}
-                  onClick={() => onViewDetails?.(turf)}
-                  actions={(
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewDetails?.(turf);
-                      }}
-                      className="rounded-full bg-lime-400 px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
-                    >
-                      View Details
-                    </button>
-                  )}
+                  onSelect={onViewDetails}
+                  onDirections={onNavigateRoute}
                 />
               ))
             )}

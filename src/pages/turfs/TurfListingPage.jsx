@@ -14,7 +14,6 @@ import {
   Building2,
   Map,
   Grid,
-  Navigation,
   ChevronUp,
   Eraser,
 } from 'lucide-react';
@@ -924,39 +923,15 @@ export default function TurfListingPage({
                             key={turf.id}
                             turf={turf}
                             data-turf-id={turf.id}
-                            onClick={() => {
+                            onSelect={() => {
                               setSelectedMapTurf(turf);
                               handleSelectTurf({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
                             }}
+                            onDirections={handleNavigateRoute}
                             onMouseEnter={() => setHoveredFromListId(turf.id)}
                             onMouseLeave={() => setHoveredFromListId(null)}
                             className={`select-none rounded-[22px] transition-all duration-200 ${isHoveredFromMap ? 'animate-turf-blink' : ''}`}
                             status={filteringTier !== 'no-date' ? <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span> : null}
-                            actions={(
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleNavigateRoute(turf);
-                                  }}
-                                  title="Get Directions"
-                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-lime-100 hover:text-lime-800 text-slate-700 transition-all active:scale-95 cursor-pointer"
-                                >
-                                  <Navigation className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectTurf({ ...turf, selectedDate: appliedDate, selectedTime: appliedTime });
-                                  }}
-                                  className="rounded-full bg-lime-400 px-4 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-lime-500 active:scale-95 cursor-pointer"
-                                >
-                                  Book Now
-                                </button>
-                              </div>
-                            )}
                           />
                         );
                       })
