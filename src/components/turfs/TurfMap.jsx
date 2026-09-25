@@ -7,7 +7,6 @@ import {
   Minimize2,
   Plus,
   Minus,
-  Compass,
 } from 'lucide-react';
 import {
   MAPTILER_KEY,
@@ -49,7 +48,9 @@ export default function TurfMap({
 
   const [mapStyleMode, setMapStyleMode] = useState('vector'); // 'vector' | 'satellite'
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mapHasBeenMoved, setMapHasBeenMoved] = useState(false);
+  // Search coordinates that arrive already set (e.g. from the landing-page search URL) are seen
+  // before the map exists, so the pan effect below also waits for this to flip on load.
+  const [mapReady, setMapReady] = useState(false);
 
   // Helper to get active style spec / URL
   const getActiveStyle = useCallback(
@@ -75,7 +76,6 @@ export default function TurfMap({
       try {
         const bounds = map.getBounds();
         if (bounds) {
-          setMapHasBeenMoved(true);
           onBoundsChange({
             north: bounds.getNorth(),
             south: bounds.getSouth(),
@@ -91,7 +91,7 @@ export default function TurfMap({
 
   // Pan/zoom to search location when coordinates are provided
   useEffect(() => {
-    if (!mapRef.current || !searchLocationCoords) return;
+    if (!mapReady || !mapRef.current || !searchLocationCoords) return;
 
     const { lat, lng } = searchLocationCoords;
     if (typeof lat !== 'number' || typeof lng !== 'number') return;
@@ -110,7 +110,7 @@ export default function TurfMap({
       mapRef.current.off('moveend', moveendHandler);
     };
     mapRef.current.on('moveend', moveendHandler);
-  }, [searchLocationCoords, emitBounds]);
+  }, [searchLocationCoords, mapReady, emitBounds]);
 
   // Initialize MapLibre GL instance
   useEffect(() => {
@@ -430,6 +430,7 @@ export default function TurfMap({
     map.on('load', () => {
       registerCustomIcons(map);
       emitBounds();
+      setMapReady(true);
     });
     map.on('styledata', () => {
       registerCustomIcons(map);
@@ -467,6 +468,7 @@ export default function TurfMap({
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
   }, []);
 

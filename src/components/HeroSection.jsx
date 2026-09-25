@@ -14,28 +14,46 @@ import {
 import { getTodayNepalString } from '../utils/dateTime';
 import CustomDatePicker from './common/CustomDatePicker';
 import CustomDropdown from './common/CustomDropdown';
+import LocationAutocomplete from './common/LocationAutocomplete';
+import { TIME_SLOT_OPTIONS } from '../utils/turfSearch';
+import { getNearbyLocation } from '../utils/geolocation';
 
+// Starts empty like the Find Turfs search bar.
 const initialForm = {
-  location: 'Hattiban, Lalitpur',
-  date: getTodayNepalString(),
-  time: '09:00 AM',
-  players: 'Random',
+  location: '',
+  date: '',
+  time: '',
+  players: 'Any Size',
 };
-
-const TIME_OPTIONS = [
-  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM',
-  '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
-].map((value) => ({ value, label: value }));
 
 export default function HeroSection({
   onFindTurfs,
-  onListTurf,
-  onViewTurfDetails,
 }) {
   const [form, setForm] = useState(initialForm);
+  // Set when a suggestion is picked; only used while the text still matches it, like Find Turfs.
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Same lookup as the "Nearby" option in the location box; if it is denied or unavailable the
+  // visitor still lands on the full listing.
+  const exploreNearMe = async () => {
+    if (isLocating) return;
+    setIsLocating(true);
+    try {
+      const place = await getNearbyLocation();
+      onFindTurfs?.({ location: place.display_name, coords: { lat: place.lat, lng: place.lon } });
+    } catch (err) {
+      console.error('Geolocation error:', err);
+      onFindTurfs?.();
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const submitSearch = () => {
-    onFindTurfs?.(form);
+    const coords = selectedLocation && selectedLocation.name === form.location.trim() ? selectedLocation.coords : null;
+    onFindTurfs?.({ ...form, coords });
   };
 
   const updateField = (field, value) => {
@@ -89,7 +107,7 @@ export default function HeroSection({
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
+                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
                   className="inline-flex items-center gap-2 rounded-full bg-lime-400 px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-transform hover:-translate-y-0.5 hover:bg-lime-500"
                 >
                   Book a Turf
@@ -97,7 +115,7 @@ export default function HeroSection({
                 </a>
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); submitSearch(); }}
+                  onClick={(e) => { e.preventDefault(); exploreNearMe(); }}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-slate-50"
                 >
                   Explore near me
@@ -198,14 +216,23 @@ export default function HeroSection({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-bold text-slate-900">Location</span>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
                       value={form.location}
-                      onChange={(event) => updateField('location', event.target.value)}
-                      className="mt-0.5 w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
+                      onChange={(value) => updateField('location', value)}
+                      onSelect={(location) => {
+                        const lat = Number(location.lat);
+                        const lng = Number(location.lon ?? location.lng);
+                        const name = location.display_name || '';
+                        updateField('location', name);
+                        setSelectedLocation(
+                          Number.isFinite(lat) && Number.isFinite(lng) ? { name, coords: { lat, lng } } : null
+                        );
+                      }}
+                      placeholder="Search location"
+                      className="mt-0.5"
+                      inputClassName="w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
                     />
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
@@ -229,7 +256,8 @@ export default function HeroSection({
                     icon={Clock}
                     value={form.time}
                     onChange={(value) => updateField('time', value)}
-                    options={TIME_OPTIONS}
+                    options={TIME_SLOT_OPTIONS}
+                    placeholder="HH:MM"
                   />
                 </div>
 
@@ -246,7 +274,7 @@ export default function HeroSection({
                       onChange={(event) => updateField('players', event.target.value)}
                       className="mt-0.5 w-full appearance-none border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none cursor-pointer"
                     >
-                      <option value="Random">Random</option>
+                      <option value="Any Size">Random</option>
                       <option value="5v5">5v5</option>
                       <option value="7v7">7v7</option>
                     </select>

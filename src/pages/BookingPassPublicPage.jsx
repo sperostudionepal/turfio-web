@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Loader2, AlertCircle, Printer } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import BookingPassModal from '../components/bookings/BookingPassModal';
 import turfService from '../services/turfService';
 

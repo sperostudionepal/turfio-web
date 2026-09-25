@@ -20,6 +20,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [qrTimestamp] = useState(() => Date.now());
 
   if (!booking) return null;
 
@@ -203,7 +204,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                     value={JSON.stringify({
                       token: booking.raw.qrToken,
                       type: 'booking_verification',
-                      timestamp: Date.now(),
+                      timestamp: qrTimestamp,
                     })}
                     size={80}
                     level="H"

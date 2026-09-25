@@ -7,14 +7,14 @@ export default function CtaBannerSection({ onBookNow }) {
         <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-lime-200/50 via-lime-50/70 to-lime-100/60 p-5 sm:p-6 lg:p-7">
           {/* Football Graphic in Original Crisp Colors */}
           <picture>
-            <source srcSet="/football.webp" type="image/webp" />
+            <source srcSet="/football-480.webp" type="image/webp" />
             <img
-              src="/football.png"
+              src="/football-480.png"
               alt="Football"
               className="absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 h-[160%] max-h-[160px] w-auto object-contain pointer-events-none z-0"
               loading="lazy"
               decoding="async"
-              width="160"
+              width="240"
               height="160"
             />
           </picture>

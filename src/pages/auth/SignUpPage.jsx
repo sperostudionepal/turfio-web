@@ -1,8 +1,13 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
+import { safeRedirectPath } from '../../utils/redirect';
 
-function SignUpPage({ onSignUp, onSwitchToLogin }) {
+function SignUpPage({ onSignUp, onSwitchToLogin: onSwitchToLoginProp }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const onSwitchToLogin = onSwitchToLoginProp || (() => navigate(`/login${location.search}`));
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -85,6 +90,7 @@ function SignUpPage({ onSignUp, onSwitchToLogin }) {
           showToast(res.error || 'Registration failed. Please check your information.', 'error');
         } else {
           showToast('Account created successfully!', 'success');
+          navigate(safeRedirectPath(new URLSearchParams(location.search).get('redirectTo')), { replace: true });
         }
       }
     } catch (err) {

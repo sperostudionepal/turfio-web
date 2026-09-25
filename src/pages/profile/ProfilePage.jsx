@@ -34,9 +34,7 @@ import {
 import { formatNepalDateTime } from '../../utils/dateTime';
 import { getPageItems } from '../../utils/pagination';
 
-export default function ProfilePage({
-  onViewTurfDetails,
-}) {
+export default function ProfilePage() {
   const {
     user,
     isInitializing,
@@ -46,7 +44,6 @@ export default function ProfilePage({
     uploadAvatar,
     changePassword,
     updatePreferences,
-    toggleTwoFactor,
     deleteAccount,
   } = useAuthStore();
   const { showToast } = useToast();
@@ -65,7 +62,7 @@ export default function ProfilePage({
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
 
-  // Re-fetch on entering Security & 2FA specifically: hasPassword (and other account-state
+  // Re-fetch on entering the Security tab specifically: hasPassword (and other account-state
   // flags) can go stale between the initial mount and whenever the user actually opens this
   // tab, so this tab always renders off freshly-confirmed data instead of a cached guess.
   useEffect(() => {
@@ -94,7 +91,7 @@ export default function ProfilePage({
       setBookings(updatedBookings);
       setSelectedBooking(null);
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to submit cancellation request');
+      throw new Error(error.response?.data?.message || 'Failed to submit cancellation request', { cause: error });
     }
   };
 
@@ -112,7 +109,7 @@ export default function ProfilePage({
     { id: 'savedTurfs', label: 'Saved Turfs', icon: Heart },
     { id: 'playerProfile', label: 'Skill Set & Style', icon: Trophy },
     { id: 'preferences', label: 'App Preferences', icon: Bell },
-    { id: 'security', label: 'Security & 2FA', icon: Shield },
+    { id: 'security', label: 'Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: AlertTriangle, danger: true },
   ];
 
@@ -137,7 +134,7 @@ export default function ProfilePage({
             </p>
             <button
               type="button"
-              onClick={onLogin}
+              onClick={() => navigate('/login?redirectTo=%2Fprofile')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-lime-400 text-sm font-bold text-slate-900 hover:bg-lime-500 transition-all cursor-pointer shadow-xs"
             >
               Log In to Account
@@ -318,7 +315,7 @@ export default function ProfilePage({
                       >
                         <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-semibold text-slate-800">
                           <ShieldCheck className="h-4 w-4 text-slate-400" />
-                          <span>Two-Factor Authentication</span>
+                          <span>Password & Security</span>
                         </div>
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                       </button>
@@ -374,7 +371,6 @@ export default function ProfilePage({
                   <SecuritySettings
                     user={user}
                     onChangePassword={changePassword}
-                    onToggleTwoFactor={toggleTwoFactor}
                   />
                 )}
 
@@ -673,7 +669,7 @@ export default function ProfilePage({
                         {wishlistItems.map((turf) => (
                           <div
                             key={turf.id}
-                            onClick={() => onViewTurfDetails?.(turf)}
+                            onClick={() => navigate(`/turfs/${turf.slug || turf.id || turf._id}`)}
                             className="group cursor-pointer"
                           >
                             {/* Image with overlaid unsave + verified badge */}

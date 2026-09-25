@@ -20,16 +20,10 @@ export default function Navbar(props) {
   const location = useLocation();
 
   const user = props.user !== undefined ? props.user : navHandlers.user;
-  const onLogin = props.onLogin || navHandlers.onLogin;
   const onLogout = props.onLogout || navHandlers.onLogout;
   const onListTurf = props.onListTurf || navHandlers.onListTurf;
-  const onHome = props.onHome || navHandlers.onHome;
-  const onFindTurfs = props.onFindTurfs || navHandlers.onFindTurfs;
   const onDashboard = props.onDashboard || navHandlers.onDashboard;
   const onProfile = props.onProfile || (() => navHandlers.navigate('/profile'));
-  const onHowItWorks = props.onHowItWorks || navHandlers.onHowItWorks;
-  const onPricing = props.onPricing || navHandlers.onPricing;
-  const onAboutUs = props.onAboutUs || navHandlers.onAboutUs;
 
   const isInitializing = props.isInitializing ?? false;
   const hideTopbar = props.hideTopbar ?? (location.pathname === '/turfs');

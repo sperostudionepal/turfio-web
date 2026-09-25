@@ -9,7 +9,6 @@ export default function PreferencesForm({ user, onUpdatePreferences }) {
   const [preferences, setPreferences] = useState({
     notifications: {
       email: user?.notifications?.email ?? true,
-      sms: user?.notifications?.sms ?? false,
     },
     preferredLocation: user?.preferredLocation || user?.city || 'Kathmandu',
     theme: user?.theme || 'light',
@@ -21,7 +20,6 @@ export default function PreferencesForm({ user, onUpdatePreferences }) {
       setPreferences({
         notifications: {
           email: user.notifications?.email ?? true,
-          sms: user.notifications?.sms ?? false,
         },
         preferredLocation: user.preferredLocation || user.city || 'Kathmandu',
         theme: user.theme || 'light',
@@ -36,16 +34,6 @@ export default function PreferencesForm({ user, onUpdatePreferences }) {
       notifications: {
         ...prev.notifications,
         email: !prev.notifications.email,
-      },
-    }));
-  };
-
-  const handleToggleSms = () => {
-    setPreferences((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        sms: !prev.notifications.sms,
       },
     }));
   };
@@ -102,27 +90,6 @@ export default function PreferencesForm({ user, onUpdatePreferences }) {
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
                     preferences.notifications.email ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* SMS toggle */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-slate-900">SMS Notifications</p>
-                <p className="text-[11px] font-medium text-slate-500 mt-0.5">Receive urgent slot reminders & verification codes via text message</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleSms}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  preferences.notifications.sms ? 'bg-lime-400' : 'bg-slate-300'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                    preferences.notifications.sms ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

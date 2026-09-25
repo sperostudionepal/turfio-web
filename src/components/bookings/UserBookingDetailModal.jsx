@@ -1,4 +1,4 @@
-import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Phone, Mail, Users, Banknote, Download, QrCode } from 'lucide-react';
+import { X, Calendar as CalendarIcon, CircleDot, CheckCircle2, AlertCircle, Ban, Users, Download, QrCode } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatNepalDateTime } from '../../utils/dateTime';
@@ -21,12 +21,11 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
   const [bookingPassData, setBookingPassData] = useState(null);
   const [qrToken, setQrToken] = useState(null);
   const [isLoadingQR, setIsLoadingQR] = useState(true); // Start as loading
-
-  if (!booking) return null;
+  const [qrTimestamp] = useState(() => Date.now());
 
   // SIMPLE: Just fetch QR token when modal opens
   useEffect(() => {
-    if (booking.status === 'Confirmed' && !booking.cancellationRequest) {
+    if (booking?.status === 'Confirmed' && !booking.cancellationRequest) {
       setIsLoadingQR(true);
       
       turfService.generateBookingPass(booking._id || booking.id)
@@ -48,9 +47,15 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
     }
   }, []);
 
+  if (!booking) return null;
+
   const totalAmount = Number(booking.totalAmount || 0);
   const paidAmount = Number(booking.totalPaidAmount || 0);
   const dueAmount = Math.max(0, totalAmount - paidAmount);
+  // remainingBalance is zeroed once the owner marks the booking paid, so derive the venue share
+  // from the deposit instead; it stays visible and just flips from "due" to "paid".
+  const venueAmount = Math.max(0, totalAmount - Number(booking.depositAmount || 0));
+  const venueSettled = dueAmount <= 0;
 
   // Check if cancellation is allowed (6 hours before match)
   const matchDateTime = new Date(`${booking.dateStr}T00:00:00.000Z`);
@@ -248,8 +253,10 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
                     <span className="font-extrabold text-emerald-600">{money(booking.depositAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-amber-700 font-bold text-[11px]">Pay at Venue</span>
-                    <span className="font-extrabold text-amber-700">{money(booking.remainingBalance)}</span>
+                    <span className={`font-bold text-[11px] ${venueSettled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {venueSettled ? 'Paid at Venue' : 'Pay at Venue'}
+                    </span>
+                    <span className={`font-extrabold ${venueSettled ? 'text-emerald-600' : 'text-amber-700'}`}>{money(venueAmount)}</span>
                   </div>
                 </div>
               )}
@@ -260,7 +267,7 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
                   <span className="font-bold text-slate-900">{money(totalAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-semibold">Received</span>
+                  <span className="text-slate-500 font-semibold">Paid</span>
                   <span className="font-bold text-emerald-600">{money(paidAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
@@ -290,7 +297,7 @@ function UserBookingDetailModal({ booking, onClose, onRequestCancellation }) {
                         value={JSON.stringify({
                           token: qrToken,
                           type: 'booking_verification',
-                          timestamp: Date.now(),
+                          timestamp: qrTimestamp,
                         })}
                         size={150}
                         level="H"

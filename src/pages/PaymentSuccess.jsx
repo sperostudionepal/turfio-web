@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import turfService from '../services/turfService';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
     const esewaDataParam = searchParams.get('data');
