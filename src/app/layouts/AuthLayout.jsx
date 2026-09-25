@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../../player/components/home/Navbar';
+import Footer from '../../player/components/home/Footer';
 
 export default function AuthLayout() {
   return (

@@ -1,7 +1,7 @@
-import Dashboard from '../pages/dashboard/Dashboard';
-import SuperadminDashboard from '../pages/superadmin/SuperadminDashboard';
-import { RequireOwner, RequireSuperadmin } from '../components/auth/RouteGuards';
-import { useOwnerAuth } from '../store/useAuthStore';
+import Dashboard from '../../admin/pages/dashboard/Dashboard';
+import SuperadminDashboard from '../../superadmin/pages/SuperadminDashboard';
+import { RequireOwner, RequireSuperadmin } from '../../shared/components/auth/RouteGuards';
+import { useOwnerAuth } from '../../shared/store/useAuthStore';
 
 export function DashboardWrapper() {
   const ownerAuth = useOwnerAuth();

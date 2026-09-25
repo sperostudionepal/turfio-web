@@ -1,8 +1,8 @@
 import { Outlet } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import OnboardingGate from '../components/auth/OnboardingGate';
-import { useGoogleOneTap } from '../hooks/useGoogleOneTap';
+import Navbar from '../../player/components/home/Navbar';
+import Footer from '../../player/components/home/Footer';
+import OnboardingGate from '../../shared/components/auth/OnboardingGate';
+import { useGoogleOneTap } from '../../shared/hooks/useGoogleOneTap';
 
 export default function PublicLayout() {
   useGoogleOneTap();

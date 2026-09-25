@@ -7,15 +7,15 @@ import RouteErrorPage from '../layouts/RouteErrorPage';
 import { pageLoaders } from './pageLoaders';
 
 // Landing and auth pages stay in the main bundle (first paint / tiny); everything else is a lazy chunk.
-import HomePage from '../pages/HomePage';
-import LoginPage from '../pages/auth/LoginPage';
-import SignUpPage from '../pages/auth/SignUpPage';
-import StaffLoginPage from '../pages/auth/StaffLoginPage';
-import SetupDashboardPage from '../pages/owner/SetupDashboardPage';
-import NotFoundPage from '../pages/NotFoundPage';
+import HomePage from '../../player/pages/HomePage';
+import LoginPage from '../../player/pages/auth/LoginPage';
+import SignUpPage from '../../player/pages/auth/SignUpPage';
+import StaffLoginPage from '../../admin/pages/auth/StaffLoginPage';
+import SetupDashboardPage from '../../admin/pages/owner/SetupDashboardPage';
+import NotFoundPage from '../../shared/pages/NotFoundPage';
 
-import { RequirePlayer } from '../components/auth/RouteGuards';
-import { usePlayerAuth, useOwnerAuth } from '../store/useAuthStore';
+import { RequirePlayer } from '../../shared/components/auth/RouteGuards';
+import { usePlayerAuth, useOwnerAuth } from '../../shared/store/useAuthStore';
 
 const lazyPage = (load, exportName = 'default') => async () => ({ Component: (await load())[exportName] });
 

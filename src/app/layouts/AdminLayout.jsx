@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import OnboardingGate from '../components/auth/OnboardingGate';
+import OnboardingGate from '../../shared/components/auth/OnboardingGate';
 
 export default function AdminLayout() {
   return (

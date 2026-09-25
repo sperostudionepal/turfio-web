@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration, useSearchParams, Navigate } from 'react-router-dom';
-import GlobalWidgets from '../components/common/GlobalWidgets';
+import GlobalWidgets from '../../shared/components/common/GlobalWidgets';
 
 function LegacyQueryHandler({ children }) {
   const [searchParams] = useSearchParams();
