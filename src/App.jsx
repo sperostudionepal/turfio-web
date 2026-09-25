@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './routes/router';
+import { prefetchLikelyPages } from './routes/pageLoaders';
 import useAccessibilityStore from './store/useAccessibilityStore';
 import { usePlayerAuth, useOwnerAuth } from './store/useAuthStore';
 
@@ -11,6 +12,7 @@ export default function App() {
     initializeAccessibility();
     usePlayerAuth.getState().initialize();
     useOwnerAuth.getState().initialize();
+    prefetchLikelyPages();
   }, [initializeAccessibility]);
 
   return <RouterProvider router={router} />;

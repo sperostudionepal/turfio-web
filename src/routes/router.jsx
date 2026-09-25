@@ -4,6 +4,7 @@ import RootLayout from '../layouts/RootLayout';
 import PublicLayout from '../layouts/PublicLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import RouteErrorPage from '../layouts/RouteErrorPage';
+import { pageLoaders } from './pageLoaders';
 
 // Landing and auth pages stay in the main bundle (first paint / tiny); everything else is a lazy chunk.
 import HomePage from '../pages/HomePage';
@@ -53,21 +54,21 @@ const routes = [
         errorElement: <RouteErrorPage />,
         children: [
           { path: '/', element: <HomePage /> },
-          { path: '/turfs', lazy: lazyPage(() => import('../pages/turfs/TurfListingPage')) },
+          { path: '/turfs', lazy: lazyPage(pageLoaders.turfListing) },
           { path: '/find-turfs', element: <RedirectWithSearch to="/turfs" /> },
-          { path: '/turfs/:slug', lazy: lazyPage(() => import('../pages/turfs/TurfDetailsPageWrapper')) },
-          { path: '/turfs/:slug/book', lazy: lazyPage(() => import('../pages/bookings/BookingCheckoutPageWrapper')) },
-          { path: '/route', lazy: lazyPage(() => import('../pages/turfs/TurfRoutePageWrapper')) },
+          { path: '/turfs/:slug', lazy: lazyPage(pageLoaders.turfDetails) },
+          { path: '/turfs/:slug/book', lazy: lazyPage(pageLoaders.checkout) },
+          { path: '/route', lazy: lazyPage(pageLoaders.turfRoute) },
           { path: '/directions', element: <RedirectWithSearch to="/route" /> },
-          { path: '/list-turf', lazy: lazyPage(() => import('../pages/listTurf/ListTurfPage')) },
-          { path: '/application-status', lazy: lazyPage(() => import('../pages/owner/ApplicationStatusPage')) },
+          { path: '/list-turf', lazy: lazyPage(pageLoaders.listTurf) },
+          { path: '/application-status', lazy: lazyPage(pageLoaders.applicationStatus) },
           {
             element: (
               <RequirePlayer>
                 <Outlet />
               </RequirePlayer>
             ),
-            children: [{ path: '/profile', lazy: lazyPage(() => import('../pages/profile/ProfilePage')) }],
+            children: [{ path: '/profile', lazy: lazyPage(pageLoaders.profile) }],
           },
         ],
       },
@@ -81,7 +82,7 @@ const routes = [
       { path: '/signup', element: <SignUpPage onSignUp={handleSignUpSuccess} /> },
     ],
   },
-  { path: '/booking-pass/:id', lazy: lazyPage(() => import('../pages/BookingPassPublicPage')) },
+  { path: '/booking-pass/:id', lazy: lazyPage(pageLoaders.bookingPass) },
   {
     element: (
       <RequirePlayer>
@@ -91,19 +92,19 @@ const routes = [
     children: [
       {
         path: '/bookings/:bookingId/confirmation',
-        lazy: lazyPage(() => import('../pages/bookings/BookingConfirmationPageWrapper')),
+        lazy: lazyPage(pageLoaders.confirmation),
       },
     ],
   },
-  { path: '/payment-success', lazy: lazyPage(() => import('../pages/PaymentSuccess')) },
-  { path: '/payment-failure', lazy: lazyPage(() => import('../pages/PaymentFailure')) },
+  { path: '/payment-success', lazy: lazyPage(pageLoaders.paymentSuccess) },
+  { path: '/payment-failure', lazy: lazyPage(pageLoaders.paymentFailure) },
   { path: '/admin/login', element: <RedirectWithSearch to="/owner/login" /> },
   { path: '/owner/login', element: <StaffLoginPage onLogin={handleAdminLoginSuccess} portalTitle="OWNER PORTAL" targetRole="admin" /> },
   { path: '/superadmin/login', element: <StaffLoginPage onLogin={handleSuperadminLoginSuccess} portalTitle="SUPERADMIN PORTAL" targetRole="superadmin" /> },
   { path: '/superadmin-login', element: <RedirectWithSearch to="/superadmin/login" /> },
   { path: '/setup-dashboard', element: <SetupDashboardPage onSetupSuccess={() => (window.location.href = '/dashboard')} /> },
-  { path: '/dashboard/*', lazy: lazyPage(() => import('./DashboardRoutes'), 'DashboardWrapper') },
-  { path: '/superadmin/dashboard', lazy: lazyPage(() => import('./DashboardRoutes'), 'SuperadminDashboardWrapper') },
+  { path: '/dashboard/*', lazy: lazyPage(pageLoaders.dashboards, 'DashboardWrapper') },
+  { path: '/superadmin/dashboard', lazy: lazyPage(pageLoaders.dashboards, 'SuperadminDashboardWrapper') },
   { path: '*', element: <NotFoundPage /> },
 ];
 
