@@ -10,23 +10,23 @@ import CtaBannerSection from '../components/CtaBannerSection';
 import { useNavHandlers } from '../hooks/useNavHandlers';
 
 export default function HomePage() {
-  const { onFindTurfs, onListTurf, navigate } = useNavHandlers();
+  const { onFindTurfs, navigate } = useNavHandlers();
 
-  const handleViewTurfDetails = (turfId) => {
-    navigate(`/turfs/${turfId}`);
+  const handleViewTurfDetails = (turf) => {
+    navigate(`/turfs/${turf.slug || turf.id || turf._id}`);
   };
 
   return (
     <>
       <HeroSection onFindTurfs={onFindTurfs} />
       <HeroStats />
-      <TurfSection onViewTurfDetails={handleViewTurfDetails} />
+      <TurfSection onViewDetails={handleViewTurfDetails} />
       <HowItWorksSection />
       <DownloadAppSection />
       <PricingSection />
       <ReviewsSection />
       <AboutUsSection />
-      <CtaBannerSection onListTurf={onListTurf} />
+      <CtaBannerSection onBookNow={onFindTurfs} />
     </>
   );
 }

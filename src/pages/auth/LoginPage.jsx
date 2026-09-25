@@ -1,9 +1,13 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 import useAuthStore from '../../store/useAuthStore';
 
-function LoginPage({ onLogin, onSwitchToSignUp }) {
+function LoginPage({ onLogin, onSwitchToSignUp: onSwitchToSignUpProp }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const onSwitchToSignUp = onSwitchToSignUpProp || (() => navigate(`/signup${location.search}`));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

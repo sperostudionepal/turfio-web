@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '../../components/common/toastContext';
 
-function SignUpPage({ onSignUp, onSwitchToLogin }) {
+function SignUpPage({ onSignUp, onSwitchToLogin: onSwitchToLoginProp }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const onSwitchToLogin = onSwitchToLoginProp || (() => navigate(`/login${location.search}`));
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');

@@ -34,9 +34,7 @@ import {
 import { formatNepalDateTime } from '../../utils/dateTime';
 import { getPageItems } from '../../utils/pagination';
 
-export default function ProfilePage({
-  onViewTurfDetails,
-}) {
+export default function ProfilePage() {
   const {
     user,
     isInitializing,
@@ -673,7 +671,7 @@ export default function ProfilePage({
                         {wishlistItems.map((turf) => (
                           <div
                             key={turf.id}
-                            onClick={() => onViewTurfDetails?.(turf)}
+                            onClick={() => navigate(`/turfs/${turf.slug || turf.id || turf._id}`)}
                             className="group cursor-pointer"
                           >
                             {/* Image with overlaid unsave + verified badge */}
