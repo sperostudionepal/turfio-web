@@ -4,7 +4,7 @@ import {
   Search,
   Sliders,
 } from 'lucide-react';
-import useAccessibilityStore from '../../../store/useAccessibilityStore';
+import useAccessibilityStore from '../../shared/store/useAccessibilityStore';
 
 function SuperadminAuditHealthPage() {
   const { toggleOpen: toggleAccessibility, fontTheme, fontSize } = useAccessibilityStore();

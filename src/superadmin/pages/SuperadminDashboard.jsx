@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import SuperadminSidebar from './components/SuperadminSidebar';
-import SuperadminTopbar from './components/SuperadminTopbar';
-import SuperadminOverviewPage from './pages/SuperadminOverviewPage';
-import SuperadminVenuesPage from './pages/SuperadminVenuesPage';
-import SuperadminFinancialsPage from './pages/SuperadminFinancialsPage';
-import SuperadminUsersPage from './pages/SuperadminUsersPage';
-import SuperadminAuditHealthPage from './pages/SuperadminAuditHealthPage';
-import SuperadminPromotionsPage from './pages/SuperadminPromotionsPage';
+import SuperadminSidebar from './SuperadminSidebar';
+import SuperadminTopbar from './SuperadminTopbar';
+import SuperadminOverviewPage from './SuperadminOverviewPage';
+import SuperadminVenuesPage from './SuperadminVenuesPage';
+import SuperadminFinancialsPage from './SuperadminFinancialsPage';
+import SuperadminUsersPage from './SuperadminUsersPage';
+import SuperadminAuditHealthPage from './SuperadminAuditHealthPage';
+import SuperadminPromotionsPage from './SuperadminPromotionsPage';
 
 function SuperadminDashboard({ onLogout, onSwitchToVenueView }) {
   const [activeTab, setActiveTab] = useState('Overview');
