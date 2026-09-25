@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MapPin, Loader2, Navigation } from 'lucide-react';
+import { getNearbyLocation } from '../../utils/geolocation';
 
 /**
  * LocationAutocomplete Component
@@ -39,14 +40,27 @@ export default function LocationAutocomplete({
   const suggestionsRef = useRef(null);
   const geolocationPermissionAskedRef = useRef(localStorage.getItem('geolocation_permission_asked') === 'true');
 
+  // The list is portalled with position: fixed, so keep it glued to the input while the page
+  // (or any scrollable ancestor, hence the capture flag) scrolls or the window resizes.
   useEffect(() => {
-    if (showSuggestions && containerRef.current) {
+    if (!showSuggestions) return undefined;
+
+    const updatePosition = () => {
+      if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + 8,
         left: rect.left,
       });
-    }
+    };
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [showSuggestions]);
 
   // Debounced search function
@@ -84,50 +98,16 @@ export default function LocationAutocomplete({
     }
 
     setIsGettingLocation(true);
-    
-    if (!navigator.geolocation) {
-      console.error('Geolocation is not supported by this browser.');
-      setIsGettingLocation(false);
-      return;
-    }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          // Reverse geocode to get address from coordinates
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await response.json();
-          
-          onSelect?.({
-            lat: latitude,
-            lon: longitude,
-            display_name: data.address?.city || data.address?.town || data.address?.county || 'Your Location',
-          });
-          setSuggestions([]);
-          setShowSuggestions(false);
-        } catch (err) {
-          console.error('Reverse geocoding error:', err);
-          // Still proceed with coordinates even if reverse geocoding fails
-          onSelect?.({
-            lat: latitude,
-            lon: longitude,
-            display_name: 'Your Location',
-          });
-          setSuggestions([]);
-          setShowSuggestions(false);
-        } finally {
-          setIsGettingLocation(false);
-        }
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        setIsGettingLocation(false);
-      }
-    );
+    try {
+      onSelect?.(await getNearbyLocation());
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } catch (err) {
+      console.error('Geolocation error:', err);
+    } finally {
+      setIsGettingLocation(false);
+    }
   }, [onSelect]);
 
   // Handle input changes with debouncing

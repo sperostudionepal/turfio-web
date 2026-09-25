@@ -16,6 +16,7 @@ import CustomDatePicker from './common/CustomDatePicker';
 import CustomDropdown from './common/CustomDropdown';
 import LocationAutocomplete from './common/LocationAutocomplete';
 import { TIME_SLOT_OPTIONS } from '../utils/turfSearch';
+import { getNearbyLocation } from '../utils/geolocation';
 
 // Starts empty like the Find Turfs search bar.
 const initialForm = {
@@ -31,6 +32,24 @@ export default function HeroSection({
   const [form, setForm] = useState(initialForm);
   // Set when a suggestion is picked; only used while the text still matches it, like Find Turfs.
   const [selectedLocation, setSelectedLocation] = useState(null);
+
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Same lookup as the "Nearby" option in the location box; if it is denied or unavailable the
+  // visitor still lands on the full listing.
+  const exploreNearMe = async () => {
+    if (isLocating) return;
+    setIsLocating(true);
+    try {
+      const place = await getNearbyLocation();
+      onFindTurfs?.({ location: place.display_name, coords: { lat: place.lat, lng: place.lon } });
+    } catch (err) {
+      console.error('Geolocation error:', err);
+      onFindTurfs?.();
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const submitSearch = () => {
     const coords = selectedLocation && selectedLocation.name === form.location.trim() ? selectedLocation.coords : null;
@@ -96,7 +115,7 @@ export default function HeroSection({
                 </a>
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); onFindTurfs?.(); }}
+                  onClick={(e) => { e.preventDefault(); exploreNearMe(); }}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-900 transition-colors hover:bg-slate-50"
                 >
                   Explore near me
@@ -214,7 +233,6 @@ export default function HeroSection({
                       inputClassName="w-full border-0 bg-transparent p-0 text-[15px] font-medium text-slate-400 outline-none placeholder:text-slate-400"
                     />
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-600" />
                 </label>
 
                 <div className="hidden h-9 w-px shrink-0 self-center bg-slate-200 lg:block" />
