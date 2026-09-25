@@ -28,6 +28,15 @@ export default function BookingConfirmationPageWrapper() {
   }
 
   const turfDoc = booking.turf || {};
+  const bookedCourtId = booking.court?.id || booking.court?._id;
+  const liveCourt = Array.isArray(turfDoc.courts)
+    ? turfDoc.courts.find((court) => String(court?._id || court?.id) === String(bookedCourtId || ''))
+    : null;
+  // The booking's court id is authoritative. Resolve its full venue court details so
+  // confirmation never falls back to Court 1/default dimensions for another court.
+  const confirmedCourt = liveCourt
+    ? { ...booking.court, ...liveCourt, id: liveCourt._id || liveCourt.id }
+    : booking.court;
   const duration = booking.startMinutes != null && booking.endMinutes != null ? (booking.endMinutes - booking.startMinutes) / 60 : 1;
   const turf = {
     ...turfDoc,
@@ -38,9 +47,11 @@ export default function BookingConfirmationPageWrapper() {
     selectedDate: booking.dateStr || booking.date,
     selectedTime: booking.timeSlot?.split(' - ')?.[0],
     duration,
-    court: booking.court,
-    courtName: booking.court?.name,
-    courtDimension: booking.court?.dimension,
+    court: confirmedCourt,
+    selectedCourt: confirmedCourt,
+    courtName: confirmedCourt?.name,
+    courtDimension: confirmedCourt?.dimension,
+    courtSurface: confirmedCourt?.surface,
     totalAmount: booking.totalAmount,
   };
 

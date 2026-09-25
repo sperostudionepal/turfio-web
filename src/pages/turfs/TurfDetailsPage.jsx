@@ -342,6 +342,7 @@ export default function TurfDetailsPage({
   const [duration, setDuration] = useState(1);
   const [, setCopiedAddress] = useState(false);
   const [isHoldingSlot, setIsHoldingSlot] = useState(false);
+  const [activeResumableHold, setActiveResumableHold] = useState(null);
 
   // Courts State & Selection
   const [courts, setCourts] = useState(() => (Array.isArray(turf?.courts) && turf.courts.length > 0 ? turf.courts : []));
@@ -389,6 +390,55 @@ export default function TurfDetailsPage({
       });
   }, [turf?.id, turf?._id]);
 
+  // Restore an active hold when the player returns from checkout. This is the
+  // source of truth for the selected date/time and for replacing an old hold.
+  useEffect(() => {
+    const turfId = turf?.id || turf?._id;
+    if (!turfId) return;
+    let cancelled = false;
+
+    const restoreHold = async () => {
+      const savedToken = localStorage.getItem('turfio_guest_hold_token');
+      if (!savedToken) {
+        if (!cancelled) setActiveResumableHold(null);
+        return;
+      }
+      try {
+        const data = await turfService.getResumableBooking(savedToken);
+        const item = data?.data || data?.item || data;
+        const itemTurfId = item?.turf?.id || item?.turf?._id;
+        if (!cancelled && item?.type === 'hold' && String(itemTurfId) === String(turfId)) {
+          setActiveResumableHold(item);
+          if (item.dateStr) setSelectedDate(item.dateStr);
+          if (item.startTime) setSelectedTimeSlot(item.startTime);
+          if (item.duration) setDuration(Number(item.duration));
+        } else if (!cancelled) {
+          setActiveResumableHold(null);
+        }
+      } catch {
+        if (!cancelled) setActiveResumableHold(null);
+      }
+    };
+
+    restoreHold();
+    window.addEventListener('turfio_hold_created', restoreHold);
+    window.addEventListener('turfio_hold_released', restoreHold);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('turfio_hold_created', restoreHold);
+      window.removeEventListener('turfio_hold_released', restoreHold);
+    };
+  }, [turf?.id, turf?._id]);
+
+  // Once courts are loaded, restore the court associated with the held slot.
+  useEffect(() => {
+    if (!activeResumableHold?.courtId || courts.length === 0) return;
+    const heldCourt = courts.find((court) =>
+      String(court?._id || court?.id) === String(activeResumableHold.courtId)
+    );
+    if (heldCourt) setSelectedCourt(heldCourt);
+  }, [activeResumableHold?.courtId, courts]);
+
   // Fetch dynamic slot availability from backend (filtered by selectedCourt)
   useEffect(() => {
     const turfId = turf?.id || turf?._id;
@@ -398,7 +448,12 @@ export default function TurfDetailsPage({
     setIsLoadingAvailability(true);
 
     turfService
-      .getTurfAvailability(turfId, selectedDate, selectedCourt?._id || selectedCourt?.id)
+      .getTurfAvailability(
+        turfId,
+        selectedDate,
+        selectedCourt?._id || selectedCourt?.id,
+        activeResumableHold?.holdToken || null,
+      )
       .then((data) => {
         if (!isMounted) return;
         setAvailabilityData(data);
@@ -413,7 +468,7 @@ export default function TurfDetailsPage({
     return () => {
       isMounted = false;
     };
-  }, [turf?.id, turf?._id, selectedDate, selectedCourt?._id, selectedCourt?.id]);
+  }, [turf?.id, turf?._id, selectedDate, selectedCourt?._id, selectedCourt?.id, activeResumableHold?.holdToken]);
 
   // Effective available days for this venue
   const effectiveAvailableDays = useMemo(() => {
@@ -436,37 +491,34 @@ export default function TurfDetailsPage({
     return effectiveAvailableDays.length > 0 && !effectiveAvailableDays.includes(dayCode);
   }, [selectedDate, effectiveAvailableDays]);
 
-  // Derive dynamic slot options from admin opening hours and availability
+  // Only render starts that can actually be booked for the selected duration.
+  // Held, booked, past and closed starts are hidden rather than disabled.
   const timeSlotOptions = useMemo(() => {
-    if (isSelectedDateHoliday || availabilityData?.isClosed) {
-      return [{ value: 'CLOSED', label: 'Closed (Holiday)', disabled: true }];
+    if (isSelectedDateHoliday || availabilityData?.isClosed) return [];
+
+    if (availabilityData?.slots) {
+      const durationMinutes = Math.max(60, Math.round(Number(duration || 1) * 60));
+      const closeMinutes = availabilityData?.openingHours?.closeMinutes ?? Number.POSITIVE_INFINITY;
+      const occupied = availabilityData?.occupiedIntervals || [];
+      return availabilityData.slots
+        .filter((slot) => {
+          if (!slot.isAvailable) return false;
+          const end = slot.startMinutes + durationMinutes;
+          if (end > closeMinutes) return false;
+          return !occupied.some((interval) =>
+            interval.startMinutes < end && interval.endMinutes > slot.startMinutes
+          );
+        })
+        .map((slot) => ({ value: slot.time, label: slot.time, disabled: false }));
     }
 
-    if (availabilityData?.slots && availabilityData.slots.length > 0) {
-      return availabilityData.slots.map((s) => {
-        let labelSuffix = '';
-        if (!s.isAvailable) {
-          if (s.state === 'past') labelSuffix = ' (Passed)';
-          else if (s.state === 'held') labelSuffix = ' (Held)';
-          else labelSuffix = ' (Taken)';
-        }
-        return {
-          value: s.time,
-          label: s.isAvailable ? s.time : `${s.time}${labelSuffix}`,
-          disabled: !s.isAvailable,
-        };
-      });
-    }
-
-    // Fallback if network is delayed: compute from turf openingHours
+    // Network fallback: expose future starts only.
     const openStr = turf?.openingHours?.start || '06:00';
     const closeStr = turf?.openingHours?.end || '22:00';
-
     const parseToMin = (t) => {
       const parts = t.split(':');
       return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
     };
-
     const to12 = (min) => {
       const h24 = Math.floor(min / 60);
       const minVal = min % 60;
@@ -475,33 +527,37 @@ export default function TurfDetailsPage({
       if (h12 === 0) h12 = 12;
       return `${String(h12).padStart(2, '0')}:${String(minVal).padStart(2, '0')} ${p}`;
     };
-
     const openMin = parseToMin(openStr);
     const closeMin = parseToMin(closeStr);
-    const generated = [];
+    const durationMinutes = Math.max(60, Math.round(Number(duration || 1) * 60));
     const { date: todayStr, minutes: currentMinutes } = getNepalCurrentDateTime();
-    for (let m = openMin; m < closeMin; m += 60) {
-      const formatted = to12(m);
-      const disabled = selectedDate < todayStr || (selectedDate === todayStr && m + 60 <= currentMinutes);
-      generated.push({ value: formatted, label: disabled ? `${formatted} (Past)` : formatted, disabled });
+    const generated = [];
+    for (let m = openMin; m + durationMinutes <= closeMin; m += 60) {
+      const isPast = selectedDate < todayStr || (selectedDate === todayStr && m <= currentMinutes);
+      if (!isPast) generated.push({ value: to12(m), label: to12(m), disabled: false });
     }
-    return generated.length > 0 ? generated : TIME_SLOT_OPTIONS;
-  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours, selectedDate]);
+    return generated;
+  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours, selectedDate, duration]);
 
-  // Keep selectedTimeSlot in sync with available slots
+  // Keep selection valid, but never overwrite the player's own restored hold while
+  // availability is refreshing after back-navigation.
   useEffect(() => {
     if (isSelectedDateHoliday) {
       setSelectedTimeSlot('');
       return;
     }
+    const isRestoredSelection = activeResumableHold?.type === 'hold'
+      && activeResumableHold.dateStr === selectedDate
+      && activeResumableHold.startTime === selectedTimeSlot;
+    if (isRestoredSelection) return;
+
     if (timeSlotOptions.length > 0) {
-      const firstAvailable = timeSlotOptions.find((opt) => !opt.disabled);
       const currentOpt = timeSlotOptions.find((opt) => opt.value === selectedTimeSlot);
-      if (!currentOpt || currentOpt.disabled) {
-        setSelectedTimeSlot(firstAvailable ? firstAvailable.value : '');
-      }
+      if (!currentOpt) setSelectedTimeSlot(timeSlotOptions[0].value);
+    } else {
+      setSelectedTimeSlot('');
     }
-  }, [timeSlotOptions, isSelectedDateHoliday]);
+  }, [timeSlotOptions, isSelectedDateHoliday, activeResumableHold, selectedDate, selectedTimeSlot]);
 
   // Gallery Fallback
   const gallery = useMemo(() => {
@@ -569,18 +625,35 @@ export default function TurfDetailsPage({
     try {
       setIsHoldingSlot(true);
 
-      // Attempt atomic hold creation
-      const holdRes = await turfService.createSlotHold(turfId, {
-        date: selectedDate,
-        startTime: selectedTimeSlot,
-        duration,
-        courtId: selectedCourt?._id || selectedCourt?.id,
-        courtName: selectedCourt?.name || 'Court 1',
-      });
+      const selectedCourtId = selectedCourt?._id || selectedCourt?.id;
+      const sameAsExistingHold = activeResumableHold?.holdToken
+        && activeResumableHold.dateStr === selectedDate
+        && activeResumableHold.startTime === selectedTimeSlot
+        && Number(activeResumableHold.duration || 1) === Number(duration)
+        && String(activeResumableHold.courtId || '') === String(selectedCourtId || '');
 
-      const holdData = holdRes?.data || holdRes;
+      let holdData = activeResumableHold;
+      if (!sameAsExistingHold) {
+        // Ask the server to atomically replace the old hold under the slot lock. A failed
+        // replacement leaves the existing hold intact.
+        const holdRes = await turfService.createSlotHold(turfId, {
+          date: selectedDate,
+          startTime: selectedTimeSlot,
+          duration,
+          courtId: selectedCourtId,
+          courtName: selectedCourt?.name || 'Court 1',
+          replaceHoldToken: activeResumableHold?.holdToken || undefined,
+        });
+        holdData = holdRes?.data || holdRes;
+
+        if (activeResumableHold?.holdToken && activeResumableHold.holdToken !== holdData?.holdToken) {
+          window.dispatchEvent(new Event('turfio_hold_released'));
+        }
+      }
+
       if (holdData?.holdToken) {
         localStorage.setItem('turfio_guest_hold_token', holdData.holdToken);
+        setActiveResumableHold({ ...holdData, type: 'hold', dateStr: holdData.date || selectedDate });
       }
       window.dispatchEvent(new Event('turfio_hold_created'));
 
@@ -616,7 +689,7 @@ export default function TurfDetailsPage({
       triggerToast(conflictMsg);
 
       // Refresh dynamic availability immediately
-      turfService.getTurfAvailability(turfId, selectedDate).then(setAvailabilityData).catch(() => {});
+      turfService.getTurfAvailability(turfId, selectedDate, selectedCourt?._id || selectedCourt?.id, activeResumableHold?.holdToken || null).then(setAvailabilityData).catch(() => {});
     } finally {
       setIsHoldingSlot(false);
     }

@@ -94,12 +94,11 @@ const ContinueBookingBanner = ({ onResume }) => {
     searchParams.get('page') === 'turfs' ||
     searchParams.get('page') === 'turfListing';
 
-  // Do not show on turf details page (/turfs/:id) or booking checkout page (/turfs/:id/book)
-  const isTurfDetailsOrCheckout =
-    pathname.includes('/book') ||
-    (pathname.match(/\/turfs\/[a-zA-Z0-9_-]+/) && !pathname.endsWith('/turfs'));
+  // Keep the resume banner visible on the turf details page so returning from
+  // checkout preserves the user's active hold. Hide it only inside checkout.
+  const isBookingCheckout = pathname.includes('/book');
 
-  if (loading || !resumableData || !isFindTurfsPage || isTurfDetailsOrCheckout) {
+  if (loading || !resumableData || !isFindTurfsPage || isBookingCheckout) {
     return null;
   }
 
