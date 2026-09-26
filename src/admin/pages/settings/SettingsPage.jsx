@@ -56,12 +56,12 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
   const [mapsUrl, setMapsUrl] = useState('https://maps.google.com/?q=Kathmandu+Futsal+Arena');
 
   // 2. Payments & eSewa State
-  const [esewaId, setEsewaId] = useState('9841234567');
-  const [esewaName, setEsewaName] = useState('Kathmandu Futsal Arena');
-  const [khaltiId, setKhaltiId] = useState('9841234567');
-  const [bankName, setBankName] = useState('Nabil Bank Ltd.');
-  const [bankAccount, setBankAccount] = useState('01901017500123');
-  const [accountHolder, setAccountHolder] = useState('Kathmandu Futsal Arena Pvt. Ltd.');
+  const [esewaId, setEsewaId] = useState('');
+  const [esewaName, setEsewaName] = useState('');
+  const [khaltiId, setKhaltiId] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
   const [advancePercent, setAdvancePercent] = useState('50%');
 
   // 3. Notifications & SMS Gateway State
@@ -403,6 +403,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={esewaId}
+                              placeholder="e.g. 98XXXXXXXX"
                               onChange={(e) => setEsewaId(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                             />
@@ -412,6 +413,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={esewaName}
+                              placeholder="Name registered with eSewa"
                               onChange={(e) => setEsewaName(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                             />
@@ -432,6 +434,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={khaltiId}
+                              placeholder="e.g. 98XXXXXXXX"
                               onChange={(e) => setKhaltiId(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                             />
@@ -473,6 +476,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={bankName}
+                            placeholder="Bank name"
                             onChange={(e) => setBankName(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                           />
@@ -483,6 +487,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={bankAccount}
+                            placeholder="Account number"
                             onChange={(e) => setBankAccount(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                           />
@@ -493,6 +498,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={accountHolder}
+                            placeholder="Account holder name"
                             onChange={(e) => setAccountHolder(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                           />

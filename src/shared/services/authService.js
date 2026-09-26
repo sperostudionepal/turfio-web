@@ -71,10 +71,10 @@ export const authService = {
   },
 
   /**
-   * Dismiss the turf approval banner for the logged in user
+   * Dismiss the turf approval banner for the logged in venue owner (staff account)
    */
-  async dismissTurfBanner() {
-    const response = await apiClient.post('/auth/dismiss-turf-banner');
+  async dismissStaffBanner() {
+    const response = await apiClient.post('/admin/auth/dismiss-turf-banner');
     return response;
   },
 

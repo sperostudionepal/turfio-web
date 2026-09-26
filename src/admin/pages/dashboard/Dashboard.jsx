@@ -16,7 +16,6 @@ import InvoicesPage from '../invoices/InvoicesPage';
 import PricingPage from '../pricing/PricingPage';
 import CouponsPage from '../coupons/CouponsPage';
 import AnnouncementsPage from '../announcements/AnnouncementsPage';
-import AnalyticsPage from '../analytics/AnalyticsPage';
 import ReviewsPage from '../reviews/ReviewsPage';
 import ActivityLogsPage from '../activity/ActivityLogsPage';
 import SettingsPage from '../settings/SettingsPage';
@@ -26,13 +25,14 @@ import turfService from '../../../shared/services/turfService';
 import { OwnerContext } from '../../context/ownerContext';
 import PeriodSelect from '../../components/dashboard/PeriodSelect';
 import NeedsActionCard from '../../components/dashboard/NeedsActionCard';
+import ApprovalBanner from '../../components/dashboard/ApprovalBanner';
 import { DashboardSkeleton, ErrorNotice, NoVenueNotice, EmptyBookingsNotice } from '../../components/dashboard/DashboardNotices';
 import { PERIOD_OPTIONS, getPeriodRange } from '../../../shared/utils/dashboardStats';
 import { deriveBookingStatus, isActiveBooking } from '../../../shared/utils/bookingStatus';
 import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../../shared/utils/reportExport';
 import { getTodayNepalString, formatDateDisplay } from '../../../shared/utils/dateTime';
 
-const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', Coupons: 'coupons', Announcements: 'announcements', Analytics: 'analytics', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
+const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', Coupons: 'coupons', Announcements: 'announcements', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
 const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab]));
 
 function Dashboard({ user, onLogout }) {
@@ -187,7 +187,6 @@ function Dashboard({ user, onLogout }) {
     Pricing: <PricingPage {...pageProps} />,
     Coupons: <CouponsPage {...pageProps} />,
     Announcements: <AnnouncementsPage {...pageProps} />,
-    Analytics: <AnalyticsPage {...pageProps} />,
     Reviews: <ReviewsPage {...pageProps} />,
     'Activity Logs': <ActivityLogsPage {...pageProps} />,
     // Keyed by venue so the form re-seeds once the venue has loaded (and not on later refreshes).
@@ -274,6 +273,7 @@ function Dashboard({ user, onLogout }) {
               </div>
             </div>
 
+            <ApprovalBanner />
             {venueStatus === 'error' && (
               <ErrorNotice
                 message="Couldn't load your venue details."

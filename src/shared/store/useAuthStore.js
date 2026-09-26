@@ -256,18 +256,6 @@ export const usePlayerAuth = create((set, get) => ({
     }
   },
 
-  dismissTurfBanner: async () => {
-    try {
-      await authService.dismissTurfBanner();
-      set((state) => ({
-        user: state.user ? { ...state.user, turfApprovalBannerSeen: true } : null,
-      }));
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  },
-
   clearError: () => set({ error: null }),
 }));
 
@@ -404,6 +392,19 @@ export const useOwnerAuth = create((set) => ({
       isLoading: false,
       error: null,
     });
+  },
+
+  dismissTurfBanner: async () => {
+    set((state) => {
+      const user = state.user ? { ...state.user, turfApprovalBannerSeen: true } : state.user;
+      if (state.token) setStoredSession(OWNER_SESSION_KEY, state.token, user);
+      return { user };
+    });
+    try {
+      await authService.dismissStaffBanner();
+    } catch (err) {
+      console.warn('Could not save banner dismissal:', err.message);
+    }
   },
 
   logout: async () => {

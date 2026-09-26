@@ -1,11 +1,10 @@
-import { Home, Calendar, CalendarDays, BarChart2, User } from 'lucide-react';
+import { Home, Calendar, CalendarDays, User } from 'lucide-react';
 
 function MobileBottomNav({ activeTab, setActiveTab }) {
   const navItems = [
     { id: 'Dashboard', label: 'Home', icon: Home },
     { id: 'Bookings', label: 'Bookings', icon: CalendarDays },
     { id: 'Calendar', label: 'Calendar', icon: Calendar },
-    { id: 'Analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'Settings', label: 'Profile', icon: User },
   ];
 

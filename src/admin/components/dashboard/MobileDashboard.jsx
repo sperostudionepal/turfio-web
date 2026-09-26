@@ -49,30 +49,6 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab }) {
     { month: 'Jun', revenue: 26, expense: 12 },
   ];
 
-  // Demo fallback items matching mockup when sparse
-  const sampleBookings = [
-    {
-      initials: 'BC',
-      customer: 'Birat City FC',
-      court: 'Court 1',
-      time: '7:00 PM – 8:00 PM',
-      matchType: '5v5 • 1 hour',
-      status: 'Confirmed',
-      badgeBg: 'bg-emerald-100/70 text-emerald-800',
-      dotColor: 'bg-emerald-500',
-    },
-    {
-      initials: 'TK',
-      customer: 'The Kickers',
-      court: 'Court 2',
-      time: '8:00 PM – 9:00 PM',
-      matchType: '7v7 • 1 hour',
-      status: 'Upcoming',
-      badgeBg: 'bg-blue-100/70 text-blue-800',
-      dotColor: 'bg-blue-500',
-    },
-  ];
-
   const mappedBookings = todayBookings.map((b) => {
     const interval = parseSlotInterval(b.timeSlot);
     const customer =
@@ -104,7 +80,7 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab }) {
     };
   });
 
-  const displayBookings = mappedBookings.length > 0 ? mappedBookings.slice(0, 3) : sampleBookings;
+  const displayBookings = mappedBookings.slice(0, 3);
 
   return (
     <div className="w-full bg-[#fbfcfd] min-h-screen text-slate-900 pb-24 select-none md:hidden">
@@ -401,6 +377,11 @@ function MobileDashboard({ user, venue, bookings = [], setActiveTab }) {
 
           {/* Slot Rows */}
           <div className="space-y-2.5">
+            {displayBookings.length === 0 && (
+              <p className="rounded-xl bg-slate-50/80 p-4 text-center text-xs font-medium text-slate-500">
+                No bookings scheduled for today.
+              </p>
+            )}
             {displayBookings.map((item, idx) => (
               <div
                 key={idx}
