@@ -11,16 +11,23 @@ import {
   AtSign,
   Footprints,
   Users,
-  Trophy,
   Heart,
 } from 'lucide-react';
+
 import { useToast } from '../../../shared/components/common/toastContext';
 import useWishlistStore from '../../../shared/store/useWishlistStore';
 
-export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar }) {
+export default function ProfileInfoCard({
+  user,
+  onUpdateProfile,
+  onUploadAvatar,
+}) {
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
-  const savedTurfsCount = useWishlistStore((s) => s.items.length);
+
+  const savedTurfsCount = useWishlistStore(
+    (state) => state.items.length
+  );
 
   const [activeField, setActiveField] = useState(null);
   const [initialFormData, setInitialFormData] = useState(null);
@@ -45,26 +52,29 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
   });
 
   useEffect(() => {
-    if (user) {
-      const next = {
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        username: user.username || '',
-        phone: user.phone || '',
-        dob: formatDob(user.dateOfBirth),
-        gender: user.gender || 'Male',
-        city: user.city || 'Kathmandu',
-        preferredFoot: user.preferredFoot || 'Right',
-      };
-      setFormData(next);
-      setInitialFormData(next);
-      setActiveField(null);
-    }
+    if (!user) return;
+
+    const next = {
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      username: user.username || '',
+      phone: user.phone || '',
+      dob: formatDob(user.dateOfBirth),
+      gender: user.gender || 'Male',
+      city: user.city || 'Kathmandu',
+      preferredFoot: user.preferredFoot || 'Right',
+    };
+
+    setFormData(next);
+    setInitialFormData(next);
+    setActiveField(null);
   }, [user]);
 
-  // Validation
-  const isValidPhone = (phone) => !phone || /^[+]*[(]?[0-9]{1,4}[)]?[-\s./0-9]{7,15}$/.test(phone);
-  const isValidUsername = (username) => !username || /^[a-zA-Z0-9_]{3,20}$/.test(username);
+  const isValidPhone = (phone) =>
+    !phone || /^[+]?\d[\d\s()./-]{6,18}$/.test(phone);
+
+  const isValidUsername = (username) =>
+    !username || /^[a-zA-Z0-9_]{3,20}$/.test(username);
 
   const isFormValid =
     formData.firstName.trim() !== '' &&
@@ -72,104 +82,312 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
     isValidPhone(formData.phone) &&
     isValidUsername(formData.username);
 
+  const hasChanges =
+    initialFormData &&
+    JSON.stringify(formData) !==
+    JSON.stringify(initialFormData);
+
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
+
     if (!file) return;
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+    ];
+
     const allowedExtensions = /\.(jpg|jpeg|png|webp)$/i;
 
-    if (!allowedTypes.includes(file.type) || !allowedExtensions.test(file.name)) {
-      showToast('Only JPG, PNG, and WebP image files are allowed.', 'error');
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (
+      !allowedTypes.includes(file.type) ||
+      !allowedExtensions.test(file.name)
+    ) {
+      showToast(
+        'Only JPG, PNG, and WebP image files are allowed.',
+        'error'
+      );
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
       return;
     }
 
     const MAX_SIZE = 5 * 1024 * 1024;
+
     if (file.size > MAX_SIZE) {
-      showToast('File size must be smaller than 5MB.', 'error');
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      showToast(
+        'File size must be smaller than 5MB.',
+        'error'
+      );
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
       return;
     }
 
     try {
       setIsUploading(true);
-      showToast('Uploading profile photo...', 'info');
+
+      showToast(
+        'Uploading profile photo...',
+        'info'
+      );
+
       const res = await onUploadAvatar(file);
+
       if (res.success) {
-        showToast('Profile photo updated successfully!', 'success');
+        setImgError(false);
+
+        showToast(
+          'Profile photo updated successfully!',
+          'success'
+        );
       } else {
-        showToast(res.error || 'Failed to upload photo.', 'error');
+        showToast(
+          res.error || 'Failed to upload photo.',
+          'error'
+        );
       }
     } catch (err) {
-      showToast(err.message || 'Error uploading photo.', 'error');
+      showToast(
+        err.message || 'Error uploading photo.',
+        'error'
+      );
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValid || isSaving) return;
+
+    if (!isFormValid || isSaving || !hasChanges) {
+      return;
+    }
 
     try {
       setIsSaving(true);
+
       const res = await onUpdateProfile(formData);
+
       if (res.success) {
-        showToast('Personal information updated successfully!', 'success');
-        setInitialFormData(formData);
+        showToast(
+          'Personal information updated successfully!',
+          'success'
+        );
+
+        setInitialFormData({ ...formData });
         setActiveField(null);
       } else {
-        showToast(res.error || 'Failed to update profile details.', 'error');
+        showToast(
+          res.error ||
+          'Failed to update profile details.',
+          'error'
+        );
       }
     } catch (err) {
-      showToast(err.message || 'Error updating profile.', 'error');
+      showToast(
+        err.message || 'Error updating profile.',
+        'error'
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
-  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || 'Saugat Shahi Personal';
-  const feet = ['Left', 'Right', 'Both'];
-  const genders = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
-  const cities = ['Kathmandu', 'Lalitpur', 'Bhaktapur', 'Pokhara', 'Chitwan', 'Butwal'];
+  const displayName =
+    [user?.firstName, user?.lastName]
+      .filter(Boolean)
+      .join(' ') ||
+    user?.username ||
+    'Turfio Player';
+
+  const feet = [
+    'Left',
+    'Right',
+    'Both',
+  ];
+
+  const genders = [
+    'Male',
+    'Female',
+    'Non-binary',
+    'Other',
+    'Prefer not to say',
+  ];
+
+  const cities = [
+    'Kathmandu',
+    'Lalitpur',
+    'Bhaktapur',
+    'Pokhara',
+    'Chitwan',
+    'Butwal',
+  ];
+
+  const inputClassName = `
+    w-full
+    rounded-lg
+    bg-slate-50
+    px-4
+    py-3
+    text-xs
+    font-medium
+    text-slate-900
+    transition-all
+    focus:outline-none
+    focus:bg-lime-50/40
+    focus:ring-2
+    focus:ring-lime-200
+    sm:text-sm
+  `;
+
+  const iconInputClassName = `
+    w-full
+    rounded-lg
+    bg-slate-50
+    py-3
+    pl-11
+    pr-4
+    text-xs
+    font-medium
+    text-slate-900
+    transition-all
+    focus:outline-none
+    focus:bg-lime-50/40
+    focus:ring-2
+    focus:ring-lime-200
+    sm:text-sm
+  `;
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Profile Banner Card */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-[0_4px_25px_rgba(0,0,0,0.08)] space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
-          <div className="flex items-start gap-4 sm:gap-5">
-            {/* Avatar Circle with Camera Overlay */}
-            <div className="relative group shrink-0">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-slate-900 ring-4 ring-slate-100 text-white font-black text-2xl flex items-center justify-center overflow-hidden">
+    <div className="space-y-5">
+
+      {/* =====================================================
+          PROFILE OVERVIEW
+      ===================================================== */}
+      <div
+        className="
+          bg-white
+          rounded-xl
+          px-5
+          py-5
+          sm:px-6
+          shadow-[0_4px_25px_rgba(0,0,0,0.08)]
+        "
+      >
+        <div
+          className="
+            flex
+            flex-col
+            gap-5
+            xl:flex-row
+            xl:items-center
+            xl:justify-between
+          "
+        >
+
+          {/* LEFT — PROFILE IDENTITY */}
+          <div
+            className="
+              flex
+              min-w-0
+              items-center
+              gap-4
+              xl:flex-1
+            "
+          >
+
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div
+                className="
+                  flex
+                  h-20
+                  w-20
+                  items-center
+                  justify-center
+                  overflow-hidden
+                  rounded-full
+                  bg-slate-900
+                  text-2xl
+                  font-black
+                  text-white
+                  ring-4
+                  ring-slate-100
+                "
+              >
                 {user?.profilePicture && !imgError ? (
                   <img
                     src={user.profilePicture}
                     alt={displayName}
                     referrerPolicy="no-referrer"
                     onError={() => setImgError(true)}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-lime-400 font-extrabold text-2xl">{displayName[0]?.toUpperCase() || 'S'}</span>
+                  <span className="font-extrabold text-lime-400">
+                    {displayName[0]?.toUpperCase() || 'T'}
+                  </span>
                 )}
               </div>
 
+              {/* Avatar Upload */}
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
                 disabled={isUploading}
-                aria-label="Upload photo"
-                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 transition-transform active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs border-2 border-white"
+                aria-label="Upload profile photo"
+                className="
+                  absolute
+                  bottom-0
+                  right-0
+                  flex
+                  h-7
+                  w-7
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  rounded-full
+                  border-2
+                  border-white
+                  bg-slate-900
+                  text-white
+                  shadow-xs
+                  transition
+                  hover:bg-slate-800
+                  active:scale-95
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
               >
                 {isUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-lime-400" />
+                  <Loader2
+                    className="
+                      h-3.5
+                      w-3.5
+                      animate-spin
+                      text-lime-400
+                    "
+                  />
                 ) : (
                   <Camera className="h-3.5 w-3.5" />
                 )}
               </button>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -179,238 +397,639 @@ export default function ProfileInfoCard({ user, onUpdateProfile, onUploadAvatar 
               />
             </div>
 
-            {/* Profile Info Text */}
-            <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{displayName}</h2>
-              <p className="text-xs sm:text-sm font-bold text-lime-600 mt-0.5">@{user?.username || 'saugatshahi2083'}</p>
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">{user?.email || 'shahi.codespace@gmail.com'}</p>
-              <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1 leading-snug">
-                Futsal enthusiast. Always up for a good game!
+            {/* Identity Text */}
+            <div className="min-w-0">
+              <h2
+                className="
+                  truncate
+                  text-xl
+                  font-black
+                  tracking-tight
+                  text-slate-900
+                  sm:text-xl
+                "
+              >
+                {displayName}
+              </h2>
+
+              <p
+                className="
+                  mt-0.5
+                  truncate
+                  text-xs
+                  font-bold
+                  text-lime-600
+                  sm:text-sm
+                "
+              >
+                @{user?.username || 'player'}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  truncate
+                  text-xs
+                  font-medium
+                  text-slate-500
+                  sm:text-sm
+                "
+              >
+                {user?.email || ''}
               </p>
             </div>
           </div>
 
-        </div>
+          {/* RIGHT — PROFILE STATS */}
+          <div
+            className="
+              grid
+              w-full
+              grid-cols-2
+              divide-x
+              divide-slate-100
+              border-t
+              border-slate-100
+              pt-5
 
-      </div>
+              xl:w-auto
+              xl:min-w-[340px]
+              xl:border-l
+              xl:border-t-0
+              xl:pl-6
+              xl:pt-0
+            "
+          >
 
-      {/* 2. Stats Summary Row Card */}
-      <div className="bg-white rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.08)] grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-        <div className="flex items-center gap-3.5 p-2">
-          <div className="w-10 h-10 rounded-full bg-lime-100 text-lime-700 flex items-center justify-center shrink-0">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-lg font-black text-slate-900 leading-none">12</p>
-            <p className="text-[11px] font-medium text-slate-500 mt-1">Total Bookings</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2 sm:pl-6">
-          <div className="w-10 h-10 rounded-full bg-lime-100 text-lime-700 flex items-center justify-center shrink-0">
-            <Trophy className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-lg font-black text-slate-900 leading-none">8</p>
-            <p className="text-[11px] font-medium text-slate-500 mt-1">Matches Played</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2 sm:pl-6">
-          <div className="w-10 h-10 rounded-full bg-lime-100 text-lime-700 flex items-center justify-center shrink-0">
-            <Heart className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-lg font-black text-slate-900 leading-none">{savedTurfsCount}</p>
-            <p className="text-[11px] font-medium text-slate-500 mt-1">Saved Turfs</p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 3. Personal Information Form Card */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-[0_4px_25px_rgba(0,0,0,0.08)] space-y-6">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-          <div>
-            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Personal Information</h3>
-            <p className="text-xs font-medium text-slate-500">Manage your basic details and how others see you on Turfio.</p>
-          </div>
-
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* First Name */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">
-                First Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  onFocus={() => setActiveField('firstName')}
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  placeholder="Saugat Shahi"
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all ${activeField ? 'focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200' : ''}`}
-                />
-              </div>
-            </div>
-
-            {/* Last Name */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">
-                Last Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  onFocus={() => setActiveField('lastName')}
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  placeholder="Personal"
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all ${activeField ? 'focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200' : ''}`}
-                />
-              </div>
-            </div>
-
-            {/* Username / Handle */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Player Handle / Username</label>
-              <div className="relative">
-                <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  onFocus={() => setActiveField('username')}
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="saugatshahi2083"
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all ${activeField ? 'focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200' : ''}`}
-                />
-              </div>
-            </div>
-
-            {/* Email Address */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="email"
-                  disabled
-                  value={user?.email || ''}
-                  className="w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-500 cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onFocus={() => setActiveField('phone')}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Add phone number"
-                  className="w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200"
-                />
-              </div>
-            </div>
-
-            {/* Gender */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Gender</label>
-              <select
-                onFocus={() => setActiveField('gender')}
-                value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                className={`w-full rounded-2xl bg-slate-50 px-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200 cursor-pointer`}
+            {/* Total Bookings */}
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+                pr-5
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-11
+                  w-11
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-lg
+                  bg-lime-100
+                  text-lime-700
+                "
               >
-                {genders.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                <Users className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p
+                  className="
+                    text-lg
+                    font-black
+                    leading-none
+                    text-slate-900
+                  "
+                >
+                  12
+                </p>
+
+                <p
+                  className="
+                    mt-1.5
+                    whitespace-nowrap
+                    text-[11px]
+                    font-medium
+                    text-slate-500
+                  "
+                >
+                  Total Bookings
+                </p>
+              </div>
+            </div>
+
+            {/* Saved Turfs */}
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+                pl-5
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-11
+                  w-11
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-lg
+                  bg-lime-100
+                  text-lime-700
+                "
+              >
+                <Heart className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p
+                  className="
+                    text-lg
+                    font-black
+                    leading-none
+                    text-slate-900
+                  "
+                >
+                  {savedTurfsCount}
+                </p>
+
+                <p
+                  className="
+                    mt-1.5
+                    whitespace-nowrap
+                    text-[11px]
+                    font-medium
+                    text-slate-500
+                  "
+                >
+                  Saved Turfs
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================
+          PERSONAL INFORMATION
+      ===================================================== */}
+      <form
+        onSubmit={handleSubmit}
+        className="
+          rounded-xl
+          bg-white
+          p-5
+          shadow-[0_4px_25px_rgba(0,0,0,0.08)]
+          sm:p-6
+        "
+      >
+
+        {/* Header */}
+        <div
+          className="
+            mb-5
+            flex
+            items-start
+            justify-between
+            gap-4
+            border-b
+            border-slate-100
+            pb-4
+          "
+        >
+          <div className="min-w-0">
+            <h3
+              className="
+                text-base
+                font-extrabold
+                tracking-tight
+                text-slate-900
+                sm:text-lg
+              "
+            >
+              Personal Information
+            </h3>
+
+            <p
+              className="
+                mt-0.5
+                text-xs
+                font-medium
+                leading-5
+                text-slate-500
+              "
+            >
+              Manage your basic details and how others
+              see you on Turfio.
+            </p>
+          </div>
+
+          {/* Save only appears when changed */}
+          {hasChanges && (
+            <button
+              type="submit"
+              disabled={!isFormValid || isSaving}
+              className="
+                inline-flex
+                shrink-0
+                cursor-pointer
+                items-center
+                justify-center
+                gap-2
+                rounded-lg
+                bg-lime-400
+                px-4
+                py-2.5
+                text-xs
+                font-bold
+                text-slate-900
+                transition-colors
+                hover:bg-lime-500
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+                sm:text-sm
+              "
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+
+                  <span className="hidden sm:inline">
+                    Saving...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+
+                  <span className="hidden sm:inline">
+                    Save Changes
+                  </span>
+
+                  <span className="sm:hidden">
+                    Save
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Form Fields */}
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-x-5
+            gap-y-5
+            sm:grid-cols-2
+          "
+        >
+
+          {/* First Name */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              First Name{' '}
+              <span className="text-rose-500">*</span>
+            </label>
+
+            <div className="relative">
+              <User
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="text"
+                onFocus={() =>
+                  setActiveField('firstName')
+                }
+                value={formData.firstName}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    firstName: e.target.value,
+                  })
+                }
+                placeholder="First name"
+                className={iconInputClassName}
+              />
+            </div>
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Last Name{' '}
+              <span className="text-rose-500">*</span>
+            </label>
+
+            <div className="relative">
+              <User
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="text"
+                onFocus={() =>
+                  setActiveField('lastName')
+                }
+                value={formData.lastName}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    lastName: e.target.value,
+                  })
+                }
+                placeholder="Last name"
+                className={iconInputClassName}
+              />
+            </div>
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Player Handle / Username
+            </label>
+
+            <div className="relative">
+              <AtSign
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="text"
+                onFocus={() =>
+                  setActiveField('username')
+                }
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    username: e.target.value,
+                  })
+                }
+                placeholder="username"
+                className={iconInputClassName}
+              />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Email Address
+            </label>
+
+            <div className="relative">
+              <Mail
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="email"
+                disabled
+                value={user?.email || ''}
+                className="
+                  w-full
+                  cursor-not-allowed
+                  rounded-lg
+                  bg-slate-50
+                  py-3
+                  pl-11
+                  pr-4
+                  text-xs
+                  font-medium
+                  text-slate-500
+                  sm:text-sm
+                "
+              />
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Phone Number
+            </label>
+
+            <div className="relative">
+              <Phone
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="tel"
+                value={formData.phone}
+                onFocus={() =>
+                  setActiveField('phone')
+                }
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    phone: e.target.value,
+                  })
+                }
+                placeholder="Add phone number"
+                className={iconInputClassName}
+              />
+            </div>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Gender
+            </label>
+
+            <select
+              onFocus={() =>
+                setActiveField('gender')
+              }
+              value={formData.gender}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  gender: e.target.value,
+                })
+              }
+              className={`${inputClassName} cursor-pointer`}
+            >
+              {genders.map((gender) => (
+                <option
+                  key={gender}
+                  value={gender}
+                >
+                  {gender}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* DOB */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Date of Birth
+            </label>
+
+            <div className="relative">
+              <Calendar
+                className="
+                  pointer-events-none
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <input
+                type="date"
+                onFocus={() =>
+                  setActiveField('dob')
+                }
+                value={formData.dob}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    dob: e.target.value,
+                  })
+                }
+                className={iconInputClassName}
+              />
+            </div>
+          </div>
+
+          {/* Preferred Foot */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              Preferred Foot
+            </label>
+
+            <div className="relative">
+              <Footprints
+                className="
+                  pointer-events-none
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <select
+                onFocus={() =>
+                  setActiveField('preferredFoot')
+                }
+                value={formData.preferredFoot}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    preferredFoot: e.target.value,
+                  })
+                }
+                className={`${iconInputClassName} cursor-pointer`}
+              >
+                {feet.map((foot) => (
+                  <option
+                    key={foot}
+                    value={foot}
+                  >
+                    {foot} Footed
+                  </option>
                 ))}
               </select>
             </div>
-
-            {/* Date of Birth */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Date of Birth</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="date"
-                  onFocus={() => setActiveField('dob')}
-                  value={formData.dob}
-                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all ${activeField ? 'focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200' : ''}`}
-                />
-              </div>
-            </div>
-
-            {/* Preferred Foot */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">Preferred Foot</label>
-              <div className="relative">
-                <Footprints className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <select
-                  onFocus={() => setActiveField('preferredFoot')}
-                  value={formData.preferredFoot}
-                  onChange={(e) => setFormData({ ...formData, preferredFoot: e.target.value })}
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200 cursor-pointer`}
-                >
-                  {feet.map((f) => (
-                    <option key={f} value={f}>{f} Footed</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* City / Location */}
-            <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">City / Location</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <select
-                  onFocus={() => setActiveField('city')}
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className={`w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3 text-xs sm:text-sm font-medium text-slate-900 transition-all focus:outline-none focus:bg-lime-50/40 focus:ring-2 focus:ring-lime-200 cursor-pointer`}
-                >
-                  {cities.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
           </div>
 
-          {initialFormData && JSON.stringify(formData) !== JSON.stringify(initialFormData) && (
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => { setFormData(initialFormData); setActiveField(null); }}
-                disabled={isSaving}
-                className="px-5 py-2.5 rounded-full bg-slate-100 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+          {/* City */}
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 sm:text-[13px]">
+              City / Location
+            </label>
+
+            <div className="relative">
+              <MapPin
+                className="
+                  pointer-events-none
+                  absolute
+                  left-4
+                  top-1/2
+                  h-4
+                  w-4
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+              <select
+                onFocus={() =>
+                  setActiveField('city')
+                }
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    city: e.target.value,
+                  })
+                }
+                className={`${iconInputClassName} cursor-pointer`}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!isFormValid || isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-lime-400 text-xs sm:text-sm font-bold text-slate-900 hover:bg-lime-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
-              >
-                {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : <><Check className="h-4 w-4" />Save Changes</>}
-              </button>
+                {cities.map((city) => (
+                  <option
+                    key={city}
+                    value={city}
+                  >
+                    {city}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
-        </form>
-      </div>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
-

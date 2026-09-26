@@ -1,89 +1,283 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ToastContext } from './toastContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  X,
+} from 'lucide-react';
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const [toastTop, setToastTop] = useState(96);
 
-  const showToast = useCallback((message, type = 'success', duration = 4000, subtitle = '') => {
-    setToasts((prev) => {
-      if (prev.some((t) => t.message === message)) {
-        return prev;
+  /**
+   * Keep the toast positioned directly below the navbar.
+   *
+   * At the top of the page:
+   * Topbar
+   * Navbar
+   * Toast
+   *
+   * After scrolling:
+   * Navbar (sticky)
+   * Toast
+   */
+  useEffect(() => {
+    let frameId = null;
+    let resizeObserver = null;
+
+    const updateToastPosition = () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
       }
-      const id = Math.random().toString(36).substring(2, 9);
-      setTimeout(() => {
-        setToasts((active) => active.filter((toast) => toast.id !== id));
-      }, duration);
-      return [...prev, { id, message, type, subtitle }];
+
+      frameId = requestAnimationFrame(() => {
+        const navbar = document.querySelector('[data-app-navbar]');
+
+        if (!navbar) {
+          setToastTop(16);
+          return;
+        }
+
+        const rect = navbar.getBoundingClientRect();
+
+        // Keep a 16px gap below the navbar.
+        setToastTop(Math.max(rect.bottom + 16, 16));
+      });
+    };
+
+    // Calculate initial position after the browser has laid out the page.
+    updateToastPosition();
+
+    window.addEventListener('scroll', updateToastPosition, {
+      passive: true,
     });
+
+    window.addEventListener('resize', updateToastPosition);
+
+    const navbar = document.querySelector('[data-app-navbar]');
+
+    if (navbar) {
+      resizeObserver = new ResizeObserver(updateToastPosition);
+      resizeObserver.observe(navbar);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', updateToastPosition);
+      window.removeEventListener('resize', updateToastPosition);
+
+      resizeObserver?.disconnect();
+
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+    };
   }, []);
+
+  const showToast = useCallback(
+    (
+      message,
+      type = 'success',
+      duration = 4000,
+      subtitle = ''
+    ) => {
+      setToasts((prev) => {
+        if (prev.some((t) => t.message === message)) {
+          return prev;
+        }
+
+        const id = Math.random()
+          .toString(36)
+          .substring(2, 9);
+
+        setTimeout(() => {
+          setToasts((active) =>
+            active.filter((toast) => toast.id !== id)
+          );
+        }, duration);
+
+        return [
+          ...prev,
+          {
+            id,
+            message,
+            type,
+            subtitle,
+          },
+        ];
+      });
+    },
+    []
+  );
 
   const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    setToasts((prev) =>
+      prev.filter((toast) => toast.id !== id)
+    );
   }, []);
+
+  const getToastIcon = (type) => {
+    switch (type) {
+      case 'error':
+        return (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50">
+            <AlertCircle
+              className="h-5 w-5 text-red-500"
+              strokeWidth={2.2}
+            />
+          </div>
+        );
+
+      case 'info':
+        return (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+            <Info
+              className="h-5 w-5 text-slate-700"
+              strokeWidth={2.2}
+            />
+          </div>
+        );
+
+      case 'success':
+      default:
+        return (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-100">
+            <CheckCircle2
+              className="h-5 w-5 text-lime-600"
+              strokeWidth={2.3}
+            />
+          </div>
+        );
+    }
+  };
+
+  const getDefaultSubtitle = (type) => {
+    switch (type) {
+      case 'error':
+        return 'Please try again';
+
+      case 'info':
+        return 'Here’s something you should know';
+
+      case 'success':
+      default:
+        return 'Action completed successfully';
+    }
+  };
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
+
       {/* Toast Container */}
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2.5 w-auto max-w-[90vw] px-4 pointer-events-none"
+        className="
+          pointer-events-none
+          fixed
+          left-1/2
+          z-[99999]
+          flex
+          w-auto
+          max-w-[calc(100vw-2rem)]
+          -translate-x-1/2
+          flex-col
+          items-center
+          gap-2.5
+
+          md:left-auto
+          md:right-6
+          md:translate-x-0
+          md:items-end
+        "
+        style={{
+          top: `${toastTop}px`,
+        }}
       >
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -16, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              style={{ backgroundColor: '#fffaf0', borderColor: '#f59e0b', color: '#8a3f05' }}
-              className="pointer-events-auto flex items-center gap-3 rounded-2xl border-2 p-3.5 sm:p-4 shadow-[0_8px_24px_rgba(245,158,11,0.14)] min-w-[min(320px,calc(100vw-2rem))] max-w-xl"
+              layout
+              initial={{
+                opacity: 0,
+                y: -16,
+                scale: 0.96,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                y: -10,
+                scale: 0.97,
+              }}
+              transition={{
+                duration: 0.22,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="
+                pointer-events-auto
+                flex
+                min-w-[min(360px,calc(100vw-2rem))]
+                max-w-[440px]
+                items-center
+                gap-3
+                rounded-2xl
+                bg-white
+                px-4
+                py-3.5
+                shadow-[0_10px_35px_rgba(15,23,42,0.12)]
+              "
             >
-              {/* Icon */}
-              {toast.type === 'success' && (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950/10 text-slate-950 border border-slate-950/15">
-                  <CheckCircle2 className="h-[18px] w-[18px]" />
-                </span>
-              )}
-              {toast.type === 'error' && (
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                  <AlertTriangle className="h-6 w-6 fill-amber-400 stroke-amber-900" />
-                </span>
-              )}
-              {toast.type === 'info' && (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950/10 text-slate-950 border border-slate-950/15">
-                  <Info className="h-[18px] w-[18px]" />
-                </span>
-              )}
+              {/* Status Icon */}
+              {getToastIcon(toast.type)}
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-amber-900 leading-tight">
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-bold leading-5 text-slate-900">
                   {toast.message}
                 </p>
-                {toast.subtitle ? (
-                  <p className="mt-0.5 text-xs font-semibold text-amber-800 leading-snug break-words">
-                    {toast.subtitle}
-                  </p>
-                ) : (
-                  <p className="mt-0.5 text-xs font-semibold text-amber-800 leading-tight">
-                    {toast.type === 'success' ? 'Action completed successfully' : toast.type === 'error' ? 'Something went wrong' : 'Information update'}
-                  </p>
-                )}
+
+                <p className="mt-0.5 break-words text-xs font-medium leading-4 text-slate-400">
+                  {toast.subtitle ||
+                    getDefaultSubtitle(toast.type)}
+                </p>
               </div>
 
               {/* Close Button */}
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="rounded-lg p-1 text-slate-500 hover:bg-amber-100 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
+                aria-label="Dismiss notification"
+                className="
+                  flex
+                  h-8
+                  w-8
+                  shrink-0
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  rounded-lg
+                  text-slate-400
+                  transition-colors
+                  hover:bg-slate-100
+                  hover:text-slate-700
+                  focus:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-lime-400/40
+                "
               >
-                <X className="h-4 w-4" />
+                <X
+                  className="h-4 w-4"
+                  strokeWidth={2}
+                />
               </button>
             </motion.div>
           ))}
