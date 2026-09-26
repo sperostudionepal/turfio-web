@@ -43,15 +43,16 @@ export default function SecuritySettings({ user, onChangePassword }) {
   }, []);
 
   // Password validation & strength calculation
-  const isGoogleOnly = user?.provider === 'google' && !user?.hasPassword;
-  const isPasswordMinLength = newPassword.length >= 8;
+  const isSettingPassword = !user?.hasPassword;
+  const isPasswordMinLength = newPassword.length >= 12;
+  const hasLowercase = /[a-z]/.test(newPassword);
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
   const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-  const hasComplexity = hasUppercase || hasNumber;
+  const hasComplexity = hasLowercase && hasUppercase && hasNumber && hasSpecial;
   const passwordsMatch = newPassword === confirmPassword;
   const isPasswordFormValid =
-    (isGoogleOnly || currentPassword.trim() !== '') &&
+    (isSettingPassword || currentPassword.trim() !== '') &&
     isPasswordMinLength &&
     hasComplexity &&
     passwordsMatch;
@@ -60,9 +61,9 @@ export default function SecuritySettings({ user, onChangePassword }) {
   const getPasswordStrength = () => {
     if (!newPassword) return { score: 0, label: '', color: 'bg-slate-200', textColors: 'text-slate-400' };
     let score = 0;
-    if (newPassword.length >= 8) score += 1;
     if (newPassword.length >= 12) score += 1;
-    if (hasUppercase && hasNumber) score += 1;
+    if (newPassword.length >= 12) score += 1;
+    if (hasLowercase && hasUppercase && hasNumber) score += 1;
     if (hasSpecial) score += 1;
 
     switch (score) {
@@ -89,7 +90,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
       setIsChangingPassword(true);
       const res = await onChangePassword({ currentPassword, newPassword });
       if (res.success) {
-        showToast('Password updated successfully!', 'success');
+        showToast(isSettingPassword ? 'Password created successfully!' : 'Password updated successfully!', 'success');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -137,18 +138,18 @@ export default function SecuritySettings({ user, onChangePassword }) {
           Change Password
         </h4>
 
-        {isGoogleOnly && (
+        {isSettingPassword && (
           <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-lime-50/80 border-l-4 border-lime-500 text-[11px] sm:text-xs leading-relaxed">
             <p className="font-bold text-slate-900 text-xs sm:text-[13px] mb-0.5">Google Signed-In Account</p>
             <p className="text-slate-600 font-medium">
-              You currently log in using Google OAuth and don't have a local password set. Create a password to enable traditional email & password sign-in alongside Google.
+              You don't have a local password yet. Set one to enable email & password sign-in alongside Google. After it is created, future password changes will require your current password.
             </p>
           </div>
         )}
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-xl">
           {/* Current Password */}
-          {!isGoogleOnly && (
+          {!isSettingPassword && (
             <div>
               <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-1.5">
                 Current Password <span className="text-rose-500">*</span>
@@ -185,7 +186,7 @@ export default function SecuritySettings({ user, onChangePassword }) {
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 8 chars with number/uppercase"
+                placeholder="12+ chars with upper, lower, number & symbol"
                 className="w-full rounded-2xl bg-slate-50 px-4 py-3 pr-11 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:bg-slate-100/80 transition-all"
               />
               <button
@@ -213,10 +214,16 @@ export default function SecuritySettings({ user, onChangePassword }) {
                 </div>
                 <div className="flex flex-col gap-1 text-[11px] pt-1">
                   <span className={isPasswordMinLength ? 'text-lime-600 font-bold' : 'text-slate-400'}>
-                    {isPasswordMinLength ? '✓' : '○'} At least 8 characters
+                    {isPasswordMinLength ? '✓' : '○'} At least 12 characters
                   </span>
-                  <span className={hasComplexity ? 'text-lime-600 font-bold' : 'text-slate-400'}>
-                    {hasComplexity ? '✓' : '○'} Includes number or uppercase letter
+                  <span className={hasLowercase && hasUppercase ? 'text-lime-600 font-bold' : 'text-slate-400'}>
+                    {hasLowercase && hasUppercase ? '✓' : '○'} Includes lowercase and uppercase letters
+                  </span>
+                  <span className={hasNumber ? 'text-lime-600 font-bold' : 'text-slate-400'}>
+                    {hasNumber ? '✓' : '○'} Includes a number
+                  </span>
+                  <span className={hasSpecial ? 'text-lime-600 font-bold' : 'text-slate-400'}>
+                    {hasSpecial ? '✓' : '○'} Includes a special character
                   </span>
                 </div>
               </div>
@@ -259,12 +266,12 @@ export default function SecuritySettings({ user, onChangePassword }) {
             {isChangingPassword ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin text-lime-400" />
-                Updating Password...
+                {isSettingPassword ? 'Setting Password...' : 'Updating Password...'}
               </>
             ) : (
               <>
                 <KeyRound className="h-4 w-4 text-lime-400" />
-                Update Password
+                {isSettingPassword ? 'Set Password' : 'Update Password'}
               </>
             )}
           </button>

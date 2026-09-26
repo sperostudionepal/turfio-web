@@ -257,24 +257,27 @@ export default function GamePreferencesCard({ user, onUpdateProfile }) {
                 {formData.fitnessLevel ? `Level ${formData.fitnessLevel} / 5` : 'Not set'}
               </span>
             </label>
-            <div className="flex items-center gap-2 pt-1">
-              {[1, 2, 3, 4, 5].map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  disabled={!isEditing}
-                  onClick={() => isEditing && setFormData({ ...formData, fitnessLevel: lvl })}
-                  className={`flex-1 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
-                    formData.fitnessLevel >= lvl
-                      ? 'bg-lime-400 text-slate-900 shadow-2xs'
-                      : isEditing
-                      ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 cursor-pointer'
-                      : 'bg-slate-100 text-slate-300 opacity-70 cursor-not-allowed'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
+            <div className="pt-2">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                disabled={!isEditing}
+                value={formData.fitnessLevel || 1}
+                onChange={(e) => setFormData({ ...formData, fitnessLevel: Number(e.target.value) })}
+                aria-label="Fitness level"
+                className="w-full accent-lime-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <div className="mt-1.5 flex justify-between px-0.5 text-[10px] font-bold text-slate-400">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <span key={level}>{level}</span>
+                ))}
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] font-semibold text-slate-400">
+                <span>Low</span>
+                <span>High</span>
+              </div>
             </div>
           </div>
         </div>
