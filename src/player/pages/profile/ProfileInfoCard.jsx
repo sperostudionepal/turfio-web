@@ -29,7 +29,6 @@ export default function ProfileInfoCard({
     (state) => state.items.length
   );
 
-  const [activeField, setActiveField] = useState(null);
   const [initialFormData, setInitialFormData] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,7 +66,6 @@ export default function ProfileInfoCard({
 
     setFormData(next);
     setInitialFormData(next);
-    setActiveField(null);
   }, [user]);
 
   const isValidPhone = (phone) =>
@@ -188,7 +186,6 @@ export default function ProfileInfoCard({
         );
 
         setInitialFormData({ ...formData });
-        setActiveField(null);
       } else {
         showToast(
           res.error ||
@@ -704,9 +701,6 @@ export default function ProfileInfoCard({
 
               <input
                 type="text"
-                onFocus={() =>
-                  setActiveField('firstName')
-                }
                 value={formData.firstName}
                 onChange={(e) =>
                   setFormData({
@@ -742,9 +736,6 @@ export default function ProfileInfoCard({
 
               <input
                 type="text"
-                onFocus={() =>
-                  setActiveField('lastName')
-                }
                 value={formData.lastName}
                 onChange={(e) =>
                   setFormData({
@@ -779,9 +770,6 @@ export default function ProfileInfoCard({
 
               <input
                 type="text"
-                onFocus={() =>
-                  setActiveField('username')
-                }
                 value={formData.username}
                 onChange={(e) =>
                   setFormData({
@@ -857,9 +845,6 @@ export default function ProfileInfoCard({
               <input
                 type="tel"
                 value={formData.phone}
-                onFocus={() =>
-                  setActiveField('phone')
-                }
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -879,9 +864,6 @@ export default function ProfileInfoCard({
             </label>
 
             <select
-              onFocus={() =>
-                setActiveField('gender')
-              }
               value={formData.gender}
               onChange={(e) =>
                 setFormData({
@@ -924,9 +906,6 @@ export default function ProfileInfoCard({
 
               <input
                 type="date"
-                onFocus={() =>
-                  setActiveField('dob')
-                }
                 value={formData.dob}
                 onChange={(e) =>
                   setFormData({
@@ -960,9 +939,6 @@ export default function ProfileInfoCard({
               />
 
               <select
-                onFocus={() =>
-                  setActiveField('preferredFoot')
-                }
                 value={formData.preferredFoot}
                 onChange={(e) =>
                   setFormData({
@@ -1005,9 +981,6 @@ export default function ProfileInfoCard({
               />
 
               <select
-                onFocus={() =>
-                  setActiveField('city')
-                }
                 value={formData.city}
                 onChange={(e) =>
                   setFormData({
