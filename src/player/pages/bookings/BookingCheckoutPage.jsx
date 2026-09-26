@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Clock,
@@ -99,6 +99,21 @@ export default function BookingCheckoutPage({
 
   const { showToast } = useToast();
 
+  // Toast Helper mapped to global ToastProvider
+  const triggerToast = useCallback((msg, type) => {
+    let toastType = type;
+    if (!toastType) {
+      if (msg.includes('🎉') || msg.includes('🔥') || msg.includes('confirmed') || msg.includes('copied') || msg.includes('applied') || msg.includes('downloaded')) {
+        toastType = 'success';
+      } else if (msg.includes('Please') || msg.includes('failed') || msg.includes('expired') || msg.includes('Unable') || msg.includes('Error')) {
+        toastType = 'error';
+      } else {
+        toastType = 'info';
+      }
+    }
+    showToast(msg, toastType);
+  }, [showToast]);
+
   // Form State
   const [formData, setFormData] = useState(() => {
     const defaultData = {
@@ -163,7 +178,7 @@ export default function BookingCheckoutPage({
     };
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
-  }, [onBack]);
+  }, [onBack, triggerToast]);
 
   // Sync hold step to backend when currentStep changes
   useEffect(() => {
@@ -355,21 +370,6 @@ export default function BookingCheckoutPage({
     const secs = secondsRemaining % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [secondsRemaining]);
-
-  // Toast Helper mapped to global ToastProvider
-  const triggerToast = (msg, type) => {
-    let toastType = type;
-    if (!toastType) {
-      if (msg.includes('🎉') || msg.includes('🔥') || msg.includes('confirmed') || msg.includes('copied') || msg.includes('applied') || msg.includes('downloaded')) {
-        toastType = 'success';
-      } else if (msg.includes('Please') || msg.includes('failed') || msg.includes('expired') || msg.includes('Unable') || msg.includes('Error')) {
-        toastType = 'error';
-      } else {
-        toastType = 'info';
-      }
-    }
-    showToast(msg, toastType);
-  };
 
   // Safe location/address string formatter helper
   const formatLocationString = (loc, addr) => {
