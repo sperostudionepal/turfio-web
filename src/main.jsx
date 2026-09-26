@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import App from './App'
-import { ToastProvider } from './components/common/Toast'
+import { ToastProvider } from './shared/components/common/Toast'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
