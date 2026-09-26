@@ -1,12 +1,10 @@
-import { ChevronRight, PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { getPeriodRange, summarizeBookings, paidAmount, periodLabel } from '../../../shared/utils/dashboardStats';
-import { useOwnerContext } from '../../context/ownerContext';
 
 const isPayAtVenue = (b) => b.paymentMethod === 'Pay at Venue' || b.paymentType === 'venue';
 
 function RevenueSummaryDonut({ bookings = [], period = 'month' }) {
-  const { setActiveTab } = useOwnerContext();
   // Live (non-cancelled) bookings inside the selected period.
   const { inPeriod, revenue: totalPaidRevenue } = summarizeBookings(bookings, getPeriodRange(period));
 
@@ -109,19 +107,6 @@ function RevenueSummaryDonut({ bookings = [], period = 'month' }) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Footer link */}
-      <div className="pt-3 mt-3">
-        {setActiveTab && (
-          <button
-            onClick={() => setActiveTab('Analytics')}
-            className="flex items-center justify-between w-full text-xs text-slate-500 font-semibold hover:text-slate-900 transition-colors cursor-pointer"
-          >
-            <span>Online vs venue analytics</span>
-            <ChevronRight size={14} className="text-slate-400" />
-          </button>
-        )}
       </div>
     </div>
   );

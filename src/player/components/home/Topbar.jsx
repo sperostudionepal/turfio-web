@@ -1,16 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, ArrowRight, Globe, Clock, HelpCircle, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../../../shared/store/useAuthStore';
+import { ArrowRight, Globe, Clock, HelpCircle, ChevronDown } from 'lucide-react';
 
 export default function Topbar({
   user,
-  onDashboard,
   onListTurf,
   hideTopbar = false,
 }) {
-  const navigate = useNavigate();
-  const dismissTurfBanner = useAuthStore((s) => s.dismissTurfBanner);
   const [langOpen, setLangOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState({ code: 'EN', label: 'English' });
   const langRef = useRef(null);
@@ -33,38 +28,6 @@ export default function Topbar({
   }, []);
 
   if (hideTopbar) return null;
-
-  // Show Turf Approval Banner for approved venue admins
-  if (user && user.isTurfAdmin && !user.turfApprovalBannerSeen) {
-    return (
-      <div className="border-b border-lime-100/40 bg-lime-50">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-10 text-[13px] font-medium text-slate-900">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-base">🎉</span>
-            <span>Congratulations! Your turf listing request has been approved and your venue is ready.</span>
-            <button
-              type="button"
-              onClick={() => {
-                if (onDashboard) onDashboard();
-                else navigate('/dashboard');
-              }}
-              className="ml-1 inline-flex items-center gap-1 font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
-            >
-              Go to Dashboard <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => dismissTurfBanner()}
-            className="p-1 hover:bg-lime-100/80 rounded-full transition-colors cursor-pointer text-slate-500 hover:text-slate-800 shrink-0"
-            title="Dismiss notification"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // Show Marketing Topbar ONLY for logged out visitors and non-admin player accounts
   if (!user || (user.role !== 'owner' && user.role !== 'admin' && !user.isTurfAdmin)) {

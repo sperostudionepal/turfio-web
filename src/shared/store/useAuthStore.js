@@ -231,21 +231,6 @@ export const usePlayerAuth = create((set, get) => ({
     }
   },
 
-  toggleTwoFactor: async () => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authService.toggleTwoFactor();
-      const updatedUser = response.data?.user || response.data;
-      const { token } = get();
-      if (token) setStoredSession(PLAYER_SESSION_KEY, token, updatedUser);
-      set({ user: updatedUser, isLoading: false, error: null });
-      return { success: true, twoFactorEnabled: updatedUser?.twoFactorEnabled };
-    } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
   verifyMfaLogin: async ({ tempToken, code }) => {
     try {
       set({ isLoading: true, error: null });
@@ -267,18 +252,6 @@ export const usePlayerAuth = create((set, get) => ({
       return { success: true, user, token };
     } catch (err) {
       set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
-    }
-  },
-
-  dismissTurfBanner: async () => {
-    try {
-      await authService.dismissTurfBanner();
-      set((state) => ({
-        user: state.user ? { ...state.user, turfApprovalBannerSeen: true } : null,
-      }));
-      return { success: true };
-    } catch (err) {
       return { success: false, error: err.message };
     }
   },
@@ -421,21 +394,16 @@ export const useOwnerAuth = create((set) => ({
     });
   },
 
-  registerOwner: async ({ name, email, password }) => {
+  dismissTurfBanner: async () => {
+    set((state) => {
+      const user = state.user ? { ...state.user, turfApprovalBannerSeen: true } : state.user;
+      if (state.token) setStoredSession(OWNER_SESSION_KEY, state.token, user);
+      return { user };
+    });
     try {
-      set({ isLoading: true, error: null });
-      const response = await authService.registerOwner({ name, email, password });
-      const { user, token } = response.data || {};
-
-      if (token) {
-        setStoredSession(OWNER_SESSION_KEY, token, user);
-      }
-
-      set({ isLoading: false, error: null });
-      return { success: true, user, token };
+      await authService.dismissStaffBanner();
     } catch (err) {
-      set({ isLoading: false, error: err.message });
-      return { success: false, error: err.message };
+      console.warn('Could not save banner dismissal:', err.message);
     }
   },
 

@@ -44,24 +44,30 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
   const [arenaName, setArenaName] = useState(venue?.name || '');
   const email = user?.email || '';
   const phone = user?.phone || '';
-  const [altPhone, setAltPhone] = useState('+977 01-4234567');
+  const [altPhone, setAltPhone] = useState('');
   const [timezone, setTimezone] = useState('(GMT+05:45) Kathmandu, Nepal');
   const [currency, setCurrency] = useState('NPR (Nepalese Rupee - NRs.)');
-  const [panNumber, setPanNumber] = useState('609823415');
+  // From the application the venue was approved on (the owner venue list adds it); read-only here.
+  const panNumber = rawVenue.panNumber || '';
 
   // Business Address State
   const [address, setAddress] = useState(rawVenue.address?.area || '');
   const [city, setCity] = useState(rawVenue.address?.city || '');
   const [stateProvince, setStateProvince] = useState('Bagmati Province');
-  const [mapsUrl, setMapsUrl] = useState('https://maps.google.com/?q=Kathmandu+Futsal+Arena');
+  // Built from the venue's stored coordinates ([longitude, latitude], the same ones the map uses).
+  // Google Maps wants "latitude,longitude".
+  const [longitude, latitude] = Array.isArray(rawVenue.location?.coordinates) ? rawVenue.location.coordinates : [];
+  const mapsUrl = Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+    : '';
 
   // 2. Payments & eSewa State
-  const [esewaId, setEsewaId] = useState('9841234567');
-  const [esewaName, setEsewaName] = useState('Kathmandu Futsal Arena');
-  const [khaltiId, setKhaltiId] = useState('9841234567');
-  const [bankName, setBankName] = useState('Nabil Bank Ltd.');
-  const [bankAccount, setBankAccount] = useState('01901017500123');
-  const [accountHolder, setAccountHolder] = useState('Kathmandu Futsal Arena Pvt. Ltd.');
+  const [esewaId, setEsewaId] = useState('');
+  const [esewaName, setEsewaName] = useState('');
+  const [khaltiId, setKhaltiId] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
   const [advancePercent, setAdvancePercent] = useState('50%');
 
   // 3. Notifications & SMS Gateway State
@@ -269,8 +275,10 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={panNumber}
-                            onChange={(e) => setPanNumber(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            readOnly
+                            placeholder="Not on file"
+                            title="From your approved venue application"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-semibold focus:outline-none cursor-not-allowed"
                           />
                         </div>
 
@@ -290,6 +298,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={altPhone}
+                            placeholder="Optional"
                             onChange={(e) => setAltPhone(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                           />
@@ -367,8 +376,10 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={mapsUrl}
-                            onChange={(e) => setMapsUrl(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            readOnly
+                            placeholder="Set your venue location to get a link"
+                            title="Built from your venue's saved location"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-medium focus:outline-none cursor-text"
                           />
                         </div>
                       </div>
@@ -403,6 +414,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={esewaId}
+                              placeholder="e.g. 98XXXXXXXX"
                               onChange={(e) => setEsewaId(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                             />
@@ -412,6 +424,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={esewaName}
+                              placeholder="Name registered with eSewa"
                               onChange={(e) => setEsewaName(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                             />
@@ -432,6 +445,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                             <input
                               type="text"
                               value={khaltiId}
+                              placeholder="e.g. 98XXXXXXXX"
                               onChange={(e) => setKhaltiId(e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                             />
@@ -473,6 +487,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={bankName}
+                            placeholder="Bank name"
                             onChange={(e) => setBankName(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                           />
@@ -483,6 +498,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={bankAccount}
+                            placeholder="Account number"
                             onChange={(e) => setBankAccount(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-bold focus:outline-none"
                           />
@@ -493,6 +509,7 @@ function SettingsPage({ user, venue, refreshVenue, activeTab, setActiveTab }) {
                           <input
                             type="text"
                             value={accountHolder}
+                            placeholder="Account holder name"
                             onChange={(e) => setAccountHolder(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl bg-white/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none"
                           />
