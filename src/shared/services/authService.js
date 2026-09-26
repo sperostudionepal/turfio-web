@@ -20,20 +20,6 @@ export const authService = {
   },
 
   /**
-   * Register a prospective venue owner (no account required beforehand).
-   * Creates a `pending_owner` — no access until a superadmin approves.
-   * @param {{ name, email, password }} data
-   */
-  async registerOwner(data) {
-    const response = await apiClient.post('/auth/register-owner', {
-      name: data.name,
-      email: data.email,
-      password: data.password,
-    });
-    return response; // { success, message, data: { user, token } }
-  },
-
-  /**
    * Login player/customer (Role: user)
    * @param {{ email, password, redirectTo }} data
    */
@@ -216,14 +202,6 @@ export const authService = {
    */
   async logoutOtherSessions() {
     const response = await apiClient.post('/auth/sessions/logout-others');
-    return response;
-  },
-
-  /**
-   * Toggle 2FA setting
-   */
-  async toggleTwoFactor() {
-    const response = await apiClient.post('/auth/2fa/toggle');
     return response;
   },
 

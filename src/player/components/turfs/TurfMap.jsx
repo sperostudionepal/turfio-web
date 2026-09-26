@@ -17,6 +17,7 @@ import {
   FALLBACK_OSM_STYLE,
   FALLBACK_SATELLITE_STYLE,
 } from '../../../shared/config/mapConfig';
+import { escapeHtml } from '../../../shared/utils/escapeHtml';
 
 export default function TurfMap({
   turfs = [],
@@ -585,7 +586,7 @@ export default function TurfMap({
       el.className = 'relative turf-custom-marker group/marker cursor-pointer select-none';
       el.style.transformOrigin = 'center bottom';
       
-      const priceText = turf.price ? turf.price.replace('/hr', '') : 'Book';
+      const priceText = escapeHtml(turf.price ? String(turf.price).replace('/hr', '') : 'Book');
 
       el.innerHTML = `
         <!-- Unified Pill + Arrow Pin Container -->
