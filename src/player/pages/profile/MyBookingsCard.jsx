@@ -15,6 +15,7 @@ import { getPageItems } from '../../../shared/utils/pagination';
 export default function MyBookingsCard({
     bookings,
     isLoading,
+    error,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -107,262 +108,54 @@ export default function MyBookingsCard({
         }
     };
 
-    const getBookingId = (booking) => {
-        return (
-            booking?.bookingId ||
-            booking?.bookingCode ||
-            booking?.reference ||
-            booking?._id ||
-            booking?.id ||
-            '—'
-        );
+    const displayValue = (value) => {
+        if (value === undefined || value === null || value === '') return '—';
+        return String(value);
     };
 
-    const formatBookingId = (booking) => {
-        const id = String(getBookingId(booking));
+    const formatBookingId = (booking) =>
+        displayValue(booking?.bookingId);
 
-        if (id === '—') return id;
+    const getTurfName = (booking) =>
+        displayValue(booking?.turf?.name);
 
-        if (
-            id.startsWith('BK-') ||
-            id.startsWith('bk-')
-        ) {
-            return id.toUpperCase();
-        }
+    const getCourtName = (booking) =>
+        displayValue(booking?.court?.name);
 
-        if (id.length > 12) {
-            return `#${id.slice(-8).toUpperCase()}`;
-        }
-
-        return id.startsWith('#')
-            ? id
-            : `#${id.toUpperCase()}`;
-    };
-
-    const getTurf = (booking) => {
-        return (
-            booking?.turf ||
-            booking?.turfId ||
-            {}
-        );
-    };
-
-    const getTurfName = (booking) => {
-        const turf = getTurf(booking);
-
-        return (
-            turf?.name ||
-            booking?.turfName ||
-            'Turf Booking'
-        );
-    };
-
-    const getCourtName = (booking) => {
-        return (
-            booking?.court?.name ||
-            booking?.courtName ||
-            booking?.court?.title ||
-            booking?.court ||
-            booking?.pitch?.name ||
-            booking?.pitchName ||
-            ''
-        );
-    };
-
-    const getTurfImage = (booking) => {
-        const turf = getTurf(booking);
-
-        const image =
-            turf?.images?.[0] ||
-            turf?.image ||
-            turf?.coverImage ||
-            turf?.thumbnail ||
-            booking?.turfImage;
-
-        if (!image) {
-            return '';
-        }
-
-        if (typeof image === 'string') {
-            return image;
-        }
-
-        return (
-            image?.url ||
-            image?.secure_url ||
-            image?.src ||
-            ''
-        );
-    };
-
-    const getAmountValue = (booking) => {
-        return (
-            booking?.totalAmount ??
-            booking?.totalPrice ??
-            booking?.amount ??
-            booking?.price ??
-            booking?.payment?.amount
-        );
-    };
+    const getTurfImage = (booking) =>
+        booking?.turf?.images?.[0] || '';
 
     const formatCurrency = (amount) => {
-        if (
-            amount === undefined ||
-            amount === null ||
-            amount === ''
-        ) {
-            return '—';
-        }
+        if (amount === undefined || amount === null || amount === '') return '—';
 
         const numericAmount = Number(amount);
-
-        if (Number.isNaN(numericAmount)) {
-            return `NPR ${amount}`;
-        }
-
-        return `NPR ${numericAmount.toLocaleString()}`;
+        return Number.isNaN(numericAmount)
+            ? displayValue(amount)
+            : `NPR ${numericAmount.toLocaleString()}`;
     };
 
-    const getAmount = (booking) => {
-        return formatCurrency(
-            getAmountValue(booking)
-        );
-    };
+    const getAmount = (booking) =>
+        formatCurrency(booking?.totalAmount);
 
-    const getDepositAmount = (booking) => {
-        const amount =
-            booking?.depositAmount ??
-            booking?.deposit ??
-            booking?.paidAmount ??
-            booking?.payment?.depositAmount ??
-            booking?.payment?.paidAmount;
+    const getDepositAmount = (booking) =>
+        booking?.depositAmount;
 
-        if (
-            amount === undefined ||
-            amount === null ||
-            amount === ''
-        ) {
-            return null;
-        }
+    const getDueAmount = (booking) =>
+        booking?.remainingBalance;
 
-        return amount;
-    };
+    const getPaymentStatus = (booking) =>
+        booking?.paymentStatus;
 
-    const getDueAmount = (booking) => {
-        const explicitDue =
-            booking?.dueAmount ??
-            booking?.remainingAmount ??
-            booking?.balanceAmount ??
-            booking?.payment?.dueAmount ??
-            booking?.payment?.remainingAmount;
-
-        if (
-            explicitDue !== undefined &&
-            explicitDue !== null &&
-            explicitDue !== ''
-        ) {
-            return explicitDue;
-        }
-
-        const total = Number(
-            getAmountValue(booking)
-        );
-
-        const paid = Number(
-            getDepositAmount(booking)
-        );
-
-        if (
-            !Number.isNaN(total) &&
-            !Number.isNaN(paid)
-        ) {
-            return Math.max(0, total - paid);
-        }
-
-        return null;
-    };
-
-    const getPaymentStatus = (booking) => {
-        const explicitStatus =
-            booking?.paymentStatus ||
-            booking?.payment?.status;
-
-        if (explicitStatus) {
-            return explicitStatus;
-        }
-
-        const total = Number(
-            getAmountValue(booking)
-        );
-
-        const paid = Number(
-            getDepositAmount(booking)
-        );
-
-        if (
-            !Number.isNaN(total) &&
-            !Number.isNaN(paid) &&
-            total > 0
-        ) {
-            if (paid >= total) {
-                return 'Paid';
-            }
-
-            if (paid > 0) {
-                return 'Partial';
-            }
-
-            return 'Unpaid';
-        }
-
-        return '';
-    };
-
-    const formatPaymentStatus = (status) => {
-        if (!status) return '';
-
-        return String(status)
-            .replaceAll('_', ' ')
-            .replace(/\b\w/g, (character) =>
-                character.toUpperCase()
-            );
-    };
-
-    const getBookingDateValue = (booking) => {
-        return (
-            booking?.date ||
-            booking?.bookingDate ||
-            booking?.slotDate
-        );
-    };
+    const formatPaymentStatus = (status) =>
+        displayValue(status);
 
     const getDate = (booking) => {
-        const date = getBookingDateValue(booking);
-
-        if (!date) {
-            return 'Date unavailable';
-        }
-
-        return formatNepalDateTime(date);
+        if (!booking?.date) return '—';
+        return formatNepalDateTime(booking.date);
     };
 
-    const getTime = (booking) => {
-        const startTime =
-            booking?.startTime ||
-            booking?.slot?.startTime;
-
-        const endTime =
-            booking?.endTime ||
-            booking?.slot?.endTime;
-
-        if (!startTime) {
-            return 'Time unavailable';
-        }
-
-        return endTime
-            ? `${startTime} – ${endTime}`
-            : startTime;
-    };
+    const getTime = (booking) =>
+        displayValue(booking?.timeSlot);
 
     return (
         <section className="overflow-hidden rounded-xl bg-white shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
@@ -429,6 +222,13 @@ export default function MyBookingsCard({
                         </p>
                     </div>
                 </div>
+            ) : error ? (
+                <div className="px-5 py-16 text-center sm:px-6">
+                    <h3 className="text-base font-bold text-slate-900">Unable to load bookings</h3>
+                    <p className="mx-auto mt-2 max-w-md text-xs font-medium leading-5 text-rose-600 sm:text-sm">
+                        {error}
+                    </p>
+                </div>
             ) : totalItems === 0 ? (
                 <div className="px-5 py-16 text-center sm:px-6">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
@@ -463,39 +263,31 @@ export default function MyBookingsCard({
                 <>
                     {/* Desktop Table */}
                     <div className="hidden overflow-x-auto lg:block">
-                        <table className="w-full table-fixed border-collapse">
-                            <colgroup>
-                                <col className="w-[12%]" />
-                                <col className="w-[24%]" />
-                                <col className="w-[14%]" />
-                                <col className="w-[18%]" />
-                                <col className="w-[10%]" />
-                                <col className="w-[10%]" />
-                            </colgroup>
+                        <table className="w-full table-auto border-collapse">
 
                             <thead>
                                 <tr className="border-b border-slate-100 bg-slate-50/70">
-                                    <th className="px-6 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Booking ID
                                     </th>
 
-                                    <th className="px-4 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Venue
                                     </th>
 
-                                    <th className="px-4 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Schedule
                                     </th>
 
-                                    <th className="px-4 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Payment
                                     </th>
 
-                                    <th className="px-4 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Status
                                     </th>
 
-                                    <th className="px-6 py-3.5 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <th className="px-5 py-3.5 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                                         Action
                                     </th>
                                 </tr>
@@ -504,9 +296,7 @@ export default function MyBookingsCard({
                             <tbody className="divide-y divide-slate-100">
                                 {visibleBookings.map((booking) => {
                                     const bookingKey =
-                                        booking?._id ||
-                                        booking?.id ||
-                                        getBookingId(booking);
+                                        booking?._id || booking?.bookingId;
 
                                     const turfName =
                                         getTurfName(booking);
@@ -540,15 +330,15 @@ export default function MyBookingsCard({
                       "
                                         >
                                             {/* 1. Booking ID */}
-                                            <td className="px-6 py-5 align-middle">
-                                                <p className="truncate text-[13px] font-extrabold tracking-tight text-lime-700">
+                                            <td className="px-5 py-5 align-middle">
+                                                <p className="truncate text-sm font-extrabold tracking-tight text-lime-700">
                                                     {formatBookingId(booking)}
                                                 </p>
                                             </td>
 
                                             {/* 2. Venue */}
-                                            <td className="px-4 py-5 align-middle">
-                                                <div className="flex min-w-0 items-center gap-3">
+                                            <td className="py-5 flex max-w-full align-middle">
+                                                <div className="flex items-center gap-3">
                                                     <div
                                                         className="
                               h-12
@@ -573,12 +363,12 @@ export default function MyBookingsCard({
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <p className="truncate text-[13px] font-extrabold text-slate-900">
+                                                        <p className="truncate text-sm font-extrabold text-slate-900">
                                                             {turfName}
                                                         </p>
 
                                                         {courtName && (
-                                                            <p className="mt-1 truncate text-[11px] font-medium text-slate-500">
+                                                            <p className="mt-1 truncate text-xs font-medium text-slate-500">
                                                                 {courtName}
                                                             </p>
                                                         )}
@@ -587,23 +377,23 @@ export default function MyBookingsCard({
                                             </td>
 
                                             {/* 3. Schedule */}
-                                            <td className="px-4 py-5 align-middle">
+                                            <td className="py-5 align-middle">
                                                 <div className="min-w-0">
-                                                    <p className="truncate text-[12px] font-bold text-slate-900">
+                                                    <p className="truncate text-sm font-bold text-slate-900">
                                                         {getDate(booking)}
                                                     </p>
 
-                                                    <p className="mt-1.5 truncate text-[11px] font-medium text-slate-500">
+                                                    <p className="mt-1.5 truncate text-xs font-medium text-slate-500">
                                                         {getTime(booking)}
                                                     </p>
                                                 </div>
                                             </td>
 
                                             {/* 4. Payment */}
-                                            <td className="px-4 py-5 align-middle">
+                                            <td className="py-5 align-middle">
                                                 <div className="min-w-0">
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="whitespace-nowrap text-[13px] font-extrabold text-slate-900">
+                                                        <p className="whitespace-nowrap text-sm font-extrabold text-slate-900">
                                                             {getAmount(booking)}
                                                         </p>
 
@@ -616,7 +406,7 @@ export default function MyBookingsCard({
                                   rounded-full
                                   px-2
                                   py-1
-                                  text-[10px]
+                                  text-[11px]
                                   font-bold
                                   ${getPaymentStatusStyles(
                                                                     paymentStatus
@@ -634,7 +424,7 @@ export default function MyBookingsCard({
                                                         depositAmount !== null) && (
                                                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                                                                 {dueAmount !== null && (
-                                                                    <span className="whitespace-nowrap text-[10px] font-semibold text-orange-600">
+                                                                    <span className="whitespace-nowrap text-[11px] font-semibold text-orange-600">
                                                                         Due{' '}
                                                                         {formatCurrency(
                                                                             dueAmount
@@ -643,7 +433,7 @@ export default function MyBookingsCard({
                                                                 )}
 
                                                                 {depositAmount !== null && (
-                                                                    <span className="whitespace-nowrap text-[10px] font-semibold text-emerald-600">
+                                                                    <span className="whitespace-nowrap text-[11px] font-semibold text-emerald-600">
                                                                         Deposit{' '}
                                                                         {formatCurrency(
                                                                             depositAmount
@@ -656,7 +446,7 @@ export default function MyBookingsCard({
                                             </td>
 
                                             {/* 5. Status */}
-                                            <td className="px-4 py-5 align-middle">
+                                            <td className="py-5 align-middle">
                                                 <span
                                                     className={`
                             inline-flex
@@ -664,7 +454,7 @@ export default function MyBookingsCard({
                             rounded-full
                             px-2.5
                             py-1.5
-                            text-[10px]
+                            text-[11px]
                             font-bold
                             capitalize
                             ${getStatusStyles(
@@ -672,13 +462,12 @@ export default function MyBookingsCard({
                                                     )}
                           `}
                                                 >
-                                                    {booking?.status ||
-                                                        'Pending'}
+                                                    {displayValue(booking?.status)}
                                                 </span>
                                             </td>
 
                                             {/* 6. Action */}
-                                            <td className="px-6 py-5 align-middle">
+                                            <td className="px-5 py-5 align-middle">
                                                 <div className="flex justify-end">
                                                     <button
                                                         type="button"
@@ -697,19 +486,13 @@ export default function MyBookingsCard({
                               gap-1.5
                               whitespace-nowrap
                               rounded-lg
-                              bg-lime-400
-                              px-3.5
-                              py-2
-                              text-xs
+                              text-sm
                               font-bold
-                              text-slate-900
+                              text-lime-500
                               transition-colors
-                              hover:bg-lime-500
                             "
                                                     >
-                                                        <Eye className="h-3.5 w-3.5" />
-
-                                                        View Details
+                                                        View
                                                     </button>
                                                 </div>
                                             </td>
@@ -724,9 +507,7 @@ export default function MyBookingsCard({
                     <div className="divide-y divide-slate-100 lg:hidden">
                         {visibleBookings.map((booking) => {
                             const bookingKey =
-                                booking?._id ||
-                                booking?.id ||
-                                getBookingId(booking);
+                                booking?._id || booking?.bookingId;
 
                             const turfName =
                                 getTurfName(booking);
@@ -753,7 +534,7 @@ export default function MyBookingsCard({
                                 >
                                     {/* Booking ID + Status */}
                                     <div className="flex items-center justify-between gap-4">
-                                        <p className="truncate text-[12px] font-extrabold tracking-tight text-lime-700">
+                                        <p className="truncate text-sm font-extrabold tracking-tight text-lime-700">
                                             {formatBookingId(booking)}
                                         </p>
 
@@ -763,7 +544,7 @@ export default function MyBookingsCard({
                         rounded-full
                         px-2.5
                         py-1
-                        text-[10px]
+                        text-[11px]
                         font-bold
                         capitalize
                         ${getStatusStyles(
@@ -771,8 +552,7 @@ export default function MyBookingsCard({
                                             )}
                       `}
                                         >
-                                            {booking?.status ||
-                                                'Pending'}
+                                            {displayValue(booking?.status)}
                                         </span>
                                     </div>
 
@@ -802,12 +582,12 @@ export default function MyBookingsCard({
                                         </div>
 
                                         <div className="min-w-0">
-                                            <h3 className="truncate text-sm font-extrabold text-slate-900">
+                                            <h3 className="truncate text-base font-extrabold text-slate-900">
                                                 {turfName}
                                             </h3>
 
                                             {courtName && (
-                                                <p className="mt-1 truncate text-xs font-medium text-slate-500">
+                                                <p className="mt-1 truncate text-sm font-medium text-slate-500">
                                                     {courtName}
                                                 </p>
                                             )}
@@ -817,26 +597,26 @@ export default function MyBookingsCard({
                                     {/* Schedule + Payment */}
                                     <div className="mt-4 grid grid-cols-2 gap-3">
                                         <div className="rounded-lg bg-slate-50 p-3">
-                                            <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                                                 Schedule
                                             </p>
 
-                                            <p className="mt-1.5 text-[11px] font-bold text-slate-900">
+                                            <p className="mt-1.5 text-sm font-bold text-slate-900">
                                                 {getDate(booking)}
                                             </p>
 
-                                            <p className="mt-1 text-[10px] font-medium text-slate-500">
+                                            <p className="mt-1 text-xs font-medium text-slate-500">
                                                 {getTime(booking)}
                                             </p>
                                         </div>
 
                                         <div className="rounded-lg bg-slate-50 p-3">
-                                            <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                                                 Payment
                                             </p>
 
                                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                                                <p className="text-[11px] font-extrabold text-slate-900">
+                                                <p className="text-sm font-extrabold text-slate-900">
                                                     {getAmount(booking)}
                                                 </p>
 
@@ -846,7 +626,7 @@ export default function MyBookingsCard({
                               rounded-full
                               px-1.5
                               py-0.5
-                              text-[9px]
+                              text-[10px]
                               font-bold
                               ${getPaymentStatusStyles(
                                                             paymentStatus
@@ -864,7 +644,7 @@ export default function MyBookingsCard({
                                                 depositAmount !== null) && (
                                                     <div className="mt-1.5 space-y-0.5">
                                                         {dueAmount !== null && (
-                                                            <p className="text-[9px] font-semibold text-orange-600">
+                                                            <p className="text-[10px] font-semibold text-orange-600">
                                                                 Due{' '}
                                                                 {formatCurrency(
                                                                     dueAmount
@@ -873,7 +653,7 @@ export default function MyBookingsCard({
                                                         )}
 
                                                         {depositAmount !== null && (
-                                                            <p className="text-[9px] font-semibold text-emerald-600">
+                                                            <p className="text-[10px] font-semibold text-emerald-600">
                                                                 Deposit{' '}
                                                                 {formatCurrency(
                                                                     depositAmount
@@ -903,7 +683,7 @@ export default function MyBookingsCard({
                       bg-lime-400
                       px-4
                       py-2.5
-                      text-xs
+                      text-sm
                       font-bold
                       text-slate-900
                       transition-colors
