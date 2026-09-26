@@ -8,22 +8,22 @@ export default function PreferencesForm({ user, onUpdatePreferences }) {
 
   const [preferences, setPreferences] = useState({
     notifications: {
-      email: user?.notifications?.email ?? true,
+      email: Boolean(user?.notifications?.email),
     },
-    preferredLocation: user?.preferredLocation || user?.city || 'Kathmandu',
-    theme: user?.theme || 'light',
-    language: user?.language || 'en',
+    preferredLocation: user?.preferredLocation ?? '',
+    theme: user?.theme ?? '',
+    language: user?.language ?? '',
   });
 
   useEffect(() => {
     if (user) {
       setPreferences({
         notifications: {
-          email: user.notifications?.email ?? true,
+          email: Boolean(user.notifications?.email),
         },
-        preferredLocation: user.preferredLocation || user.city || 'Kathmandu',
-        theme: user.theme || 'light',
-        language: user.language || 'en',
+        preferredLocation: user.preferredLocation ?? '',
+        theme: user.theme ?? '',
+        language: user.language ?? '',
       });
     }
   }, [user]);

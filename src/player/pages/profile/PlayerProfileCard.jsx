@@ -18,29 +18,13 @@ export default function PlayerProfileCard({
     useState(null);
 
   const buildFormData = (source) => ({
-    position:
-      source?.primaryPosition ||
-      source?.position ||
-      'Midfielder',
-
-    skillLevel:
-      source?.skillLevel ||
-      'Weekend Warrior',
-
-    playingStyle: Array.isArray(
-      source?.playingStyle
-    )
+    primaryPosition: source?.primaryPosition ?? '',
+    skillLevel: source?.skillLevel ?? '',
+    playingStyle: Array.isArray(source?.playingStyle)
       ? source.playingStyle
-      : ['Playmaker', 'Team Player'],
-
-    matchType:
-      source?.preferredMatchType ||
-      source?.matchType ||
-      '5v5',
-
-    playFrequency:
-      source?.playFrequency ||
-      '2-3 times/per week',
+      : [],
+    preferredMatchType: source?.preferredMatchType ?? '',
+    playFrequency: source?.playFrequency ?? '',
   });
 
   const [formData, setFormData] = useState(() =>
@@ -148,7 +132,13 @@ export default function PlayerProfileCard({
     try {
       setIsSaving(true);
 
-      const res = await onUpdateProfile(formData);
+      const changedFields = Object.fromEntries(
+        Object.entries(formData).filter(([key, value]) =>
+          JSON.stringify(value) !== JSON.stringify(initialFormData?.[key])
+        )
+      );
+
+      const res = await onUpdateProfile(changedFields);
 
       if (res.success) {
         showToast(
@@ -270,7 +260,7 @@ export default function PlayerProfileCard({
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
           {positions.map((position) => {
             const isSelected =
-              formData.position === position;
+              formData.primaryPosition === position;
 
             return (
               <button
@@ -279,7 +269,7 @@ export default function PlayerProfileCard({
                 onClick={() =>
                   setFormData((prev) => ({
                     ...prev,
-                    position,
+                    primaryPosition: position,
                   }))
                 }
                 className={`
@@ -409,7 +399,7 @@ export default function PlayerProfileCard({
           <div className="grid grid-cols-3 gap-2">
             {matchTypes.map((type) => {
               const isSelected =
-                formData.matchType === type;
+                formData.preferredMatchType === type;
 
               return (
                 <button
@@ -418,7 +408,7 @@ export default function PlayerProfileCard({
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      matchType: type,
+                      preferredMatchType: type,
                     }))
                   }
                   className={`

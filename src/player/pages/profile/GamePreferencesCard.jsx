@@ -7,32 +7,22 @@ export default function GamePreferencesCard({ user, onUpdateProfile }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const formatTravelDistance = (val) => {
-    if (typeof val === 'number') return `${val}km`;
-    if (typeof val === 'string' && val.trim()) {
-      if (val.endsWith('km') || val.endsWith('km+')) return val;
-      return `${val}km`;
-    }
-    return '5km';
-  };
-
-  const [formData, setFormData] = useState({
-    preferredTime: user?.preferredTime || ['Evening'],
-    travelDistance: formatTravelDistance(user?.travelPreference || user?.travelDistance),
-    weeklyAvailability: user?.weeklyAvailability || ['Fri', 'Sat'],
-    gameVibe: Array.isArray(user?.gameVibe) ? user.gameVibe[0] || 'Friendly' : user?.gameVibe || 'Friendly',
-    fitnessLevel: user?.fitnessLevel || 3,
+  const buildFormData = (source) => ({
+    preferredTime: Array.isArray(source?.preferredTime) ? source.preferredTime : [],
+    travelPreference: source?.travelPreference ?? '',
+    weeklyAvailability: Array.isArray(source?.weeklyAvailability) ? source.weeklyAvailability : [],
+    gameVibe: Array.isArray(source?.gameVibe) ? source.gameVibe[0] ?? '' : '',
+    fitnessLevel: source?.fitnessLevel ?? '',
   });
+
+  const [formData, setFormData] = useState(() => buildFormData(user));
+  const [initialFormData, setInitialFormData] = useState(() => buildFormData(user));
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        preferredTime: Array.isArray(user.preferredTime) ? user.preferredTime : ['Evening'],
-        travelDistance: formatTravelDistance(user.travelPreference || user.travelDistance),
-        weeklyAvailability: Array.isArray(user.weeklyAvailability) ? user.weeklyAvailability : ['Fri', 'Sat'],
-        gameVibe: Array.isArray(user.gameVibe) ? user.gameVibe[0] || 'Friendly' : user.gameVibe || 'Friendly',
-        fitnessLevel: user.fitnessLevel || 3,
-      });
+      const next = buildFormData(user);
+      setFormData(next);
+      setInitialFormData(next);
     }
   }, [user]);
 
@@ -77,7 +67,20 @@ export default function GamePreferencesCard({ user, onUpdateProfile }) {
 
     try {
       setIsSaving(true);
-      const res = await onUpdateProfile(formData);
+      const changedFields = Object.fromEntries(
+        Object.entries(formData).filter(([key, value]) =>
+          JSON.stringify(value) !== JSON.stringify(initialFormData?.[key])
+        )
+      );
+
+      if ('travelPreference' in changedFields) {
+        changedFields.travelPreference = Number(changedFields.travelPreference);
+      }
+      if ('gameVibe' in changedFields) {
+        changedFields.gameVibe = changedFields.gameVibe ? [changedFields.gameVibe] : [];
+      }
+
+      const res = await onUpdateProfile(changedFields);
       if (res.success) {
         showToast('Game preferences & schedule updated successfully!', 'success');
         setIsEditing(false);
@@ -193,13 +196,13 @@ export default function GamePreferencesCard({ user, onUpdateProfile }) {
           </label>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
             {travelDistances.map((dist) => {
-              const isSelected = formData.travelDistance === dist;
+              const isSelected = String(formData.travelPreference) === dist.replace('km+', '').replace('km', '');
               return (
                 <button
                   key={dist}
                   type="button"
                   disabled={!isEditing}
-                  onClick={() => isEditing && setFormData({ ...formData, travelDistance: dist })}
+                  onClick={() => isEditing && setFormData({ ...formData, travelPreference: Number(dist.replace('km+', '').replace('km', '')) })}
                   className={`px-3 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all text-center ${
                     isSelected
                       ? 'bg-lime-400 text-slate-900 shadow-2xs'
@@ -251,7 +254,7 @@ export default function GamePreferencesCard({ user, onUpdateProfile }) {
             <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2 flex items-center justify-between">
               <span>Fitness Level</span>
               <span className="text-[11px] font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
-                Level {formData.fitnessLevel} / 5
+                {formData.fitnessLevel ? `Level ${formData.fitnessLevel} / 5` : 'Not set'}
               </span>
             </label>
             <div className="flex items-center gap-2 pt-1">
