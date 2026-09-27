@@ -7,19 +7,18 @@ import {
   CircleDot,
   CheckCircle2,
   Wrench,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
   Eye,
   Edit2,
   X,
   Building2,
-  ArrowUpRight,
   MoreHorizontal,
   Upload,
   Trash2,
 } from 'lucide-react';
 import turfService from '../../../shared/services/turfService';
 import { useToast } from '../../../shared/components/common/toastContext';
+import StatCards from '../../components/dashboard/StatCards';
 
 const DIMENSION_PRESETS = [
   { label: 'Standard 5v5 (25m x 15m)', value: '25m x 15m (Standard 5v5)', length: 25, width: 15, matchType: '5v5' },
@@ -36,6 +35,43 @@ const SURFACE_OPTIONS = [
   'Natural Grass Surface',
   'Indoor Wooden / Hardcourt',
 ];
+
+const STATUS_STYLES = {
+  Available: 'bg-lime-50 text-lime-700',
+  'In Use': 'bg-blue-50 text-blue-600',
+  Maintenance: 'bg-rose-50 text-rose-600',
+};
+
+function StatusBadge({ status }) {
+  const Icon = status === 'Available' ? CheckCircle2 : status === 'In Use' ? CircleDot : status === 'Maintenance' ? Wrench : null;
+  return (
+    <span
+      className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[status] || 'bg-slate-100 text-slate-600'
+        }`}
+    >
+      {Icon && <Icon size={12} className={status === 'In Use' ? 'animate-pulse' : ''} />}
+      {status}
+    </span>
+  );
+}
+
+function FilterSelect({ value, onChange, children }) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-8 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus:outline-none"
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={13}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+    </div>
+  );
+}
 
 function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
   const { showToast } = useToast();
@@ -103,7 +139,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
             setCourts(turfs[0].courts);
           }
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [venue, user?._id, user?.id]);
 
@@ -321,35 +357,6 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Available':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 w-fit">
-            <CheckCircle2 size={13} /> Available
-          </span>
-        );
-      case 'In Use':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 w-fit">
-            <CircleDot size={13} className="animate-pulse" /> In Use
-          </span>
-        );
-      case 'Maintenance':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-600 w-fit">
-            <Wrench size={13} /> Maintenance
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 w-fit">
-            {status}
-          </span>
-        );
-    }
-  };
-
   const filteredCourts = courts.filter((c) => {
     const matchesSearch =
       (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -369,34 +376,27 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
     {
       title: 'Total Registered Courts',
       value: `${courts.length} ${courts.length === 1 ? 'Court' : 'Courts'}`,
-      change: 'Active',
-      period: 'venue capacity',
-      icon: Building2,
-      iconBg: 'bg-emerald-50 text-emerald-600',
+      subtext: 'Venue capacity',
+      showTrendArrow: false,
     },
     {
       title: 'Available for Booking',
       value: `${availableCount} ${availableCount === 1 ? 'Pitch' : 'Pitches'}`,
       change: `${courts.length ? Math.round((availableCount / courts.length) * 100) : 0}%`,
-      period: 'ready for kickoff',
-      icon: CircleDot,
-      iconBg: 'bg-blue-50 text-blue-600',
+      subtext: 'Ready for kickoff',
+      showTrendArrow: false,
     },
     {
       title: 'Average Hourly Rate',
       value: `NRs. ${avgRate.toLocaleString('en-NP')}`,
-      change: 'Standard',
-      period: 'per 60 min session',
-      icon: ArrowUpRight,
-      iconBg: 'bg-purple-50 text-purple-600',
+      subtext: 'Per 60 min session',
+      showTrendArrow: false,
     },
     {
       title: 'Pitch Maintenance Status',
       value: maintenanceCount > 0 ? `${maintenanceCount} Under Repair` : 'All Optimal',
-      change: `${maintenanceCount} Pitches`,
-      period: 'maintenance log',
-      icon: Wrench,
-      iconBg: maintenanceCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600',
+      subtext: 'Maintenance log',
+      showTrendArrow: false,
     },
   ];
 
@@ -406,355 +406,338 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
 
   return (
     <>
-      <div className="flex flex-col h-screen bg-[#f3f5fc] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
+      <div className="relative flex h-screen flex-col overflow-hidden bg-[#fdfefe] font-sans text-slate-900 antialiased select-none">
         <TopBar user={user} venue={currentVenue} setActiveTab={setActiveTab} onLogout={onLogout} />
 
-        <div className="flex flex-1 min-h-0 relative">
-          <div className="absolute top-[45%] right-[35%] w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[160px] pointer-events-none" />
-
+        <div className="relative flex min-h-0 flex-1">
           <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />
 
-          <div className="flex-1 flex flex-col min-w-0 backdrop-blur-md overflow-hidden relative z-10">
-            <main className="flex-1 overflow-y-auto space-y-4 scrollbar-thin p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    Futsal Courts & Pitches
-                  </h1>
-                  <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">
-                    Manage {currentVenue?.name || 'Venue'} numbered courts, dimensions, pitch specifications, and photos.
-                  </p>
+          <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="scrollbar-thin flex-1 overflow-y-auto">
+              <div className="mx-auto w-full space-y-6 px-5 py-6 md:px-6 md:py-7 xl:px-7">
+                {/* Header */}
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                      Futsal Courts &amp; Pitches
+                    </h1>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      Manage {currentVenue?.name || 'Venue'} courts, dimensions, pitch specifications, and photos.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenAddModal}
+                    className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full bg-lime-400 px-5 py-3 text-xs font-bold text-slate-900 transition-colors hover:bg-lime-500"
+                  >
+                    <Plus size={14} />
+                    Add New Pitch
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleOpenAddModal}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
-                >
-                  <Plus size={15} />
-                  <span>Add New Pitch</span>
-                </button>
-              </div>
+                {/* Stat Cards */}
+                <StatCards stats={stats} />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat) => {
-                  const Icon = stat.icon;
-                  return (
-                    <div
-                      key={stat.title}
-                      className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-5 relative flex flex-col justify-between shadow-xs hover:shadow-md hover:bg-white/80 transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-3.5 rounded-2xl shrink-0 ${stat.iconBg}`}>
-                            <Icon size={20} />
-                          </div>
-                          <div>
-                            <span className="text-[12px] font-semibold text-slate-400 block leading-tight">
-                              {stat.title}
-                            </span>
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
-                              {stat.value}
-                            </h3>
-                          </div>
-                        </div>
-                        <button className="text-slate-400 hover:text-slate-700 p-1 -mr-1 -mt-1 transition-colors">
-                          <MoreHorizontal size={16} />
+                {/* Table */}
+                <div className="min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                  {/* Toolbar */}
+                  <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative w-full sm:max-w-sm">
+                      <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        placeholder="Search court name, dimension, turf..."
+                        className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:border-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-100"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {['All', 'Available', 'In Use', 'Maintenance'].map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(status);
+                            setCurrentPage(1);
+                          }}
+                          className={`whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${statusFilter === status
+                            ? 'bg-lime-400 text-slate-900'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                          <th className="px-4 py-3">Court ID</th>
+                          <th className="px-4 py-3">Pitch Name &amp; Photo</th>
+                          <th className="px-4 py-3">Dimensions</th>
+                          <th className="px-4 py-3">Surface / Material</th>
+                          <th className="px-4 py-3">Hourly Rate</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loading ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                              Loading court specifications...
+                            </td>
+                          </tr>
+                        ) : paginatedCourts.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                              No courts found matching your search. Click &quot;Add New Pitch&quot; to add one.
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedCourts.map((court, index) => {
+                            const displayId = `CRT-${String(court.courtNumber || index + 1).padStart(2, '0')}`;
+                            const courtImg =
+                              court.image ||
+                              (court.images && court.images[0]) ||
+                              'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
+                            return (
+                              <tr key={court._id || court.id || index} className="border-b border-slate-50 hover:bg-slate-50/70">
+                                <td className="px-4 py-3.5 font-bold text-slate-700">{displayId}</td>
+                                <td className="px-4 py-3.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <img
+                                      src={courtImg}
+                                      alt={court.name}
+                                      className="h-9 w-12 shrink-0 rounded-lg border border-slate-100 object-cover"
+                                    />
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-slate-900">{court.name}</span>
+                                        {court.isConfigured ? (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-lime-50 px-2 py-0.5 text-[10px] font-extrabold text-lime-700">
+                                            <CheckCircle2 size={10} /> Configured
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                                            Setup Needed
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] text-slate-400">{court.matchType || '5v5'} Standard</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                                    {court.dimension || `${court.length || 25}m x ${court.width || 15}m`}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3.5 text-slate-500">{court.surface || 'FIFA Quality Synthetic Turf'}</td>
+                                <td className="px-4 py-3.5 font-bold text-slate-900">
+                                  {`NRs. ${Number(court.hourlyRate || currentVenue?.pricePerHour || 1200).toLocaleString('en-NP')} / hr`}
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <StatusBadge status={court.status} />
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      title="View Details"
+                                      onClick={() => setSelectedCourt(court)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                    >
+                                      <Eye size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Edit Pitch & Upload Photo"
+                                      onClick={() => handleOpenEditModal(court)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lime-600 hover:bg-lime-50"
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Delete Pitch"
+                                      onClick={() => handleDeleteCourt(court._id, court.name)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-500 hover:bg-rose-50"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex flex-col gap-3 border-t border-slate-100 p-4 text-xs font-medium text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                    <span>
+                      Showing {filteredCourts.length === 0 ? 0 : startIndex + 1}–
+                      {Math.min(startIndex + itemsPerPage, filteredCourts.length)} of {filteredCourts.length}{' '}
+                      {filteredCourts.length === 1 ? 'court' : 'courts'}
+                    </span>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          ‹
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .slice(0, 5)
+                          .map((page) => (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => setCurrentPage(page)}
+                              className={`rounded-lg px-3 py-1.5 font-bold ${currentPage === page
+                                ? 'bg-lime-400 text-slate-900'
+                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                          className="rounded-lg border border-slate-200 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          ›
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <span className="text-emerald-600 bg-emerald-50/80 px-1.5 py-1 rounded-md flex items-center gap-0.5 font-bold">
-                          <ArrowUpRight size={12} /> {stat.change}
-                        </span>
-                        <span className="text-slate-400 font-medium">{stat.period}</span>
+                      <div className="flex items-center gap-2">
+                        <span>Rows per page</span>
+                        <FilterSelect
+                          value={String(itemsPerPage)}
+                          onChange={(value) => {
+                            setItemsPerPage(Number(value));
+                            setCurrentPage(1);
+                          }}
+                        >
+                          <option value="5">5</option>
+                          <option value="10">10</option>
+                          <option value="20">20</option>
+                        </FilterSelect>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-xs hover:shadow-md transition-all">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-                  <div className="relative w-full md:w-80">
-                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search court name, dimension, turf..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full pl-10 pr-4 py-3 rounded-full bg-white/80 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto py-0.5">
-                    {['All', 'Available', 'In Use', 'Maintenance'].map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          setStatusFilter(status);
-                          setCurrentPage(1);
-                        }}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                          statusFilter === status
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-white/80 text-slate-600 hover:bg-white border border-slate-200/80'
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
-                    <thead>
-                      <tr className="text-xs font-bold text-slate-400 border-b border-slate-100 uppercase tracking-wider whitespace-nowrap">
-                        <th className="pb-3 pr-4">Court ID</th>
-                        <th className="pb-3 pr-4">Pitch Name & Photo</th>
-                        <th className="pb-3 pr-4">Dimensions</th>
-                        <th className="pb-3 pr-4">Surface / Material</th>
-                        <th className="pb-3 pr-4">Hourly Rate</th>
-                        <th className="pb-3 pr-4">Status</th>
-                        <th className="pb-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100/60 text-sm whitespace-nowrap">
-                      {loading ? (
-                        <tr>
-                          <td colSpan={7} className="py-10 text-center text-slate-400 text-xs font-medium">
-                            Loading court specifications...
-                          </td>
-                        </tr>
-                      ) : paginatedCourts.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="py-10 text-center text-slate-400 text-xs font-medium">
-                            No courts found matching your search. Click "Add New Pitch" to add one.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedCourts.map((court, index) => {
-                          const displayId = `CRT-${String(court.courtNumber || index + 1).padStart(2, '0')}`;
-                          const courtImg = court.image || (court.images && court.images[0]) || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
-                          return (
-                            <tr key={court._id || court.id || index} className="hover:bg-white/40 transition-colors whitespace-nowrap">
-                              <td className="py-3.5 pr-4 font-bold text-emerald-600 text-sm whitespace-nowrap">
-                                {displayId}
-                              </td>
-                              <td className="py-3.5 pr-4 whitespace-nowrap">
-                                <div className="flex items-center gap-3">
-                                  <img
-                                    src={courtImg}
-                                    alt={court.name}
-                                    className="w-12 h-10 rounded-xl object-cover border border-white shadow-2xs shrink-0"
-                                  />
-                                  <div className="whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{court.name}</h4>
-                                      {court.isConfigured ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
-                                          <CheckCircle2 size={10} /> Configured
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
-                                          Setup Needed
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
-                                      {court.matchType || '5v5'} Standard
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3.5 pr-4 whitespace-nowrap">
-                                <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold">
-                                  {court.dimension || `${court.length || 25}m x ${court.width || 15}m`}
-                                </span>
-                              </td>
-                              <td className="py-3.5 pr-4 text-xs font-medium text-slate-600 whitespace-nowrap">
-                                {court.surface || 'FIFA Quality Synthetic Turf'}
-                              </td>
-                              <td className="py-3.5 pr-4 font-black text-slate-900 text-sm whitespace-nowrap">
-                                NRs. {Number(court.hourlyRate || currentVenue?.pricePerHour || 1200).toLocaleString('en-NP')} / hr
-                              </td>
-                              <td className="py-3.5 pr-4 whitespace-nowrap">
-                                {getStatusBadge(court.status)}
-                              </td>
-                              <td className="py-3.5 text-right whitespace-nowrap">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button
-                                    title="View Details"
-                                    onClick={() => setSelectedCourt(court)}
-                                    className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-2xs"
-                                  >
-                                    <Eye size={14} />
-                                  </button>
-                                  <button
-                                    title="Edit Pitch & Upload Photo"
-                                    onClick={() => handleOpenEditModal(court)}
-                                    className="p-1.5 rounded-xl border border-slate-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-2xs"
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button
-                                    title="Delete Pitch"
-                                    onClick={() => handleDeleteCourt(court._id, court.name)}
-                                    className="p-1.5 rounded-xl border border-slate-200 text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all shadow-2xs"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3.5 border-t border-slate-100/60 text-xs text-slate-500 font-medium select-none">
-                  <div className="flex items-center gap-3">
-                    <span>
-                      Showing <strong className="text-slate-900 font-bold">{filteredCourts.length === 0 ? 0 : startIndex + 1}</strong> to{' '}
-                      <strong className="text-slate-900 font-bold">{Math.min(startIndex + itemsPerPage, filteredCourts.length)}</strong> of{' '}
-                      <strong className="text-slate-900 font-bold">{filteredCourts.length}</strong> entries
-                    </span>
-
-                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                      <span>Rows:</span>
-                      <select
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                          setItemsPerPage(Number(e.target.value));
-                          setCurrentPage(1);
-                        }}
-                        className="px-2 py-1 rounded-lg bg-white/80 border border-slate-200 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronLeft size={15} />
-                    </button>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
-                          currentPage === page
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronRight size={15} />
-                    </button>
                   </div>
                 </div>
               </div>
-            </main>
-          </div>
+            </div>
+          </main>
         </div>
       </div>
 
+      {/* VIEW DETAILS MODAL */}
       {selectedCourt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/80 w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="p-5 pb-4 border-b border-slate-100 flex items-center justify-between bg-white/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-lg text-slate-900 tracking-tight">{selectedCourt.name}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                <span className="text-base font-extrabold text-slate-900">{selectedCourt.name}</span>
+                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
                   Court #{selectedCourt.courtNumber || 1} • {currentVenue?.name || 'Turfio Arena'}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {getStatusBadge(selectedCourt.status)}
+                <StatusBadge status={selectedCourt.status} />
                 <button
+                  type="button"
                   onClick={() => setSelectedCourt(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors ml-1"
+                  className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                 >
                   <X size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
+            <div className="space-y-4 p-5 text-xs">
               <img
-                src={selectedCourt.image || (selectedCourt.images && selectedCourt.images[0]) || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80'}
+                src={
+                  selectedCourt.image ||
+                  (selectedCourt.images && selectedCourt.images[0]) ||
+                  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80'
+                }
                 alt={selectedCourt.name}
-                className="w-full h-44 rounded-2xl object-cover border border-white shadow-2xs"
+                className="h-44 w-full rounded-xl border border-slate-100 object-cover"
               />
 
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Standard Rate</span>
-                  <p className="font-black text-sm text-slate-900">NRs. {Number(selectedCourt.hourlyRate || currentVenue?.pricePerHour || 1200).toLocaleString('en-NP')} / hr</p>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard Rate</span>
+                  <p className="mt-1 text-sm font-extrabold text-slate-900">
+                    NRs. {Number(selectedCourt.hourlyRate || currentVenue?.pricePerHour || 1200).toLocaleString('en-NP')} / hr
+                  </p>
                 </div>
-                <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-100/60 space-y-1">
-                  <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Peak Tariff</span>
-                  <p className="font-black text-sm text-slate-900">NRs. {Number(selectedCourt.peakRate || Math.round((selectedCourt.hourlyRate || 1200) * 1.25)).toLocaleString('en-NP')} / hr</p>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Peak Tariff</span>
+                  <p className="mt-1 text-sm font-extrabold text-slate-900">
+                    NRs. {Number(selectedCourt.peakRate || Math.round((selectedCourt.hourlyRate || 1200) * 1.25)).toLocaleString('en-NP')} / hr
+                  </p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white border border-slate-100 space-y-2 shadow-2xs">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Pitch Dimensions</span>
-                  <span className="font-bold text-slate-900">{selectedCourt.dimension || `${selectedCourt.length || 25}m x ${selectedCourt.width || 15}m`}</span>
+              <div className="space-y-2 rounded-xl border border-slate-100 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-400">Pitch Dimensions</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedCourt.dimension || `${selectedCourt.length || 25}m x ${selectedCourt.width || 15}m`}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Surface Material</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-400">Surface Material</span>
                   <span className="font-bold text-slate-900">{selectedCourt.surface || 'FIFA Quality Synthetic Turf'}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Match Format</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-400">Match Format</span>
                   <span className="font-bold text-slate-900">{selectedCourt.matchType || '5v5'}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-semibold">Lighting Setup</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-400">Lighting Setup</span>
                   <span className="font-bold text-slate-900">{selectedCourt.lighting || 'LED Floodlights (500 Lux)'}</span>
                 </div>
               </div>
 
-              <div className="pt-1 flex items-center gap-2">
+              <div className="flex items-center gap-2 pt-1">
                 <button
+                  type="button"
                   onClick={() => {
                     const c = selectedCourt;
                     setSelectedCourt(null);
                     handleOpenEditModal(c);
                   }}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all text-xs flex items-center justify-center gap-1.5"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
                 >
                   <Edit2 size={13} />
-                  <span>Edit Pitch Specs</span>
+                  Edit Pitch Specs
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedCourt(null)}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-xs text-xs"
+                  className="flex-1 rounded-xl bg-lime-400 py-2.5 text-xs font-bold text-slate-900 hover:bg-lime-500"
                 >
                   Close
                 </button>
@@ -764,43 +747,43 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
         </div>
       )}
 
+      {/* ADD PITCH MODAL */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
-                <h3 className="font-black text-base text-slate-900">Add New Pitch / Court</h3>
-                <p className="text-[11px] text-slate-400 font-medium">Add a new court with specifications and picture</p>
+                <h3 className="text-base font-extrabold text-slate-900">Add New Pitch / Court</h3>
+                <p className="text-[11px] font-medium text-slate-400">Add a new court with specifications and picture</p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleAddSubmit} className="max-h-[75vh] space-y-4 overflow-y-auto p-5 text-xs">
               {formError && (
-                <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold">
-                  {formError}
-                </div>
+                <div className="rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700">{formError}</div>
               )}
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Pitch Name</label>
+              <label className="block text-xs font-bold text-slate-700">
+                Pitch Name
                 <input
                   type="text"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   placeholder="e.g. Court 3 or Rooftop Pro Pitch"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:border-lime-400"
                   required
                 />
-              </div>
+              </label>
 
               <div className="space-y-2">
-                <label className="font-bold text-slate-700 block mb-1">Court Dimensions & Size</label>
+                <label className="block text-xs font-bold text-slate-700">Court Dimensions &amp; Size</label>
                 <select
                   value={addForm.dimensionPreset}
                   onChange={(e) => {
@@ -814,7 +797,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
                       matchType: preset ? preset.matchType : prev.matchType,
                     }));
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                 >
                   {DIMENSION_PRESETS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -825,114 +808,116 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
 
                 {addForm.dimensionPreset === 'custom' && (
                   <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-500 block mb-1">Length (meters)</span>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-bold text-slate-500">Length (meters)</span>
                       <input
                         type="number"
                         min={10}
                         max={120}
                         value={addForm.customLength}
                         onChange={(e) => setAddForm({ ...addForm, customLength: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                         required
                       />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-500 block mb-1">Width (meters)</span>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-bold text-slate-500">Width (meters)</span>
                       <input
                         type="number"
                         min={5}
                         max={90}
                         value={addForm.customWidth}
                         onChange={(e) => setAddForm({ ...addForm, customWidth: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                         required
                       />
-                    </div>
+                    </label>
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Turf Surface</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Turf Surface
                   <select
                     value={addForm.surface}
                     onChange={(e) => setAddForm({ ...addForm, surface: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     {SURFACE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
                     ))}
                   </select>
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Match Format</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Match Format
                   <select
                     value={addForm.matchType}
                     onChange={(e) => setAddForm({ ...addForm, matchType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     <option value="5v5">5v5 Futsal</option>
                     <option value="7v7">7v7 Mini Pitch</option>
                     <option value="11v11">11v11 Full Pitch</option>
                   </select>
-                </div>
+                </label>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Rate (NRs/hr)</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Rate (NRs/hr)
                   <input
                     type="number"
                     min={0}
                     value={addForm.hourlyRate}
                     onChange={(e) => setAddForm({ ...addForm, hourlyRate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                     required
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Peak Rate (NRs)</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Peak Rate (NRs)
                   <input
                     type="number"
                     min={0}
                     value={addForm.peakRate}
                     onChange={(e) => setAddForm({ ...addForm, peakRate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-200 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Status</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Status
                   <select
                     value={addForm.status}
                     onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     <option value="Available">Available</option>
                     <option value="In Use">In Use</option>
                     <option value="Maintenance">Maintenance</option>
                   </select>
-                </div>
+                </label>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Upload Court Picture</label>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Upload Court Picture</label>
                 <div
                   onClick={() => addFileInputRef.current?.click()}
-                  className="cursor-pointer border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-2xl p-4 text-center bg-slate-50/60 transition-all"
+                  className="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-4 text-center transition-colors hover:border-lime-400"
                 >
                   {addForm.imagePreview ? (
                     <div className="space-y-2">
                       <img
                         src={addForm.imagePreview}
                         alt="Court Preview"
-                        className="w-full h-36 rounded-xl object-cover border border-slate-200 mx-auto"
+                        className="mx-auto h-36 w-full rounded-xl border border-slate-200 object-cover"
                       />
-                      <span className="text-[11px] text-emerald-600 font-bold">Click to choose a different photo</span>
+                      <span className="text-[11px] font-bold text-lime-600">Click to choose a different photo</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-1.5 py-2">
@@ -950,18 +935,18 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-xs disabled:opacity-50"
+                  className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-bold text-slate-900 hover:bg-lime-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {formLoading ? 'Saving...' : 'Add Pitch'}
                 </button>
@@ -971,43 +956,43 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
         </div>
       )}
 
+      {/* EDIT PITCH MODAL */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
-                <h3 className="font-black text-base text-slate-900">Edit Pitch: {editingCourt?.name}</h3>
-                <p className="text-[11px] text-slate-400 font-medium">Modify dimensions, rates, status, and court photo</p>
+                <h3 className="text-base font-extrabold text-slate-900">Edit Pitch: {editingCourt?.name}</h3>
+                <p className="text-[11px] font-medium text-slate-400">Modify dimensions, rates, status, and court photo</p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleEditSubmit} className="max-h-[75vh] space-y-4 overflow-y-auto p-5 text-xs">
               {formError && (
-                <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold">
-                  {formError}
-                </div>
+                <div className="rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700">{formError}</div>
               )}
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Pitch / Court Name</label>
+              <label className="block text-xs font-bold text-slate-700">
+                Pitch / Court Name
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   placeholder="e.g. Court 1 or Main Match Pitch"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                   required
                 />
-              </div>
+              </label>
 
               <div className="space-y-2">
-                <label className="font-bold text-slate-700 block mb-1">Court Dimensions & Size</label>
+                <label className="block text-xs font-bold text-slate-700">Court Dimensions &amp; Size</label>
                 <select
                   value={editForm.dimensionPreset}
                   onChange={(e) => {
@@ -1021,7 +1006,7 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
                       matchType: preset ? preset.matchType : prev.matchType,
                     }));
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                 >
                   {DIMENSION_PRESETS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -1032,114 +1017,116 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
 
                 {editForm.dimensionPreset === 'custom' && (
                   <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-500 block mb-1">Length (meters)</span>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-bold text-slate-500">Length (meters)</span>
                       <input
                         type="number"
                         min={10}
                         max={120}
                         value={editForm.customLength}
                         onChange={(e) => setEditForm({ ...editForm, customLength: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                         required
                       />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-500 block mb-1">Width (meters)</span>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-bold text-slate-500">Width (meters)</span>
                       <input
                         type="number"
                         min={5}
                         max={90}
                         value={editForm.customWidth}
                         onChange={(e) => setEditForm({ ...editForm, customWidth: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                         required
                       />
-                    </div>
+                    </label>
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Turf Surface</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Turf Surface
                   <select
                     value={editForm.surface}
                     onChange={(e) => setEditForm({ ...editForm, surface: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     {SURFACE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
                     ))}
                   </select>
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Match Format</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Match Format
                   <select
                     value={editForm.matchType}
                     onChange={(e) => setEditForm({ ...editForm, matchType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     <option value="5v5">5v5 Futsal</option>
                     <option value="7v7">7v7 Mini Pitch</option>
                     <option value="11v11">11v11 Full Pitch</option>
                   </select>
-                </div>
+                </label>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Rate (NRs/hr)</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Rate (NRs/hr)
                   <input
                     type="number"
                     min={0}
                     value={editForm.hourlyRate}
                     onChange={(e) => setEditForm({ ...editForm, hourlyRate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                     required
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Peak Rate (NRs)</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Peak Rate (NRs)
                   <input
                     type="number"
                     min={0}
                     value={editForm.peakRate}
                     onChange={(e) => setEditForm({ ...editForm, peakRate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Status</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Status
                   <select
                     value={editForm.status}
                     onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-lime-400"
                   >
                     <option value="Available">Available</option>
                     <option value="In Use">In Use</option>
                     <option value="Maintenance">Maintenance</option>
                   </select>
-                </div>
+                </label>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Update Court Picture</label>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Update Court Picture</label>
                 <div
                   onClick={() => editFileInputRef.current?.click()}
-                  className="cursor-pointer border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-2xl p-4 text-center bg-slate-50/60 transition-all"
+                  className="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-4 text-center transition-colors hover:border-lime-400"
                 >
                   {editForm.imagePreview ? (
                     <div className="space-y-2">
                       <img
                         src={editForm.imagePreview}
                         alt="Court Preview"
-                        className="w-full h-36 rounded-xl object-cover border border-slate-200 mx-auto"
+                        className="mx-auto h-36 w-full rounded-xl border border-slate-200 object-cover"
                       />
-                      <span className="text-[11px] text-emerald-600 font-bold block">Click to choose a new photo to replace</span>
+                      <span className="block text-[11px] font-bold text-lime-600">Click to choose a new photo to replace</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-1.5 py-2">
@@ -1157,18 +1144,18 @@ function CourtsPage({ user, venue, activeTab, setActiveTab, onLogout }) {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-xs disabled:opacity-50"
+                  className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-bold text-slate-900 hover:bg-lime-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {formLoading ? 'Saving...' : 'Save Changes'}
                 </button>

@@ -106,7 +106,7 @@ function SchedulePage({ user, activeTab, setActiveTab }) {
         customer: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ') || 'Customer',
         phone: booking.user?.phone || '—',
         avatar: booking.user?.profilePicture || '/logo.png',
-        status: booking.status === 'Cancelled' ? 'Cancelled' : booking.paymentStatus === 'Paid' ? booking.status : 'Pending',
+        status: booking.status === 'CANCELLED' ? 'Cancelled' : booking.paymentStatus === 'Paid' ? booking.status : 'Pending',
         amount: Number(booking.totalAmount || 0),
         paymentStatus: booking.paymentStatus || 'Pending',
       })));
