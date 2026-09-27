@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Sidebar from '../../../admin/components/layout/Sidebar';
 import TopBar from '../../../admin/components/layout/Topbar';
 import {
@@ -173,7 +173,7 @@ function BookingsPage({
   ];
   const showSkeleton = loadStatus === 'loading' && !hasLoaded;
 
-  const loadBookings = () =>
+  const loadBookings = useCallback(() =>
     turfService.getOwnerBookings().then((items) => {
       setBookings(items.map(mapServerBooking));
       setHasLoaded(true);
@@ -185,7 +185,7 @@ function BookingsPage({
         setHasLoaded(true);
       }
       setLoadStatus('error');
-    });
+    }), [ownerBookings]);
 
   const retryLoad = async () => {
     setIsRetrying(true);
@@ -196,6 +196,20 @@ function BookingsPage({
   useEffect(() => {
     loadBookings();
   }, [ownerBookings.length]);
+
+  // A player can book while this page sits in a background tab; refetch when the tab comes back
+  // so the table doesn't keep showing the list it loaded on mount.
+  useEffect(() => {
+    const reloadWhenVisible = () => {
+      if (!document.hidden) loadBookings();
+    };
+    window.addEventListener('focus', reloadWhenVisible);
+    document.addEventListener('visibilitychange', reloadWhenVisible);
+    return () => {
+      window.removeEventListener('focus', reloadWhenVisible);
+      document.removeEventListener('visibilitychange', reloadWhenVisible);
+    };
+  }, [loadBookings]);
 
   const handleConfirm = async (booking) => {
     setActionBusyId(booking.id);
