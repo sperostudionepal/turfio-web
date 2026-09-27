@@ -30,7 +30,7 @@ export function buildPaymentRows(bookings = []) {
   bookings.forEach((booking) => {
     const bookingKey = booking._id || booking.bookingId;
     const name = customerName(booking);
-    const cancelled = booking.status === 'Cancelled';
+    const cancelled = booking.status === 'CANCELLED';
     const ledger = Array.isArray(booking.payments) ? booking.payments : [];
 
     ledger.forEach((payment, index) => {
