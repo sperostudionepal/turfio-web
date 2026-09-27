@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { transformReview } from './reviewService';
 
 // Owner/admin calls explicitly select the staff credential namespace. Never infer identity from URL shape.
 const ownerRequest = { authScope: 'owner' };
@@ -78,8 +79,8 @@ export function transformTurf(turf) {
     size: matchTypes[0] || '5v5',
     matchTypes,
     parking: hasParking ? 'Parking' : null,
-    rating: Number(turf.averageRating || turf.rating) || 4.5,
-    reviews: Number(turf.numberOfReviews || turf.reviews) || 0,
+    rating: Math.round(Number(turf.averageRating ?? turf.rating ?? 0) * 10) / 10,
+    reviews: Number(turf.numberOfReviews ?? turf.reviews ?? 0),
     priceVal: pricePerHour,
     price: `NPR ${pricePerHour.toLocaleString()}/hr`,
     pricePerHour,
@@ -102,7 +103,7 @@ export function transformTurf(turf) {
     managerName: ownerFullName,
     phone: ownerPhone,
     managerAvatar: ownerAvatar,
-    reviewsList: turf.reviewsList || [],
+    reviewsList: Array.isArray(turf.reviews) ? turf.reviews.map(transformReview).filter(Boolean) : [],
     courts: Array.isArray(turf.courts) ? turf.courts : [],
     raw: turf,
   };

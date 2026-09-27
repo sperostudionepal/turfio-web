@@ -53,14 +53,29 @@ export default function TurfCard({ turf, onSelect, onDirections, status = null, 
           </h3>
 
           <div className="mt-1 flex items-center gap-1">
-            <div className="flex text-lime-400">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-lime-400 text-lime-400" />
-              ))}
-            </div>
-            <span className="ml-1 text-xs font-semibold text-slate-600">
-              {turf.rating} ({turf.reviews})
-            </span>
+            {turf.reviews > 0 ? (
+              <>
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < Math.floor(turf.rating)
+                          ? 'fill-lime-400 text-lime-400'
+                          : i < turf.rating
+                            ? 'fill-lime-400/50 text-lime-400'
+                            : 'fill-slate-200 text-slate-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="ml-1 text-xs font-semibold text-slate-600">
+                  {Number(turf.rating).toFixed(1)} ({turf.reviews})
+                </span>
+              </>
+            ) : (
+              <span className="text-xs font-semibold text-slate-400">No reviews yet</span>
+            )}
           </div>
 
           {turf.location && (
