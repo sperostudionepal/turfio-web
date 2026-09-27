@@ -11,7 +11,7 @@ function MarkPaidDialog({ booking, busy = false, onKeep, onConfirm }) {
     <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-slate-100 w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="p-5 space-y-2 text-center">
-          <div className="mx-auto w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="mx-auto w-11 h-11 rounded-full bg-lime-50 text-lime-600 flex items-center justify-center">
             <Banknote size={22} />
           </div>
           <h3 className="font-extrabold text-base text-slate-900">Record payment received?</h3>
@@ -33,7 +33,7 @@ function MarkPaidDialog({ booking, busy = false, onKeep, onConfirm }) {
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors disabled:opacity-40"
+            className="flex-1 py-2 rounded-xl bg-lime-400 hover:bg-lime-500 text-white text-xs font-bold transition-colors disabled:opacity-40"
           >
             {busy ? 'Saving...' : 'Yes, mark as paid'}
           </button>

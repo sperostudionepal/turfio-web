@@ -22,6 +22,7 @@ import jsPDF from 'jspdf';
 
 import { formatNepalDateTime } from '../../../shared/utils/dateTime';
 import turfService from '../../../shared/services/turfService';
+import FinancialHistoryPanel from '../../../shared/components/common/FinancialHistoryPanel';
 
 const money = (value) => {
   if (value === null || value === undefined || value === '') return '—';
@@ -206,11 +207,11 @@ function UserBookingDetailModal({
 
   const canRequestCancellation =
     hoursUntilMatch >= 6 &&
-    booking.status === 'Confirmed' &&
+    booking.status === 'CONFIRMED' &&
     !booking.cancellationRequest;
 
   const displayStatus =
-    booking.status === 'Cancelled' &&
+    booking.status === 'CANCELLED' &&
       booking.refund?.status === 'Processed'
       ? 'Refunded'
       : booking.status;
@@ -575,6 +576,8 @@ function UserBookingDetailModal({
                 )}
               </section>
 
+              <FinancialHistoryPanel bookingId={booking.bookingId || booking._id || booking.id} />
+
               {/* Payment */}
               <section className="space-y-4">
                 <SectionHeader
@@ -797,7 +800,7 @@ function UserBookingDetailModal({
             </div>
 
             {!canRequestCancellation &&
-              booking.status === 'Confirmed' &&
+              booking.status === 'CONFIRMED' &&
               !booking.cancellationRequest &&
               hoursUntilMatch < 6 && (
                 <p className="mt-2 text-right text-[11px] font-medium text-slate-400">
@@ -857,7 +860,7 @@ function UserBookingDetailModal({
           {/* Status badge */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <span style={{ display: 'inline-block', background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: '12px', padding: '4px 16px', borderRadius: '999px', border: '1px solid #bbf7d0' }}>
-              ✓ {booking.status || 'Confirmed'}
+              ✓ {booking.status || 'CONFIRMED'}
             </span>
           </div>
 

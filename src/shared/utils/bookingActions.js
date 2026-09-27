@@ -4,8 +4,8 @@
  * so the two can never disagree.
  */
 
-// Waiting for the owner to accept it
-export const canConfirm = (booking) => booking.bookingStatus === 'Pending';
+// Bookings are confirmed when created; there is no pending booking lifecycle state.
+export const canConfirm = () => false;
 
 // Cancelled bookings can't be paid in person here
 export const canMarkPaid = (booking) =>

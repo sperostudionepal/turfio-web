@@ -3,11 +3,12 @@ import { formatNepalDateTime } from '../../../shared/utils/dateTime';
 import { canConfirm, canMarkPaid, canCancel } from '../../../shared/utils/bookingActions';
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import FinancialHistoryPanel from '../../../shared/components/common/FinancialHistoryPanel';
 
 const money = (value) => `NRs. ${Number(value || 0).toLocaleString('en-NP')}`;
 
 const PAYMENT_STATUS_STYLES = {
-  Paid: 'text-emerald-600 bg-emerald-50',
+  Paid: 'text-lime-600 bg-lime-50',
   Failed: 'text-rose-600 bg-rose-50',
 };
 
@@ -102,7 +103,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               booking.cancellationRequest.status === 'Pending'
                 ? 'bg-amber-50 border-amber-200'
                 : booking.cancellationRequest.status === 'Approved'
-                ? 'bg-emerald-50 border-emerald-200'
+                ? 'bg-lime-50 border-lime-200'
                 : 'bg-rose-50 border-rose-200'
             }`}>
               <div className="flex items-start gap-3">
@@ -110,7 +111,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                   booking.cancellationRequest.status === 'Pending'
                     ? 'text-amber-600'
                     : booking.cancellationRequest.status === 'Approved'
-                    ? 'text-emerald-600'
+                    ? 'text-lime-600'
                     : 'text-rose-600'
                 }`} />
                 <div className="flex-1">
@@ -125,7 +126,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                   </p>
                  
                   {booking.refund && booking.cancellationRequest.status === 'Approved' && (
-                    <div className="mt-3 pt-3 border-t border-emerald-200 space-y-1 text-xs">
+                    <div className="mt-3 pt-3 border-t border-lime-200 space-y-1 text-xs">
                       <div className="flex justify-between">
                         <span className="text-slate-600">Original Amount:</span>
                         <span className="font-bold text-slate-900">{money(booking.refund.amount)}</span>
@@ -134,9 +135,9 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                         <span className="text-slate-600">Processing Fee (10%):</span>
                         <span className="font-bold text-rose-600">{money(booking.refund.deductedAmount)}</span>
                       </div>
-                      <div className="flex justify-between pt-1 border-t border-emerald-200">
-                        <span className="font-bold text-emerald-700">Net Refund:</span>
-                        <span className="font-black text-emerald-700">{money(booking.refund.netRefundAmount)}</span>
+                      <div className="flex justify-between pt-1 border-t border-lime-200">
+                        <span className="font-bold text-lime-700">Net Refund:</span>
+                        <span className="font-black text-lime-700">{money(booking.refund.netRefundAmount)}</span>
                       </div>
                     </div>
                   )}
@@ -145,7 +146,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                       <button
                         onClick={() => setShowApproveDialog(true)}
                         disabled={isProcessing}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-lime-400 hover:bg-lime-500 text-white text-xs font-bold transition-all disabled:opacity-50"
                       >
                         <CheckCircle size={14} /> Approve
                       </button>
@@ -217,8 +218,8 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
 
           {/* When and where */}
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+            <div className="p-3 rounded-xl bg-lime-50/60 border border-lime-100/60 space-y-1">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-lime-700 uppercase tracking-wider">
                 <CalendarIcon size={13} /> Date & Slot
               </div>
               <p className="font-extrabold text-xs text-slate-900">{booking.date}</p>
@@ -254,7 +255,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               <div className="pt-2 border-t border-amber-100 bg-amber-50/30 -mx-4 px-4 pb-2 space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="text-amber-700 font-bold text-[11px]">Deposit Paid (20%)</span>
-                  <span className="font-extrabold text-emerald-600">{money(booking.depositAmount)}</span>
+                  <span className="font-extrabold text-lime-600">{money(booking.depositAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-amber-700 font-bold text-[11px]">Pay at Venue</span>
@@ -269,7 +270,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-semibold">Received</span>
-                <span className="font-bold text-emerald-600">{money(booking.paid)}</span>
+                <span className="font-bold text-lime-600">{money(booking.paid)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="font-extrabold text-slate-900">Still due</span>
@@ -277,6 +278,8 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               </div>
             </div>
           </div>
+
+          <FinancialHistoryPanel bookingId={booking.rawId || booking.id} owner />
 
           {/* Payment history */}
           <div className="space-y-2">
@@ -314,7 +317,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
 
           {booking.confirmedAt && (
             <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-              <CheckCircle2 size={12} className="text-emerald-500" /> Confirmed on {formatNepalDateTime(booking.confirmedAt)}
+              <CheckCircle2 size={12} className="text-lime-500" /> Confirmed on {formatNepalDateTime(booking.confirmedAt)}
             </p>
           )}
 
@@ -326,7 +329,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                   <button
                     onClick={onConfirm}
                     disabled={busy}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-500 text-white font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <CheckCircle2 size={14} /> Confirm
                   </button>
@@ -335,7 +338,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
                   <button
                     onClick={onMarkPaid}
                     disabled={busy}
-                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-lime-200 text-lime-700 hover:bg-lime-400 hover:text-white hover:border-lime-400 font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Banknote size={14} /> Mark as paid
                   </button>
@@ -377,7 +380,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               value={reviewNotes}
               onChange={(e) => setReviewNotes(e.target.value)}
               placeholder="Add notes about this approval..."
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 resize-none"
               rows={3}
               disabled={isProcessing}
             />
@@ -386,7 +389,7 @@ function BookingDetailsModal({ booking, statusBadge, busy = false, error = '', o
               <button
                 onClick={handleApproveCancellation}
                 disabled={isProcessing}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-500 text-white font-bold transition-all disabled:opacity-50"
               >
                 {isProcessing ? 'Processing...' : 'Approve & Refund'}
               </button>

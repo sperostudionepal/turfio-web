@@ -262,6 +262,31 @@ export const turfService = {
     return response?.data || response;
   },
 
+  async getBookingFinancials(bookingId, { owner = false } = {}) {
+    const response = await apiClient.get(`/finance/bookings/${encodeURIComponent(bookingId)}`, owner ? ownerRequest : undefined);
+    return response?.data || response;
+  },
+
+  async getOwnerFinancialPayments() {
+    const response = await apiClient.get('/finance/owner/payments', ownerRequest);
+    return response?.data || response;
+  },
+
+  async getOwnerTransactions() {
+    const response = await apiClient.get('/finance/owner/transactions', ownerRequest);
+    return response?.data || response;
+  },
+
+  async getOwnerInvoices() {
+    const response = await apiClient.get('/finance/owner/invoices', ownerRequest);
+    return response?.data || response;
+  },
+
+  async getOwnerReceipts() {
+    const response = await apiClient.get('/finance/owner/receipts', ownerRequest);
+    return response?.data || response;
+  },
+
   /**
    * Update editable venue fields (name, description, address city/area, pricePerHour, amenities)
    */
@@ -271,7 +296,7 @@ export const turfService = {
   },
 
   async cancelBooking(bookingId) {
-    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/cancel`);
+    const response = await apiClient.put(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {}, ownerRequest);
     return response?.data || response;
   },
 

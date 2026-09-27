@@ -34,11 +34,11 @@ function RecentBookingsTable({ bookings = [] }) {
     <div className="bg-white rounded-xl overflow-hidden p-5 shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Recent Bookings</h3>
+        <h3 className="font-extrabold text-lg text-slate-900 tracking-tight">Recent Bookings</h3>
         {openBookings && (
           <button
             onClick={() => openBookings()}
-            className="text-xs font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
+            className="text-sm font-semibold text-lime-600 hover:text-lime-700 transition-colors cursor-pointer"
           >
             View All
           </button>
@@ -49,7 +49,7 @@ function RecentBookingsTable({ bookings = [] }) {
       <div className="overflow-x-auto">
         <div className="min-w-[680px]">
           {/* Header Grid Row */}
-          <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-2.5 border-b border-slate-100">
+          <div className="grid grid-cols-12 gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider pb-3 border-b border-slate-100">
             <span className="col-span-3">Customer</span>
             <span className="col-span-1">Court</span>
             <span className="col-span-2">Date</span>
@@ -60,14 +60,14 @@ function RecentBookingsTable({ bookings = [] }) {
 
           {/* Rows List */}
           <div className="divide-y divide-slate-50">
-            {rows.length === 0 ? <p className="py-8 text-center text-xs text-slate-400">No bookings yet.</p> : rows.map((booking, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-center py-3 text-xs hover:bg-slate-50/70 transition-colors rounded-xl px-1">
+            {rows.length === 0 ? <p className="py-8 text-center text-base text-slate-400">No bookings yet.</p> : rows.map((booking, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-2 items-center py-3.5 text-base hover:bg-slate-50/70 transition-colors rounded-xl px-1">
                 {/* Customer Column */}
                 <div className="col-span-3 flex items-center gap-2.5 min-w-0">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${booking.initialsBg}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${booking.initialsBg}`}>
                     {booking.initials}
                   </div>
-                  <span className="font-bold text-slate-900 text-xs truncate">
+                  <span className="font-bold text-slate-900 text-base truncate">
                     {booking.name}
                   </span>
                 </div>
@@ -86,7 +86,7 @@ function RecentBookingsTable({ bookings = [] }) {
 
                 {/* Status Badge */}
                 <div className="col-span-2 flex items-center justify-end">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${booking.statusStyle}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold whitespace-nowrap ${booking.statusStyle}`}>
                     {booking.status}
                   </span>
                 </div>
