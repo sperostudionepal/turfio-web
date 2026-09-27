@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
@@ -14,7 +14,7 @@ import CustomersPage from '../customers/CustomersPage';
 import PaymentsPage from '../payments/PaymentsPage';
 import InvoicesPage from '../invoices/InvoicesPage';
 import PricingPage from '../pricing/PricingPage';
-import CouponsPage from '../coupons/CouponsPage';
+import PromoCodesPage from '../promoCodes/PromoCodesPage';
 import AnnouncementsPage from '../announcements/AnnouncementsPage';
 import ReviewsPage from '../reviews/ReviewsPage';
 import ActivityLogsPage from '../activity/ActivityLogsPage';
@@ -32,7 +32,7 @@ import { deriveBookingStatus, isActiveBooking } from '../../../shared/utils/book
 import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../../shared/utils/reportExport';
 import { getTodayNepalString, formatDateDisplay } from '../../../shared/utils/dateTime';
 
-const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', Coupons: 'coupons', Announcements: 'announcements', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
+const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', 'Promo Codes': 'promo-codes', Announcements: 'announcements', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
 const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab]));
 
 function Dashboard({ user, onLogout }) {
@@ -76,7 +76,7 @@ function Dashboard({ user, onLogout }) {
   };
 
   // Keeps the previous list on failure so a flaky refresh doesn't blank the page.
-  const loadBookings = () =>
+  const loadBookings = useCallback(() =>
     turfService
       .getOwnerBookings()
       .then((items) => {
@@ -84,7 +84,7 @@ function Dashboard({ user, onLogout }) {
         setBookingsLoaded(true);
         setBookingsStatus('ready');
       })
-      .catch(() => setBookingsStatus('error'));
+      .catch(() => setBookingsStatus('error')), []);
 
   const userId = user?._id || user?.id;
 
@@ -97,7 +97,22 @@ function Dashboard({ user, onLogout }) {
   useEffect(() => {
     if (!userId || activeTab !== 'Dashboard') return;
     loadBookings();
-  }, [userId, activeTab]);
+  }, [userId, activeTab, loadBookings]);
+
+  // Players book from their own devices, so a portal tab left open in the background has to
+  // refetch when it becomes visible again instead of keeping the list it loaded on mount.
+  useEffect(() => {
+    if (!userId) return;
+    const reloadWhenVisible = () => {
+      if (!document.hidden) loadBookings();
+    };
+    window.addEventListener('focus', reloadWhenVisible);
+    document.addEventListener('visibilitychange', reloadWhenVisible);
+    return () => {
+      window.removeEventListener('focus', reloadWhenVisible);
+      document.removeEventListener('visibilitychange', reloadWhenVisible);
+    };
+  }, [userId, loadBookings]);
 
   // Reload bookings after something changed them.
   const refreshBookings = loadBookings;
@@ -185,7 +200,7 @@ function Dashboard({ user, onLogout }) {
     ),
     Invoices: <InvoicesPage {...pageProps} />,
     Pricing: <PricingPage {...pageProps} />,
-    Coupons: <CouponsPage {...pageProps} />,
+    'Promo Codes': <PromoCodesPage {...pageProps} />,
     Announcements: <AnnouncementsPage {...pageProps} />,
     Reviews: <ReviewsPage {...pageProps} />,
     'Activity Logs': <ActivityLogsPage {...pageProps} />,
