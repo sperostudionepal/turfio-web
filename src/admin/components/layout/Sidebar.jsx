@@ -10,6 +10,7 @@ import {
   Building2,
   Image as ImageIcon,
   Wallet,
+  Ticket,
   X,
 } from 'lucide-react';
 import { useOwnerContext } from '../../context/ownerContext';
@@ -43,6 +44,7 @@ function Sidebar(props) {
 
   const manageItems = [
     { label: 'Reviews', icon: Star, href: '#' },
+    { label: 'Promo Codes', icon: Ticket, href: '#' },
   ];
 
   const generalItems = [

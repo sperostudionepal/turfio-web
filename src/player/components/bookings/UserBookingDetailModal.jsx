@@ -13,12 +13,14 @@ import {
   MapPin,
   CreditCard,
   WalletCards,
+  Loader2,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import domtoimage from 'dom-to-image-more';
+import jsPDF from 'jspdf';
 
 import { formatNepalDateTime } from '../../../shared/utils/dateTime';
-import BookingPassModal from './BookingPassModal';
 import turfService from '../../../shared/services/turfService';
 
 const money = (value) => {
@@ -136,12 +138,11 @@ function UserBookingDetailModal({
   const [cancellationReason, setCancellationReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [showBookingPass, setShowBookingPass] = useState(false);
-  const [bookingPassData, setBookingPassData] = useState(null);
-
   const [qrToken, setQrToken] = useState(null);
   const [isLoadingQR, setIsLoadingQR] = useState(true);
   const [qrTimestamp] = useState(() => Date.now());
+  const [isDownloading, setIsDownloading] = useState(false);
+  const passRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -156,33 +157,27 @@ function UserBookingDetailModal({
         .generateBookingPass(booking._id || booking.id)
         .then((response) => {
           if (!active) return;
-
           const data = response?.data || response;
-
           if (data?.qrToken) {
             setQrToken(data.qrToken);
-            setBookingPassData(data);
           }
         })
         .catch((error) => {
           console.error('QR fetch error:', error);
         })
         .finally(() => {
-          if (active) {
-            setIsLoadingQR(false);
-          }
+          if (active) setIsLoadingQR(false);
         });
     } else {
       setIsLoadingQR(false);
     }
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [booking]);
 
   if (!booking) return null;
 
+  // ── Derived payment values ──────────────────────────────────────
   const totalAmount = Number(booking.totalAmount || 0);
   const paidAmount = Number(booking.totalPaidAmount || 0);
   const dueAmount = Math.max(0, totalAmount - paidAmount);
@@ -191,7 +186,6 @@ function UserBookingDetailModal({
     0,
     totalAmount - Number(booking.depositAmount || 0),
   );
-
   const venueSettled = dueAmount <= 0;
 
   const matchDateTime = booking.dateStr
@@ -200,7 +194,6 @@ function UserBookingDetailModal({
 
   if (matchDateTime && !Number.isNaN(matchDateTime.getTime())) {
     const matchTimeMinutes = booking.startMinutes || 0;
-
     matchDateTime.setMinutes(
       matchDateTime.getMinutes() + matchTimeMinutes - 345,
     );
@@ -234,6 +227,88 @@ function UserBookingDetailModal({
     .filter(Boolean)
     .join(', ');
 
+  // ── Contact info from customerSnapshot (authoritative at booking time) ──
+  const contactName =
+    booking.customerSnapshot?.name ||
+    (booking.user?.firstName
+      ? `${booking.user.firstName} ${booking.user.lastName || ''}`.trim()
+      : '') ||
+    booking.user?.name ||
+    '—';
+  const contactEmail =
+    booking.customerSnapshot?.email || booking.user?.email || '';
+  const contactPhone =
+    booking.customerSnapshot?.phone ||
+    booking.user?.phone ||
+    booking.teamPhone ||
+    '';
+
+  // ── QR URL (same as BookingPassModal) ──────────────────────────
+  const bookingPassUrl = qrToken
+    ? `${window.location.origin}/booking-pass/${booking.bookingId || booking.shortCode}?token=${qrToken}`
+    : null;
+
+  // ── Direct PDF download ─────────────────────────────────────────
+  const handleDownloadPass = async () => {
+    if (!passRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const el = passRef.current;
+
+      // Make the hidden element briefly visible for accurate capture
+      el.style.display = 'block';
+      await new Promise(r => setTimeout(r, 350));
+
+      const scale = 2;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+
+      const blob = await domtoimage.toBlob(el, {
+        quality: 1,
+        width: w * scale,
+        height: h * scale,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: `${w}px`,
+          height: `${h}px`,
+        },
+        cacheBust: true,
+      });
+
+      el.style.display = 'none';
+
+      const reader = new FileReader();
+      const imgDataUrl = await new Promise(resolve => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+
+      const pdfW = 210, pdfH = 297, margin = 12;
+      const maxW = pdfW - 2 * margin;
+      const maxH = pdfH - 2 * margin;
+      const dispW = w / 3.7795;
+      const dispH = h / 3.7795;
+      let fw = dispW, fh = dispH;
+      if (dispW > maxW || dispH > maxH) {
+        const fit = Math.min(maxW / dispW, maxH / dispH);
+        fw = dispW * fit;
+        fh = dispH * fit;
+      }
+      const xOff = (pdfW - fw) / 2;
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      pdf.addImage(imgDataUrl, 'PNG', xOff, margin, fw, fh, undefined, 'SLOW');
+      pdf.save(`Turfio-${booking.bookingId || booking.shortCode}-${booking.dateStr || 'pass'}.pdf`);
+    } catch (err) {
+      console.error('PDF error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      if (passRef.current) passRef.current.style.display = 'none';
+      setIsDownloading(false);
+    }
+  };
+
   const handleCancellationRequest = async () => {
     if (!cancellationReason.trim()) {
       alert('Please provide a reason for cancellation');
@@ -257,18 +332,6 @@ function UserBookingDetailModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDownloadPass = () => {
-    if (!bookingPassData && qrToken) {
-      setBookingPassData({
-        booking,
-        qrToken,
-        expiresAt: booking.qrTokenExpiresAt,
-      });
-    }
-
-    setShowBookingPass(true);
   };
 
   return (
@@ -687,10 +750,20 @@ function UserBookingDetailModal({
                           <button
                             type="button"
                             onClick={handleDownloadPass}
-                            className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-lime-400 px-4 py-2.5 text-xs font-extrabold text-slate-900 transition hover:bg-lime-500"
+                            disabled={isDownloading}
+                            className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-lime-400 px-4 py-2.5 text-xs font-extrabold text-slate-900 transition hover:bg-lime-500 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            <Download size={14} />
-                            Download booking pass
+                            {isDownloading ? (
+                              <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Generating PDF...
+                              </>
+                            ) : (
+                              <>
+                                <Download size={14} />
+                                Download booking pass
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
@@ -736,17 +809,120 @@ function UserBookingDetailModal({
         </div>
       </div>
 
-      {/* Booking Pass */}
-      {showBookingPass && bookingPassData && (
-        <BookingPassModal
-          booking={bookingPassData.booking}
-          qrToken={bookingPassData.qrToken}
-          onClose={() => {
-            setShowBookingPass(false);
-            setBookingPassData(null);
-          }}
-        />
-      )}
+      {/* Hidden off-screen booking pass card — captured for PDF download */}
+      <div
+        ref={passRef}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: 0,
+          left: '-9999px',
+          width: '680px',
+          zIndex: -1,
+          background: '#fff',
+        }}
+      >
+        <div style={{ padding: '28px', background: '#fff', border: '4px solid #a3e635', borderRadius: '16px', fontFamily: 'system-ui, sans-serif' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '2px' }}>🏟 TURFIO</span>
+            </div>
+            <p style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', letterSpacing: '2px', textTransform: 'uppercase' }}>Booking Confirmation Pass</p>
+          </div>
+
+          {/* QR Code */}
+          {bookingPassUrl && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{ background: '#fff', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '12px', display: 'inline-block' }}>
+                <QRCodeSVG value={bookingPassUrl} size={150} level="H" includeMargin={true} />
+              </div>
+            </div>
+          )}
+
+          {/* Booking ID */}
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Booking ID</p>
+            <p style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', fontFamily: 'monospace', letterSpacing: '3px' }}>
+              {booking.bookingId || booking.shortCode}
+            </p>
+            <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+              {booking.dateStr} · {booking.timeSlot}
+            </p>
+            <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+              Booked on {formatNepalDateTime(booking.createdAt)}
+            </p>
+          </div>
+
+          {/* Status badge */}
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <span style={{ display: 'inline-block', background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: '12px', padding: '4px 16px', borderRadius: '999px', border: '1px solid #bbf7d0' }}>
+              ✓ {booking.status || 'Confirmed'}
+            </span>
+          </div>
+
+          {/* Details grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+            {[
+              { label: 'Venue', value: booking.turf?.name },
+              { label: 'Date', value: `${booking.dateStr}\n${booking.timeSlot}` },
+              { label: 'Court', value: booking.court?.name || 'Court' },
+              { label: 'Booked On', value: formatNepalDateTime(booking.createdAt) },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
+                <p style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>{label}</p>
+                <p style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', whiteSpace: 'pre-line' }}>{value || '—'}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Payment summary */}
+          <div style={{ background: '#f7fee7', border: '2px solid #d9f99d', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 700, color: '#365314', textTransform: 'uppercase', marginBottom: '8px' }}>Payment Summary</p>
+            {[
+              { label: 'Total Amount', value: `NRs. ${Number(booking.totalAmount || 0).toLocaleString('en-NP')}`, color: '#0f172a' },
+              { label: 'Amount Paid', value: `NRs. ${Number(booking.totalPaidAmount || 0).toLocaleString('en-NP')}`, color: '#16a34a' },
+              ...(booking.paymentType === 'venue' && Number(booking.depositAmount) > 0 ? [
+                { label: 'Deposit Paid (20%)', value: `NRs. ${Number(booking.depositAmount).toLocaleString('en-NP')}`, color: '#16a34a' },
+                { label: 'Pay at Venue', value: `NRs. ${Math.max(0, Number(booking.totalAmount) - Number(booking.depositAmount)).toLocaleString('en-NP')}`, color: '#b45309' },
+              ] : []),
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>{label}</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color, whiteSpace: 'nowrap' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Player Details */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}>Player Details</p>
+            {[
+              { label: 'Name', value: contactName },
+              ...(booking.teamName ? [{ label: 'Team', value: booking.teamName }] : []),
+              ...(booking.teamSize ? [{ label: 'Players', value: `${booking.teamSize} players · ${booking.matchType || ''}` }] : []),
+              ...(contactEmail ? [{ label: 'Email', value: contactEmail }] : []),
+              ...(contactPhone ? [{ label: 'Phone', value: contactPhone }] : []),
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', minWidth: '52px', paddingTop: '2px' }}>{label}</span>
+                <span style={{ fontSize: '12px', fontWeight: label === 'Name' ? 800 : 600, color: '#0f172a' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ borderTop: '2px dashed #e2e8f0', paddingTop: '12px', textAlign: 'center' }}>
+            <p style={{ fontSize: '10px', color: '#94a3b8', lineHeight: '1.6' }}>
+              Scan this QR code at the venue entrance for check-in.<br />
+              Keep this pass accessible on your device or printed.
+            </p>
+            <p style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '6px' }}>
+              support@turfio.com | +977-9800000000
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Cancellation dialog */}
       {showCancelDialog && (

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import turfService from '../../../shared/services/turfService';
 import authService from '../../../shared/services/authService';
+import promoService from '../../../shared/services/promoService';
 import CustomDropdown from '../../../shared/components/common/CustomDropdown';
 import CustomDatePicker from '../../../shared/components/common/CustomDatePicker';
 import { getTodayNepalString } from '../../../shared/utils/dateTime';
@@ -148,7 +149,7 @@ export default function BookingCheckoutPage({
     return defaultData;
   });
 
-  // Save step and formData changes into sessionStorage
+  // Save step, formData, and turf data changes into sessionStorage
   useEffect(() => {
     try {
       sessionStorage.setItem(
@@ -156,12 +157,13 @@ export default function BookingCheckoutPage({
         JSON.stringify({
           currentStep,
           formData,
+          turfData: turf, // Save turf object to preserve pricing
         })
       );
     } catch (e) {
       console.error(e);
     }
-  }, [currentStep, formData, storageKey]);
+  }, [currentStep, formData, turf, storageKey]);
 
   // If the player returns from eSewa with the browser Back action instead of a
   // callback, treat that payment attempt as abandoned and release the hold.
@@ -293,9 +295,26 @@ export default function BookingCheckoutPage({
   };
 
   const [promoCode, setPromoCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  // Server-confirmed discount, tagged with the hold it was frozen onto. The amount always comes
+  // back from the API, never from this file.
+  const [promoState, setPromoState] = useState(null);
+  const [availablePromos, setAvailablePromos] = useState([]);
   const [promoError, setPromoError] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
+
+  const currentHoldToken = useMemo(
+    () =>
+      activeHold.holdToken ||
+      turf?.holdToken ||
+      new URLSearchParams(window.location.search).get('holdToken') ||
+      localStorage.getItem('turfio_guest_hold_token'),
+    [activeHold.holdToken, turf?.holdToken]
+  );
+
+  // Deriving instead of clearing in an effect: a replaced hold is a fresh document with no promo
+  // on it, so a discount quoted against the previous token must stop applying the moment it swaps.
+  const appliedPromo = promoState && promoState.holdToken === currentHoldToken ? promoState : null;
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(initialBooking);
   const [bookingPass, setBookingPass] = useState(null);
@@ -314,6 +333,45 @@ export default function BookingCheckoutPage({
     }
     return newKey;
   });
+
+  // Fetch turf and court details from backend to get accurate pricing
+  useEffect(() => {
+    const fetchCourtPrice = async () => {
+      const turfId = turf?.id || turf?._id;
+      const courtId = turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?._id || turf?.court?.id;
+      
+      // Only fetch if we don't have the rate and we have IDs
+      if (turfId && courtId && !turf?.rateOverride) {
+        try {
+          const turfDetails = await turfService.getTurfById(turfId);
+          
+          if (turfDetails?.courts) {
+            const court = turfDetails.courts.find(c => 
+              String(c._id || c.id) === String(courtId)
+            );
+            
+            if (court?.hourlyRate) {
+              // Force update the turf object
+              if (turf) {
+                turf.courtHourlyRate = court.hourlyRate;
+                turf.rateOverride = court.hourlyRate;
+                turf.pricePerHour = court.hourlyRate;
+                turf.priceVal = court.hourlyRate;
+                turf.selectedCourt = court;
+                turf.court = court;
+              }
+              // Trigger re-render
+              setFormData(prev => ({ ...prev }));
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch court price:', error);
+        }
+      }
+    };
+
+    fetchCourtPrice();
+  }, [turf?.id, turf?._id, currentStep]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync user info if loaded later (auto-populate for logged in user)
   useEffect(() => {
@@ -446,18 +504,62 @@ export default function BookingCheckoutPage({
 
   // Base Rate Calculation
   const baseRateNumeric = useMemo(() => {
+    // PRIORITY 0: rateOverride (explicitly passed override)
+    if (turf?.rateOverride && Number(turf.rateOverride) > 0) {
+      return Number(turf.rateOverride);
+    }
+
+    // PRIORITY 1: Court-specific rate from selected court object
+    const courtRate = turf?.selectedCourt?.hourlyRate || turf?.court?.hourlyRate;
+    if (courtRate && Number(courtRate) > 0) {
+      return Number(courtRate);
+    }
+
+    // PRIORITY 2: Explicit rate fields passed from turf details
+    if (turf?.courtHourlyRate && Number(turf.courtHourlyRate) > 0) {
+      return Number(turf.courtHourlyRate);
+    }
+    
+    if (turf?.pricePerHour && Number(turf.pricePerHour) > 0) {
+      return Number(turf.pricePerHour);
+    }
+    
+    if (turf?.priceVal && Number(turf.priceVal) > 0) {
+      return Number(turf.priceVal);
+    }
+    
+    // PRIORITY 3: SessionStorage backup (from TurfDetailsPage)
+    try {
+      const storedRate = sessionStorage.getItem('turfio_booking_rate');
+      if (storedRate && Number(storedRate) > 0) {
+        return Number(storedRate);
+      }
+    } catch (e) {
+      console.error('Failed to read rate from sessionStorage:', e);
+    }
+    
+    // PRIORITY 4: Calculate from totalAmount
+    if (turf?.totalAmount && duration > 0) {
+      const rate = Math.round(turf.totalAmount / duration);
+      return rate;
+    }
+    
+    // LAST RESORT: Parse from price string
     if (turf?.price) {
       const match = String(turf.price).match(/(\d+,?\d*)/);
-      if (match) return parseInt(match[1].replace(/,/g, ''), 10);
+      if (match) {
+        const rate = parseInt(match[1].replace(/,/g, ''), 10);
+        return rate;
+      }
     }
-    if (turf?.totalAmount && duration > 0) {
-      return Math.round(turf.totalAmount / duration);
-    }
+    
     return 1250;
   }, [turf, duration]);
 
-  const subtotal = baseRateNumeric * duration;
-  const discountAmount = Math.round(subtotal * appliedDiscount);
+  // Rounded to match the server, which prices a hold as round(rate x duration) and overwrites
+  // any client-supplied amount, so the quote on screen is the quote that gets charged.
+  const subtotal = Math.round(baseRateNumeric * duration);
+  const discountAmount = Math.min(Math.round(Number(appliedPromo?.discountAmount) || 0), subtotal);
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
   // Min/max players -- one full side per team is the floor, a full match both sides is the ceiling.
@@ -509,20 +611,52 @@ export default function BookingCheckoutPage({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleApplyPromo = (e) => {
+  useEffect(() => {
+    const turfId = turf?.id || turf?._id;
+    if (!turfId) return;
+    let cancelled = false;
+    promoService
+      .getAvailableForTurf(turfId)
+      .then((items) => { if (!cancelled) setAvailablePromos(items); })
+      .catch(() => { if (!cancelled) setAvailablePromos([]); });
+    return () => { cancelled = true; };
+  }, [turf?.id, turf?._id]);
+
+  const handleApplyPromo = async (e) => {
     e.preventDefault();
     setPromoError('');
     const code = promoCode.trim().toUpperCase();
-    if (!code) return;
+    if (!code || promoBusy) return;
 
-    if (code === 'TURF10' || code === 'KICKOFF') {
-      setAppliedDiscount(0.1);
-      triggerToast('🎉 10% promo discount applied!');
-    } else if (code === 'TURF20') {
-      setAppliedDiscount(0.2);
-      triggerToast('🔥 20% promo discount applied!');
-    } else {
-      setPromoError('Invalid coupon. Try TURF10 or TURF20');
+    const turfId = turf?.id || turf?._id;
+    setPromoBusy(true);
+    try {
+      // With a hold, the discount is frozen on it so the eSewa charge and the callback that
+      // verifies it both price the booking identically. Without one, fall back to a read-only quote.
+      const result = currentHoldToken
+        ? await promoService.applyToHold(turfId, { code, holdToken: currentHoldToken })
+        : await promoService.validate({ code, turfId, subtotal });
+
+      setPromoState({ ...result, holdToken: currentHoldToken });
+      setPromoCode('');
+      setShowPromoInput(false);
+      triggerToast(`${result.code} applied — you save NPR ${Math.round(result.discountAmount).toLocaleString()}.`, 'success');
+    } catch (err) {
+      setPromoError(err?.message || 'That promo code could not be applied.');
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const handleRemovePromo = async () => {
+    setPromoState(null);
+    setPromoCode('');
+    setPromoError('');
+    if (!currentHoldToken) return;
+    try {
+      await promoService.removeFromHold(turf?.id || turf?._id, { holdToken: currentHoldToken });
+    } catch (err) {
+      console.error('Failed to remove the promo code from the hold:', err);
     }
   };
 
@@ -599,6 +733,7 @@ export default function BookingCheckoutPage({
             matchType,
             teamSize: formData.expectedPlayers || 10,
             paymentType: formData.paymentType || 'full',
+            promoCode: appliedPromo?.code,
             // This whole branch only runs when eSewa is the selected gateway (even for a
             // venue-deposit booking, the deposit itself is charged through eSewa) -- the
             // "at venue" part is captured by paymentType/remainingBalance, not this field.
@@ -684,6 +819,7 @@ export default function BookingCheckoutPage({
           matchType,
           teamSize: formData.expectedPlayers || 10,
           paymentType: formData.paymentType || 'venue',
+          promoCode: appliedPromo?.code,
           holdToken: activeHold.holdToken || turf?.holdToken,
           holdId: activeHold.holdId || turf?.holdId,
           idempotencyKey,
@@ -1329,23 +1465,7 @@ export default function BookingCheckoutPage({
                       </div>
                     </div>
 
-                    {/* Match Equipment Chips */}
-                    <div className="pt-2">
-                      <p className="text-xs font-semibold text-slate-500 mb-2">
-                        Included Match Equipment
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> FIFA Standard Ball
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Team Bibs (2 Colors)
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                          <Check className="h-3 w-3 text-lime-600 stroke-[3]" /> Cold Drinking Water
-                        </span>
-                      </div>
-                    </div>
+                   
                   </div>
 
                   <div className="h-px bg-slate-100 my-8" />
@@ -1867,17 +1987,16 @@ export default function BookingCheckoutPage({
                   <div className="space-y-3 text-sm font-medium text-slate-600">
                     <div className="flex justify-between">
                       <span>
-                        NPR {baseRateNumeric.toLocaleString()} × {duration}{' '}
-                        {duration === 1 ? 'hr' : 'hrs'}
-                      </span>
+                      NPR {baseRateNumeric.toLocaleString()} × {duration} {duration === 1 ? 'hr' : 'hrs'}
+                    </span>
                       <span className="font-bold text-slate-900">
                         NPR {subtotal.toLocaleString()}
                       </span>
                     </div>
 
-                    {appliedDiscount > 0 && (
+                    {discountAmount > 0 && (
                       <div className="flex justify-between text-lime-700 font-bold">
-                        <span>Promo Discount ({appliedDiscount * 100}%)</span>
+                        <span>Promo Discount ({appliedPromo?.code})</span>
                         <span>- NPR {discountAmount.toLocaleString()}</span>
                       </div>
                     )}
@@ -1904,6 +2023,7 @@ export default function BookingCheckoutPage({
                       </span>
                     </div>
 
+
                     <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between">
                       <div>
                         <p className="text-base font-black text-slate-900">Total Amount</p>
@@ -1918,16 +2038,15 @@ export default function BookingCheckoutPage({
                   {/* Promo Code Section (Stays right here below Total Amount) */}
                   {currentStep < 4 && (
                     <div className="pt-1">
-                      {appliedDiscount > 0 ? (
-                        <div className="rounded-xl bg-lime-100/80 p-3 text-xs font-bold text-lime-900 flex items-center justify-between">
-                          <span>Coupon applied ({appliedDiscount * 100}% off)</span>
+                      {appliedPromo ? (
+                        <div className="rounded-xl bg-lime-100/80 p-3 text-xs font-bold text-lime-900 flex items-center justify-between gap-2">
+                          <span className="truncate">
+                            {appliedPromo.code} applied — you save NPR {discountAmount.toLocaleString()}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setAppliedDiscount(0);
-                              setPromoCode('');
-                            }}
-                            className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer underline"
+                            onClick={handleRemovePromo}
+                            className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer underline shrink-0"
                           >
                             Remove
                           </button>
@@ -1939,21 +2058,42 @@ export default function BookingCheckoutPage({
                               <input
                                 type="text"
                                 value={promoCode}
-                                onChange={(e) => setPromoCode(e.target.value)}
-                                placeholder="Coupon (e.g. TURF10)"
-                                className="w-full h-[44px] rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:bg-slate-100 transition-all"
+                                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                placeholder="Enter promo code"
+                                className="w-full h-[44px] rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:bg-slate-100 transition-all uppercase tracking-wide"
                                 autoFocus
                               />
                             </div>
                             <button
                               type="submit"
-                              className="h-[44px] min-w-[100px] px-5 rounded-xl bg-lime-400 hover:bg-lime-500 text-sm font-extrabold text-slate-950 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center shadow-xs"
+                              disabled={promoBusy || !promoCode.trim()}
+                              className="h-[44px] min-w-[100px] px-5 rounded-xl bg-lime-400 hover:bg-lime-500 text-sm font-extrabold text-slate-950 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Apply
+                              {promoBusy ? <Loader2 className="animate-spin" size={16} /> : 'Apply'}
                             </button>
                           </div>
                           {promoError && (
                             <p className="text-[11px] font-semibold text-rose-500 mt-1.5">{promoError}</p>
+                          )}
+                          {availablePromos.length > 0 && (
+                            <div className="pt-1.5 space-y-1.5">
+                              <p className="text-[11px] font-semibold text-slate-400">Available for this venue</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {availablePromos.map((item) => (
+                                  <button
+                                    key={item.code}
+                                    type="button"
+                                    onClick={() => { setPromoCode(item.code); setPromoError(''); }}
+                                    title={item.description || undefined}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:border-lime-500 hover:bg-lime-50 transition-colors cursor-pointer"
+                                  >
+                                    {item.code} · {item.discountType === 'percentage'
+                                      ? `${item.discountValue}% off`
+                                      : `NPR ${Math.round(item.discountValue).toLocaleString()} off`}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </form>
                       ) : (
