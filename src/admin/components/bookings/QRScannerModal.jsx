@@ -161,19 +161,19 @@ function QRScannerModal({ onClose, onScanSuccess }) {
           {/* Result Display */}
           {result && (
             <div className={`p-6 rounded-xl border-2 ${
-              result.success ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
+              result.success ? 'bg-lime-50 border-lime-200' : 'bg-rose-50 border-rose-200'
             }`}>
               <div className="flex items-center gap-3 mb-4">
                 {result.success ? (
-                  <CheckCircle2 size={32} className="text-emerald-600" />
+                  <CheckCircle2 size={32} className="text-lime-600" />
                 ) : (
                   <XCircle size={32} className="text-rose-600" />
                 )}
                 <div>
-                  <p className={`font-black text-lg ${result.success ? 'text-emerald-900' : 'text-rose-900'}`}>
+                  <p className={`font-black text-lg ${result.success ? 'text-lime-900' : 'text-rose-900'}`}>
                     {result.success ? (result.alreadyCheckedIn ? 'Already Checked In' : 'Check-in Successful!') : 'Verification Failed'}
                   </p>
-                  <p className={`text-sm ${result.success ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  <p className={`text-sm ${result.success ? 'text-lime-700' : 'text-rose-700'}`}>
                     {result.message}
                   </p>
                 </div>
@@ -202,7 +202,7 @@ function QRScannerModal({ onClose, onScanSuccess }) {
                   {result.booking.checkedInAt && (
                     <div className="flex justify-between pt-2 border-t border-slate-200">
                       <span className="text-slate-600">Checked in:</span>
-                      <span className="font-bold text-emerald-600">
+                      <span className="font-bold text-lime-600">
                         {new Date(result.booking.checkedInAt).toLocaleString()}
                       </span>
                     </div>
@@ -241,7 +241,7 @@ function QRScannerModal({ onClose, onScanSuccess }) {
                 {result.success && (
                   <button
                     onClick={() => setShowBookingPass(true)}
-                    className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-lime-400 hover:bg-lime-500 text-white font-bold transition-all flex items-center justify-center gap-2"
                   >
                     <Download size={16} />
                     View Pass
