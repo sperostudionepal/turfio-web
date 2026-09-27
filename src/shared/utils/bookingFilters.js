@@ -55,8 +55,7 @@ export function matchesDateRange(dateStr, range) {
   return true;
 }
 
-// Pending first, so "sort by status" floats what needs the owner to the top
-const STATUS_RANK = { Pending: 0, Confirmed: 1, Completed: 2, Refunded: 3, Cancelled: 4 };
+const STATUS_RANK = { Confirmed: 0, Completed: 1, Cancelled: 2 };
 const PAYMENT_RANK = { Pending: 0, Partial: 1, Paid: 2, Failed: 3 };
 
 const SORT_VALUES = {

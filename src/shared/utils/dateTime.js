@@ -37,6 +37,20 @@ export function getNepalCurrentDateTime() {
 }
 
 /**
+ * Formats a timestamp as a Nepal date string 'YYYY-MM-DD'. Returns '' for missing/invalid values.
+ */
+export function formatNepalDateStr(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const utcMillis = date.getTime() + date.getTimezoneOffset() * 60000;
+  const npt = new Date(utcMillis + NPT_OFFSET_MINUTES * 60000);
+  const year = npt.getFullYear();
+  const month = String(npt.getMonth() + 1).padStart(2, '0');
+  const day = String(npt.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Parses time string like "07:00", "07:00 AM", "7:00 PM", "19:00" to minutes from midnight (0..1439).
  */
 export function parseTimeToMinutes(timeStr) {
