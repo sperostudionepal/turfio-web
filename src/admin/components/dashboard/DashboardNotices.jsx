@@ -2,6 +2,15 @@ import { AlertTriangle, CalendarPlus, Building2, RefreshCw } from 'lucide-react'
 
 const CARD = 'bg-white rounded-xl shadow-[0_0_25px_rgba(0,0,0,0.05)] border border-slate-100';
 
+
+function SkeletonCard({ children, className = '' }) {
+  return <div className={`${CARD} h-full p-4 ${className}`}>{children}</div>;
+}
+
+function SkeletonLine({ className = '' }) {
+  return <div className={`rounded-full bg-slate-100 ${className}`} />;
+}
+
 /** Pulsing placeholder that stands in for a widget while its data loads. */
 export function WidgetSkeleton({ className = 'h-64' }) {
   return (
@@ -22,22 +31,83 @@ export function WidgetSkeleton({ className = 'h-64' }) {
 /** Whole dashboard body in skeleton form (first load only). */
 export function DashboardSkeleton() {
   return (
-    <div role="status" aria-label="Loading your dashboard" className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+    <div role="status" aria-label="Loading your dashboard" className="animate-pulse space-y-6">
+      {/* StatCards: same responsive grid and card footprint as the loaded dashboard. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((n) => (
-          <WidgetSkeleton key={n} className="h-32" />
+          <SkeletonCard key={n}>
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100" />
+              <div className="min-w-0 flex-1 py-0.5">
+                <SkeletonLine className="h-3 w-24" />
+                <SkeletonLine className="mt-3 h-5 w-28" />
+                <SkeletonLine className="mt-2 h-2.5 w-36 max-w-full" />
+              </div>
+            </div>
+          </SkeletonCard>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {[0, 1, 2].map((n) => (
-          <WidgetSkeleton key={n} className="h-72" />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {[0, 1].map((n) => (
-          <WidgetSkeleton key={n} className="h-64" />
-        ))}
-      </div>
+
+      {/* Today's Schedule / Revenue Overview / Bookings by Time. */}
+      <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[4fr_5fr_4fr]">
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-32" /><SkeletonLine className="h-3 w-20" /></div>
+          <div className="mt-4 space-y-3">
+            {[0, 1, 2, 3].map((n) => <SkeletonLine key={n} className="h-[52px] w-full rounded-lg" />)}
+          </div>
+        </SkeletonCard>
+        <SkeletonCard>
+          <div className="flex items-start justify-between"><div><SkeletonLine className="h-4 w-32" /><SkeletonLine className="mt-3 h-5 w-24" /></div><SkeletonLine className="h-7 w-20" /></div>
+          <div className="mt-5 flex h-[185px] items-end gap-3 border-b border-slate-100 pb-1">
+            {[55, 78, 46, 88, 64, 72, 52].map((h, n) => <div key={n} className="flex-1 rounded-t-md bg-slate-100" style={{ height: `${h}%` }} />)}
+          </div>
+        </SkeletonCard>
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-28" /><SkeletonLine className="h-3 w-16" /></div>
+          <div className="mt-5 grid grid-cols-7 gap-1.5">
+            {Array.from({ length: 35 }, (_, n) => <div key={n} className="h-[23px] rounded bg-slate-100" />)}
+          </div>
+          <div className="mt-4 flex justify-center gap-4"><SkeletonLine className="h-3 w-16" /><SkeletonLine className="h-3 w-16" /><SkeletonLine className="h-3 w-16" /></div>
+        </SkeletonCard>
+      </section>
+
+      {/* Court Status / Recent Bookings. */}
+      <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[5fr_8fr]">
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-24" /><SkeletonLine className="h-3 w-14" /></div>
+          <div className="mt-4 space-y-2">
+            {[0, 1, 2, 3].map((n) => <SkeletonLine key={n} className="h-[48px] w-full rounded-lg" />)}
+          </div>
+        </SkeletonCard>
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-32" /><SkeletonLine className="h-3 w-14" /></div>
+          <SkeletonLine className="mt-4 h-5 w-full rounded-md" />
+          <div className="mt-2 space-y-1.5">
+            {[0, 1, 2, 3, 4].map((n) => <SkeletonLine key={n} className="h-[38px] w-full rounded-md" />)}
+          </div>
+        </SkeletonCard>
+      </section>
+
+      {/* Customer Insights / Top Customers / Recent Reviews. */}
+      <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2 xl:grid-cols-[1.05fr_1fr_1fr]">
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-32" /><SkeletonLine className="h-3 w-14" /></div>
+          <div className="mt-4 flex items-center gap-6">
+            <div className="h-[132px] w-[132px] shrink-0 rounded-full border-[27px] border-slate-100" />
+            <div className="flex-1 space-y-4"><SkeletonLine className="h-3 w-full" /><SkeletonLine className="h-3 w-full" /><SkeletonLine className="h-3 w-full" /></div>
+          </div>
+        </SkeletonCard>
+        <SkeletonCard>
+          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-28" /><SkeletonLine className="h-7 w-20" /></div>
+          <div className="mt-3 space-y-2">{[0, 1, 2].map((n) => <SkeletonLine key={n} className="h-[48px] w-full rounded-lg" />)}</div>
+        </SkeletonCard>
+        <div className="min-w-0 lg:col-span-2 xl:col-span-1">
+          <SkeletonCard>
+            <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-28" /><SkeletonLine className="h-3 w-14" /></div>
+            <div className="mt-3 space-y-2">{[0, 1].map((n) => <SkeletonLine key={n} className="h-[72px] w-full rounded-lg" />)}</div>
+          </SkeletonCard>
+        </div>
+      </section>
     </div>
   );
 }

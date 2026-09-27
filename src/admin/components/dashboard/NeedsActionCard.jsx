@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import turfService from '../../../shared/services/turfService';
-import CancelBookingDialog from '../../../player/components/bookings/CancelBookingDialog';
+import CancelBookingDialog from '../bookings/CancelBookingDialog';
 import { deriveBookingStatus, getBookingDateStr, isActiveBooking } from '../../../shared/utils/bookingStatus';
 import { getNepalCurrentDateTime, parseSlotInterval } from '../../../shared/utils/dateTime';
 

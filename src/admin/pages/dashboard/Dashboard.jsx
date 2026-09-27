@@ -1,18 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Calendar, Download } from 'lucide-react';
+
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
+
 import StatCards from '../../components/dashboard/StatCards';
-import ScheduleCard from '../../components/dashboard/ScheduleCard';
-import RevenueChart from '../../components/dashboard/RevenueChart';
-import RecentBookingsTable from '../../components/dashboard/RecentBookingsTable';
-import RevenueSummaryDonut from '../../components/dashboard/RevenueSummaryDonut';
+import RevenueOverview from '../../components/dashboard/RevenueOverview';
+import BookingsByTime from '../../components/dashboard/BookingsByTime';
+import CourtStatus from '../../components/dashboard/CourtStatus';
+
+import TodaysSchedule from '../../components/dashboard/TodaysSchedule';
+import DashboardRecentBookings from '../../components/dashboard/DashboardRecentBookings';
+
+// New dashboard row
+import CustomerInsights from '../../components/dashboard/CustomerInsights';
+import TopCustomers from '../../components/dashboard/TopCustomers';
+import RecentReviews from '../../components/dashboard/RecentReviews';
+
 import CourtsPage from '../turfs/CourtsPage';
 import TurfImagesPage from '../turfs/TurfImagesPage';
-import BookingsPage from '../../../player/pages/bookings/BookingsPage';
+import BookingsPage from '../bookings/BookingsPage';
 import CustomersPage from '../customers/CustomersPage';
 import PaymentsPage from '../payments/PaymentsPage';
-import InvoicesPage from '../invoices/InvoicesPage';
 import PricingPage from '../pricing/PricingPage';
 import PromoCodesPage from '../promoCodes/PromoCodesPage';
 import AnnouncementsPage from '../announcements/AnnouncementsPage';
@@ -20,53 +30,124 @@ import ReviewsPage from '../reviews/ReviewsPage';
 import ActivityLogsPage from '../activity/ActivityLogsPage';
 import SettingsPage from '../settings/SettingsPage';
 import SupportPage from '../support/SupportPage';
-import { Calendar, Download } from 'lucide-react';
-import turfService from '../../../shared/services/turfService';
-import { OwnerContext } from '../../context/ownerContext';
-import PeriodSelect from '../../components/dashboard/PeriodSelect';
-import NeedsActionCard from '../../components/dashboard/NeedsActionCard';
-import ApprovalBanner from '../../components/dashboard/ApprovalBanner';
-import { DashboardSkeleton, ErrorNotice, NoVenueNotice, EmptyBookingsNotice } from '../../components/dashboard/DashboardNotices';
-import { PERIOD_OPTIONS, getPeriodRange } from '../../../shared/utils/dashboardStats';
-import { deriveBookingStatus, isActiveBooking } from '../../../shared/utils/bookingStatus';
-import { buildBookingsCsv, getReportBookings, downloadCsv } from '../../../shared/utils/reportExport';
-import { getTodayNepalString, formatDateDisplay } from '../../../shared/utils/dateTime';
 
-const TAB_TO_PATH = { Dashboard: '', Bookings: 'bookings', Payments: 'payments', Customers: 'customers', Courts: 'courts', 'Turf Images': 'images', Invoices: 'invoices', Pricing: 'pricing', 'Promo Codes': 'promo-codes', Announcements: 'announcements', Reviews: 'reviews', 'Activity Logs': 'activity-logs', Settings: 'settings', 'Help & Support': 'support' };
-const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab]));
+import turfService from '../../../shared/services/turfService';
+import reviewService from '../../../shared/services/reviewService';
+import { buildDashboardViewData } from '../../../shared/utils/dashboardViewData';
+
+import { OwnerContext } from '../../context/ownerContext';
+
+import PeriodSelect from '../../components/dashboard/PeriodSelect';
+
+import {
+  DashboardSkeleton,
+  ErrorNotice,
+  NoVenueNotice,
+} from '../../components/dashboard/DashboardNotices';
+
+import {
+  PERIOD_OPTIONS,
+  getPeriodRange,
+} from '../../../shared/utils/dashboardStats';
+
+import {
+  deriveBookingStatus,
+  isActiveBooking,
+} from '../../../shared/utils/bookingStatus';
+
+import {
+  buildBookingsCsv,
+  getReportBookings,
+  downloadCsv,
+} from '../../../shared/utils/reportExport';
+
+import {
+  getTodayNepalString,
+  formatDateDisplay,
+} from '../../../shared/utils/dateTime';
+
+const TAB_TO_PATH = {
+  Dashboard: '',
+  Bookings: 'bookings',
+  Payments: 'payments',
+  Customers: 'customers',
+  Courts: 'courts',
+  'Turf Images': 'images',
+  Invoices: 'invoices',
+  Pricing: 'pricing',
+  'Promo Codes': 'promo-codes',
+  Announcements: 'announcements',
+  Reviews: 'reviews',
+  'Activity Logs': 'activity-logs',
+  Settings: 'settings',
+  'Help & Support': 'support',
+};
+
+const PATH_TO_TAB = Object.fromEntries(
+  Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab])
+);
 
 function Dashboard({ user, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const section = location.pathname.replace(/^\/dashboard\/?/, '').split('/')[0];
+
+  const section = location.pathname
+    .replace(/^\/dashboard\/?/, '')
+    .split('/')[0];
+
   const activeTab = PATH_TO_TAB[section] || 'Dashboard';
-  const setActiveTab = (tab) => navigate(`/dashboard${TAB_TO_PATH[tab] ? `/${TAB_TO_PATH[tab]}` : ''}`);
+
+  const setActiveTab = (tab) =>
+    navigate(
+      `/dashboard${TAB_TO_PATH[tab] ? `/${TAB_TO_PATH[tab]}` : ''}`
+    );
+
   const [venue, setVenue] = useState(null);
   const [venues, setVenues] = useState([]);
   const [ownerBookings, setOwnerBookings] = useState([]);
-  // Load state, so the page can show skeletons / errors / empty states instead of misleading zeros.
-  const [venueStatus, setVenueStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [bookingsStatus, setBookingsStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [bookingsLoaded, setBookingsLoaded] = useState(false); // true once bookings loaded at least once
+  const [ownerCustomers, setOwnerCustomers] = useState([]);
+  const [ownerReviews, setOwnerReviews] = useState([]);
+
+  const [venueStatus, setVenueStatus] = useState('loading');
+  const [bookingsStatus, setBookingsStatus] = useState('loading');
+  const [bookingsLoaded, setBookingsLoaded] = useState(false);
+
   const [isRetrying, setIsRetrying] = useState(false);
   const [period, setPeriod] = useState('month');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  // Lets the top bar / dashboard cards open the Bookings tab with a search, filter or the New Booking form.
-  // Changing the nonce remounts the Bookings page so it starts from these values.
-  const [bookingIntent, setBookingIntent] = useState({ nonce: 0, search: '', status: 'All', date: 'all', openAdd: false });
-  // Same deep-link pattern for the top bar's global search jumping straight to a Payment or Customer ID.
-  const [paymentIntent, setPaymentIntent] = useState({ nonce: 0, search: '' });
-  const [customerIntent, setCustomerIntent] = useState({ nonce: 0, search: '' });
+
+  const [bookingIntent, setBookingIntent] = useState({
+    nonce: 0,
+    search: '',
+    status: 'All',
+    date: 'all',
+    openAdd: false,
+  });
+
+  const [paymentIntent, setPaymentIntent] = useState({
+    nonce: 0,
+    search: '',
+  });
+
+  const [customerIntent, setCustomerIntent] = useState({
+    nonce: 0,
+    search: '',
+  });
 
   const loadVenue = () => {
     const userId = user?._id || user?.id;
-    if (!userId) return Promise.resolve(null);
+
+    if (!userId) {
+      return Promise.resolve(null);
+    }
+
     return turfService
       .getOwnerTurfs()
       .then((turfs) => {
         setVenues(turfs);
         setVenue(turfs[0] || null);
         setVenueStatus('ready');
+
         return turfs[0] || null;
       })
       .catch((error) => {
@@ -75,83 +156,143 @@ function Dashboard({ user, onLogout }) {
       });
   };
 
-  // Keeps the previous list on failure so a flaky refresh doesn't blank the page.
-  const loadBookings = useCallback(() =>
-    turfService
-      .getOwnerBookings()
-      .then((items) => {
+  const loadBookings = useCallback(
+    () => Promise.all([
+      turfService.getOwnerBookings(),
+      turfService.getOwnerCustomers(),
+      reviewService.getOwnerReviews(),
+    ])
+      .then(([items, customers, reviews]) => {
         setOwnerBookings(items);
+        setOwnerCustomers(Array.isArray(customers) ? customers : []);
+        setOwnerReviews(Array.isArray(reviews) ? reviews : []);
         setBookingsLoaded(true);
         setBookingsStatus('ready');
       })
-      .catch(() => setBookingsStatus('error')), []);
+      .catch(() => {
+        setBookingsStatus('error');
+      }),
+    []
+  );
 
   const userId = user?._id || user?.id;
 
   useEffect(() => {
-    if (!userId) return;
-    loadVenue().catch(() => {});
+    if (!userId) {
+      return;
+    }
+
+    loadVenue().catch(() => { });
   }, [userId]);
 
-  // Reload whenever the owner lands back on the dashboard, so confirms/cancels made on other tabs show up.
   useEffect(() => {
-    if (!userId || activeTab !== 'Dashboard') return;
+    if (!userId || activeTab !== 'Dashboard') {
+      return;
+    }
+
     loadBookings();
   }, [userId, activeTab, loadBookings]);
 
-  // Players book from their own devices, so a portal tab left open in the background has to
-  // refetch when it becomes visible again instead of keeping the list it loaded on mount.
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      return;
+    }
+
     const reloadWhenVisible = () => {
-      if (!document.hidden) loadBookings();
+      if (!document.hidden) {
+        loadBookings();
+      }
     };
+
     window.addEventListener('focus', reloadWhenVisible);
-    document.addEventListener('visibilitychange', reloadWhenVisible);
+
+    document.addEventListener(
+      'visibilitychange',
+      reloadWhenVisible
+    );
+
     return () => {
-      window.removeEventListener('focus', reloadWhenVisible);
-      document.removeEventListener('visibilitychange', reloadWhenVisible);
+      window.removeEventListener(
+        'focus',
+        reloadWhenVisible
+      );
+
+      document.removeEventListener(
+        'visibilitychange',
+        reloadWhenVisible
+      );
     };
   }, [userId, loadBookings]);
 
-  // Reload bookings after something changed them.
   const refreshBookings = loadBookings;
 
   const retry = async (load) => {
     setIsRetrying(true);
+
     try {
       await load();
     } catch {
-      // the failed state stays visible; nothing else to do
+      // Keep the current error state visible.
     } finally {
       setIsRetrying(false);
     }
   };
 
-  // Plain tab changes start the Bookings page clean; openBookings() is the deep-link version.
   const goToTab = (tab) => {
-    setBookingIntent((prev) => ({ nonce: prev.nonce + 1, search: '', status: 'All', date: 'all', openAdd: false }));
+    setBookingIntent((prev) => ({
+      nonce: prev.nonce + 1,
+      search: '',
+      status: 'All',
+      date: 'all',
+      openAdd: false,
+    }));
+
     setActiveTab(tab);
   };
-  const openBookings = ({ search = '', status = 'All', date = 'all', openAdd = false } = {}) => {
-    setBookingIntent((prev) => ({ nonce: prev.nonce + 1, search, status, date, openAdd }));
+
+  const openBookings = ({
+    search = '',
+    status = 'All',
+    date = 'all',
+    openAdd = false,
+  } = {}) => {
+    setBookingIntent((prev) => ({
+      nonce: prev.nonce + 1,
+      search,
+      status,
+      date,
+      openAdd,
+    }));
+
     setActiveTab('Bookings');
   };
+
   const openPayments = ({ search = '' } = {}) => {
-    setPaymentIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setPaymentIntent((prev) => ({
+      nonce: prev.nonce + 1,
+      search,
+    }));
+
     setActiveTab('Payments');
   };
+
   const openCustomers = ({ search = '' } = {}) => {
-    setCustomerIntent((prev) => ({ nonce: prev.nonce + 1, search }));
+    setCustomerIntent((prev) => ({
+      nonce: prev.nonce + 1,
+      search,
+    }));
+
     setActiveTab('Customers');
   };
 
-  const pendingCount = ownerBookings.filter((b) => isActiveBooking(b) && deriveBookingStatus(b) === 'Pending').length;
+  const pendingCount = ownerBookings.filter(
+    (booking) =>
+      isActiveBooking(booking) &&
+      deriveBookingStatus(booking) === 'Pending'
+  ).length;
 
   const refreshVenue = loadVenue;
 
-  // Shared by every owner page (Sidebar/TopBar read it) so the venue name, user and
-  // logout action are identical no matter which tab is open.
   const ownerContext = {
     user,
     venue,
@@ -164,14 +305,32 @@ function Dashboard({ user, onLogout }) {
     openCustomers,
     pendingCount,
     isMobileMenuOpen,
-    toggleMobileMenu: () => setIsMobileMenuOpen((open) => !open),
-    closeMobileMenu: () => setIsMobileMenuOpen(false),
+
+    toggleMobileMenu: () =>
+      setIsMobileMenuOpen((open) => !open),
+
+    closeMobileMenu: () =>
+      setIsMobileMenuOpen(false),
   };
-  const pageProps = { user, venue, activeTab, setActiveTab: goToTab, onLogout, refreshVenue };
+
+  const pageProps = {
+    user,
+    venue,
+    activeTab,
+    setActiveTab: goToTab,
+    onLogout,
+    refreshVenue,
+  };
 
   const tabPages = {
-    Courts: <CourtsPage {...pageProps} />,
-    'Turf Images': <TurfImagesPage {...pageProps} />,
+    Courts: (
+      <CourtsPage {...pageProps} />
+    ),
+
+    'Turf Images': (
+      <TurfImagesPage {...pageProps} />
+    ),
+
     Bookings: (
       <BookingsPage
         key={bookingIntent.nonce}
@@ -184,6 +343,7 @@ function Dashboard({ user, onLogout }) {
         initialAddOpen={bookingIntent.openAdd}
       />
     ),
+
     Customers: (
       <CustomersPage
         key={customerIntent.nonce}
@@ -191,6 +351,7 @@ function Dashboard({ user, onLogout }) {
         initialSearch={customerIntent.search}
       />
     ),
+
     Payments: (
       <PaymentsPage
         key={paymentIntent.nonce}
@@ -198,153 +359,330 @@ function Dashboard({ user, onLogout }) {
         initialSearch={paymentIntent.search}
       />
     ),
-    Invoices: <InvoicesPage {...pageProps} />,
-    Pricing: <PricingPage {...pageProps} />,
-    'Promo Codes': <PromoCodesPage {...pageProps} />,
-    Announcements: <AnnouncementsPage {...pageProps} />,
-    Reviews: <ReviewsPage {...pageProps} />,
-    'Activity Logs': <ActivityLogsPage {...pageProps} />,
-    // Keyed by venue so the form re-seeds once the venue has loaded (and not on later refreshes).
-    Settings: <SettingsPage key={venue?.id || 'no-venue'} {...pageProps} />,
-    'Help & Support': <SupportPage {...pageProps} />,
+
+    Invoices: (
+      <PaymentsPage {...pageProps} initialTab="Invoices" />
+    ),
+
+    Pricing: (
+      <PricingPage {...pageProps} />
+    ),
+
+    'Promo Codes': (
+      <PromoCodesPage {...pageProps} />
+    ),
+
+    Announcements: (
+      <AnnouncementsPage {...pageProps} />
+    ),
+
+    Reviews: (
+      <ReviewsPage {...pageProps} />
+    ),
+
+    'Activity Logs': (
+      <ActivityLogsPage {...pageProps} />
+    ),
+
+    Settings: (
+      <SettingsPage
+        key={venue?.id || 'no-venue'}
+        {...pageProps}
+      />
+    ),
+
+    'Help & Support': (
+      <SupportPage {...pageProps} />
+    ),
   };
 
+  // Keep dashboard hooks above any tab-specific return so every render calls
+  // hooks in the same order when navigating between Dashboard and child pages.
+  const dashboardData = useMemo(() => buildDashboardViewData({
+    bookings: ownerBookings,
+    venues,
+    customers: ownerCustomers,
+    reviews: ownerReviews,
+    period,
+  }), [ownerBookings, venues, ownerCustomers, ownerReviews, period]);
+
   if (tabPages[activeTab]) {
-    return <OwnerContext.Provider value={ownerContext}>{tabPages[activeTab]}</OwnerContext.Provider>;
+    return (
+      <OwnerContext.Provider value={ownerContext}>
+        {tabPages[activeTab]}
+      </OwnerContext.Provider>
+    );
   }
 
-  const todayLabel = formatDateDisplay(getTodayNepalString()) || 'Today';
-  const noVenue = venueStatus === 'ready' && !venue;
+  const todayLabel =
+    formatDateDisplay(getTodayNepalString()) || 'Today';
+
+  const noVenue =
+    venueStatus === 'ready' && !venue;
 
   const reportRange = getPeriodRange(period);
-  const reportCount = getReportBookings(ownerBookings, reportRange).length;
+
+  const reportCount = getReportBookings(
+    ownerBookings,
+    reportRange
+  ).length;
+
   const handleExportReport = () => {
-    if (reportCount === 0) return;
-    downloadCsv(`turfio-bookings-${period}-${getTodayNepalString()}.csv`, buildBookingsCsv(ownerBookings, reportRange));
+    if (reportCount === 0) {
+      return;
+    }
+
+    downloadCsv(
+      `turfio-bookings-${period}-${getTodayNepalString()}.csv`,
+      buildBookingsCsv(
+        ownerBookings,
+        reportRange
+      )
+    );
   };
 
   return (
     <OwnerContext.Provider value={ownerContext}>
-    <div className="flex flex-col h-screen bg-[#fdfefe] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
-      {/* Top Header Bar across full window width */}
-      <TopBar
-        user={user}
-        venue={venue}
-        setActiveTab={goToTab}
-        onLogout={onLogout}
-        isMobileMenuOpen={isMobileMenuOpen}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      />
+      <div className="relative flex h-screen flex-col overflow-hidden bg-white font-sans text-slate-900 antialiased select-none">
 
-      {/* Main Body Section: Left Sidebar + Right Content Area */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Floating Left Sidebar */}
-        <Sidebar
+        {/* =====================================================
+            TOP HEADER
+        ====================================================== */}
+        <TopBar
           user={user}
           venue={venue}
-          activeTab={activeTab}
           setActiveTab={goToTab}
           onLogout={onLogout}
-          isOpen={isMobileMenuOpen}
-          onClose={() => setIsMobileMenuOpen(false)}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() =>
+            setIsMobileMenuOpen(!isMobileMenuOpen)
+          }
         />
 
-        {/* Right Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
-          {/* Scrollable Dashboard Body */}
-          <div className="flex-1 overflow-y-auto space-y-6 scrollbar-thin px-6 py-6 md:px-8 md:py-8">
-            {/* Welcome Header Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                  Welcome back, {user?.firstName || 'Admin'}! 👋
-                </h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">
-                  Here's what's happening with your futsal arena · {todayLabel}
-                </p>
-              </div>
+        {/* =====================================================
+            MAIN LAYOUT
+        ====================================================== */}
+        <div className="relative flex min-h-0 flex-1">
 
-              <div className="flex items-center gap-2.5">
-                {/* Period filter: drives the stat cards and revenue summary */}
-                <PeriodSelect
-                  value={period}
-                  onChange={setPeriod}
-                  options={PERIOD_OPTIONS}
-                  icon={Calendar}
-                  ariaLabel="Dashboard period"
-                  className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:bg-slate-100 py-1"
-                />
+          {/* Sidebar */}
+          <Sidebar
+            user={user}
+            venue={venue}
+            activeTab={activeTab}
+            setActiveTab={goToTab}
+            onLogout={onLogout}
+            isOpen={isMobileMenuOpen}
+            onClose={() =>
+              setIsMobileMenuOpen(false)
+            }
+          />
 
-                {/* Export Report Action */}
-                <button
-                  onClick={handleExportReport}
-                  disabled={reportCount === 0}
-                  title={reportCount === 0 ? 'No bookings in this period to export' : `Download ${reportCount} booking${reportCount === 1 ? '' : 's'} as CSV`}
-                  className="flex items-center gap-2 px-5 py-3 rounded-full bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Download size={14} />
-                  <span>Export Report</span>
-                </button>
-              </div>
-            </div>
+          {/* =====================================================
+              DASHBOARD CONTENT
+          ====================================================== */}
+          <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="scrollbar-thin flex-1 overflow-y-auto">
+              <div className="mx-auto w-full space-y-6 px-5 py-6 md:px-6 md:py-7 xl:px-7">
 
-            <ApprovalBanner />
-            {venueStatus === 'error' && (
-              <ErrorNotice
-                message="Couldn't load your venue details."
-                onRetry={() => retry(loadVenue)}
-                busy={isRetrying}
-              />
-            )}
-            {noVenue && <NoVenueNotice onListTurf={() => { window.location.href = '/list-turf'; }} />}
-            {bookingsStatus === 'error' && (
-              <ErrorNotice
-                message={
-                  bookingsLoaded
-                    ? "Couldn't refresh your bookings. Showing the last data that loaded."
-                    : "Couldn't load your bookings."
-                }
-                onRetry={() => retry(loadBookings)}
-                busy={isRetrying}
-              />
-            )}
+                {/* =====================================================
+                    WELCOME HEADER
+                ====================================================== */}
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="min-w-0">
+                    <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-slate-900">
+                      Welcome back, {user?.firstName || 'Admin'}! 👋
+                    </h1>
 
-            {noVenue ? null : !bookingsLoaded ? (
-              bookingsStatus === 'loading' ? <DashboardSkeleton /> : null
-            ) : (
-              <>
-                {ownerBookings.length === 0 && (
-                  <EmptyBookingsNotice
-                    onAddBooking={() => openBookings({ openAdd: true })}
-                    onSetup={() => goToTab('Courts')}
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      Here&apos;s what&apos;s happening with your futsal arena ·{' '}
+                      {todayLabel}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2.5">
+                    <PeriodSelect
+                      value={period}
+                      onChange={setPeriod}
+                      options={PERIOD_OPTIONS}
+                      icon={Calendar}
+                      ariaLabel="Dashboard period"
+                      className="bg-white py-1 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:bg-slate-100"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleExportReport}
+                      disabled={reportCount === 0}
+                      title={
+                        reportCount === 0
+                          ? 'No bookings in this period to export'
+                          : `Download ${reportCount} booking${reportCount === 1 ? '' : 's'
+                          } as CSV`
+                      }
+                      className="flex cursor-pointer items-center gap-2 rounded-full bg-lime-400 px-5 py-3 text-xs font-bold text-slate-900 transition-colors hover:bg-lime-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Download size={14} />
+
+                      <span>
+                        Export Report
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* =====================================================
+                    VENUE ERROR
+                ====================================================== */}
+                {venueStatus === 'error' && (
+                  <ErrorNotice
+                    message="Couldn't load your venue details."
+                    onRetry={() =>
+                      retry(loadVenue)
+                    }
+                    busy={isRetrying}
                   />
                 )}
 
-                {/* Bookings waiting on the owner (hidden when there are none) */}
-              <NeedsActionCard
-                bookings={ownerBookings}
-                onChanged={refreshBookings}
-                onViewAll={() => openBookings({ status: 'Pending' })}
-              />
+                {/* =====================================================
+                    NO VENUE
+                ====================================================== */}
+                {noVenue && (
+                  <NoVenueNotice
+                    onListTurf={() => {
+                      window.location.href =
+                        '/list-turf';
+                    }}
+                  />
+                )}
 
-              {/* Top Row: 4 Metric Cards */}
-              <StatCards bookings={ownerBookings} venue={venue} venues={venues} period={period} />
+                {/* =====================================================
+                    BOOKING ERROR
+                ====================================================== */}
+                {bookingsStatus === 'error' && (
+                  <ErrorNotice
+                    message={
+                      bookingsLoaded
+                        ? "Couldn't refresh your bookings. Showing the last data that loaded."
+                        : "Couldn't load your bookings."
+                    }
+                    onRetry={() =>
+                      retry(loadBookings)
+                    }
+                    busy={isRetrying}
+                  />
+                )}
 
-              {/* Middle Row: Today's Schedule, Bookings Overview Bar Chart, Revenue Summary Donut */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <ScheduleCard bookings={ownerBookings} venue={venue} />
-                <RevenueChart bookings={ownerBookings} />
-                <RevenueSummaryDonut bookings={ownerBookings} period={period} />
+                {noVenue ? null : !bookingsLoaded ? (
+                  bookingsStatus === 'loading' ? (
+                    <DashboardSkeleton />
+                  ) : null
+                ) : (
+                  <>
+                    {/* =====================================================
+                        STAT CARDS
+                    ====================================================== */}
+                    <StatCards stats={dashboardData.stats} />
+
+                    {/* =====================================================
+                        PRIMARY DASHBOARD ROW
+
+                        Today's Schedule
+                        Revenue Overview
+                        Bookings by Time
+                    ====================================================== */}
+                    <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[4fr_5fr_4fr]">
+
+                      {/* Today's Schedule */}
+                      <div className="min-w-0">
+                        <TodaysSchedule
+                          schedule={dashboardData.schedule}
+                          onViewCalendar={() =>
+                            goToTab('Bookings')
+                          }
+                        />
+                      </div>
+
+                      {/* Revenue Overview */}
+                      <div className="min-w-0">
+                        <RevenueOverview {...dashboardData.revenue} />
+                      </div>
+
+                      {/* Bookings Heatmap */}
+                      <div className="min-w-0">
+                        <BookingsByTime rows={dashboardData.heatRows} />
+                      </div>
+                    </section>
+
+                    {/* =====================================================
+                        SECONDARY DASHBOARD ROW
+
+                        Court Status
+                        Recent Bookings
+                    ====================================================== */}
+                    <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[5fr_8fr]">
+
+                      {/* Court Status */}
+                      <div className="min-w-0">
+                        <CourtStatus
+                          courts={dashboardData.courts}
+                          onViewAll={() =>
+                            goToTab('Courts')
+                          }
+                        />
+                      </div>
+
+                      {/* Recent Bookings */}
+                      <div className="min-w-0">
+                        <DashboardRecentBookings
+                          bookings={dashboardData.recentBookings}
+                          onViewAll={() =>
+                            goToTab('Bookings')
+                          }
+                        />
+                      </div>
+                    </section>
+
+                    {/* =====================================================
+                        CUSTOMER INSIGHTS ROW
+
+                        Customer Insights
+                        Top Customers
+                        Recent Reviews
+                    ====================================================== */}
+                    <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2 xl:grid-cols-[1.05fr_1fr_1fr]">
+
+                      {/* Customer Insights */}
+                      <div className="min-w-0">
+                        <CustomerInsights
+                          insights={dashboardData.insights}
+                          onViewAll={() =>
+                            goToTab('Customers')
+                          }
+                        />
+                      </div>
+
+                      {/* Top Customers */}
+                      <div className="min-w-0">
+                        <TopCustomers customers={dashboardData.topCustomers} />
+                      </div>
+
+                      {/* Recent Reviews */}
+                      <div className="min-w-0 lg:col-span-2 xl:col-span-1">
+                        <RecentReviews
+                          reviews={dashboardData.recentReviews}
+                          onViewAll={() =>
+                            goToTab('Reviews')
+                          }
+                        />
+                      </div>
+                    </section>
+                  </>
+                )}
               </div>
-
-              {/* Bottom Row: Recent Bookings. Payments now live on their own dashboard page (see Sidebar). */}
-              <RecentBookingsTable bookings={ownerBookings} />
-              </>
-            )}
-          </div>
+            </div>
+          </main>
         </div>
       </div>
-    </div>
     </OwnerContext.Provider>
   );
 }
