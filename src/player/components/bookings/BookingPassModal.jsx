@@ -28,110 +28,91 @@ function BookingPassModal({ booking, qrToken, onClose }) {
 
     setIsGenerating(true);
     try {
-      console.log('Starting PDF generation with dom-to-image...');
-      
       const element = passRef.current;
-      
+
       // Store original styles
       const originalTransform = element.style.transform;
       const originalWidth = element.style.width;
-      
-      // Set fixed width for consistent rendering
+      const originalPosition = element.style.position;
+
+      // Fix width and flatten transform for accurate capture
       element.style.transform = 'none';
-      element.style.width = '750px'; // Fixed width for PDF
-      
+      element.style.width = '680px';
+      element.style.position = 'relative';
+
       // Wait for layout to settle
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Generate PNG blob from the element (handles modern CSS including oklch)
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const scale = 2; // 2× resolution for sharp PDF text
+      const captureWidth = element.offsetWidth;
+      const captureHeight = element.offsetHeight;
+
+      // Generate high-resolution PNG
       const blob = await domtoimage.toBlob(element, {
-        quality: 0.98,
-        width: element.offsetWidth,
-        height: element.offsetHeight,
+        quality: 1,
+        width: captureWidth * scale,
+        height: captureHeight * scale,
         style: {
-          transform: 'none',
-          margin: '0',
-          padding: '24px',
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: `${captureWidth}px`,
+          height: `${captureHeight}px`,
         },
         cacheBust: true,
       });
-      
-      console.log('Image blob generated');
-      
+
       // Restore original styles
       element.style.transform = originalTransform;
       element.style.width = originalWidth;
-      
+      element.style.position = originalPosition;
+
       // Convert blob to base64 for jsPDF
       const reader = new FileReader();
       const imgDataUrl = await new Promise((resolve) => {
         reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(blob);
       });
-      
-      // Create an image to get dimensions
-      const img = new Image();
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.src = imgDataUrl;
-      });
-      
-      console.log('Image loaded:', img.width, 'x', img.height);
-      
+
       // PDF dimensions (A4: 210mm x 297mm)
       const pdfWidth = 210;
       const pdfHeight = 297;
-      const margin = 15; // Increased margin
-      
-      // Calculate dimensions to fit page
-      const maxWidth = pdfWidth - (2 * margin);
-      const maxHeight = pdfHeight - (2 * margin);
-      
-      // Convert px to mm (at 96 DPI: 1mm = 3.7795px)
-      const imgWidthMM = img.width / 3.7795;
-      const imgHeightMM = img.height / 3.7795;
-      
-      // Calculate scale to fit within page
-      let finalWidth = imgWidthMM;
-      let finalHeight = imgHeightMM;
-      
-      if (imgWidthMM > maxWidth || imgHeightMM > maxHeight) {
-        const scaleWidth = maxWidth / imgWidthMM;
-        const scaleHeight = maxHeight / imgHeightMM;
-        const scale = Math.min(scaleWidth, scaleHeight);
-        
-        finalWidth = imgWidthMM * scale;
-        finalHeight = imgHeightMM * scale;
+      const margin = 12;
+      const maxWidth = pdfWidth - 2 * margin;
+      const maxHeight = pdfHeight - 2 * margin;
+
+      // The captured image is scale× the display size; convert display px → mm
+      const displayWidthMM = captureWidth / 3.7795;
+      const displayHeightMM = captureHeight / 3.7795;
+
+      let finalWidth = displayWidthMM;
+      let finalHeight = displayHeightMM;
+
+      if (displayWidthMM > maxWidth || displayHeightMM > maxHeight) {
+        const scaleW = maxWidth / displayWidthMM;
+        const scaleH = maxHeight / displayHeightMM;
+        const fit = Math.min(scaleW, scaleH);
+        finalWidth = displayWidthMM * fit;
+        finalHeight = displayHeightMM * fit;
       }
-      
-      // Center on page
+
       const xOffset = (pdfWidth - finalWidth) / 2;
-      const yOffset = (pdfHeight - finalHeight) / 2;
-      
-      console.log('PDF layout:', finalWidth.toFixed(2), 'x', finalHeight.toFixed(2), 'mm at', xOffset.toFixed(2), yOffset.toFixed(2));
-      
-      // Create PDF
+      const yOffset = margin;
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
         compress: true,
       });
-      
-      // Add image to PDF
-      pdf.addImage(imgDataUrl, 'PNG', xOffset, yOffset, finalWidth, finalHeight, undefined, 'FAST');
-      
-      // Download
+
+      pdf.addImage(imgDataUrl, 'PNG', xOffset, yOffset, finalWidth, finalHeight, undefined, 'SLOW');
+
       const fileName = `Turfio-Booking-${booking.bookingId || booking.shortCode}-${booking.dateStr || 'pass'}.pdf`;
-      console.log('Saving PDF:', fileName);
       pdf.save(fileName);
-      
-      console.log('✅ PDF generated successfully!');
 
     } catch (error) {
-      console.error('❌ PDF generation error:', error);
-      console.error('Error details:', error.message);
-      alert(`Failed to generate PDF.\n\nError: ${error.message}\n\nPlease use the Print button which works perfectly!`);
+      console.error('PDF generation error:', error);
+      alert(`Failed to generate PDF.\n\nError: ${error.message}\n\nPlease use the Print button instead.`);
     } finally {
       setIsGenerating(false);
     }
@@ -311,24 +292,21 @@ function BookingPassModal({ booking, qrToken, onClose }) {
             <div className="bg-lime-50 border-2 border-lime-200 p-3 rounded-xl mb-4">
               <h3 className="font-bold text-slate-700 text-xs mb-2 uppercase">Payment Summary</h3>
               <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600 flex-shrink-0">Total Amount</span>
-                  <span className="font-bold text-slate-900 text-right">{money(booking.totalAmount)}</span>
+                <div className="flex items-center" style={{ gap: '8px' }}>
+                  <span className="text-slate-600" style={{ flex: '1 1 auto' }}>Total Amount</span>
+                  <span className="font-bold text-slate-900" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{money(booking.totalAmount)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600 flex-shrink-0">Amount Paid</span>
-                  <span className="font-bold text-emerald-600 text-right">{money(booking.totalPaidAmount)}</span>
-                </div>
+               
                 {booking.paymentType === 'venue' && booking.depositAmount > 0 && (
                   <>
                     <div className="border-t border-lime-300 my-1.5"></div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-amber-700 font-bold flex-shrink-0 pr-2">Deposit Paid (20%)</span>
-                      <span className="font-bold text-emerald-600 text-right">{money(booking.depositAmount)}</span>
+                    <div className="flex items-center" style={{ gap: '8px' }}>
+                      <span className="text-amber-700 font-bold" style={{ flex: '1 1 auto' }}>Deposit Paid (20%)</span>
+                      <span className="font-bold text-emerald-600" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{money(booking.depositAmount)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-amber-700 font-bold flex-shrink-0 pr-2">Pay at Venue</span>
-                      <span className="font-black text-amber-700 text-right">{money(booking.remainingBalance)}</span>
+                    <div className="flex items-center" style={{ gap: '8px' }}>
+                      <span className="text-amber-700 font-bold" style={{ flex: '1 1 auto' }}>Pay at Venue</span>
+                      <span className="font-black text-amber-700" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{money(booking.remainingBalance)}</span>
                     </div>
                   </>
                 )}
@@ -337,10 +315,46 @@ function BookingPassModal({ booking, qrToken, onClose }) {
 
             {/* Player Details */}
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
-              <h3 className="font-bold text-slate-700 text-xs mb-1.5 uppercase">Player Details</h3>
-              <p className="font-black text-slate-900 text-sm">{booking.user?.firstName} {booking.user?.lastName}</p>
-              <p className="text-xs text-slate-600">{booking.user?.email}</p>
-              <p className="text-xs text-slate-600">{booking.user?.phone}</p>
+              <h3 className="font-bold text-slate-700 text-xs mb-2 uppercase">Player Details</h3>
+              {(() => {
+                // customerSnapshot is the authoritative contact at booking time
+                const name = booking.customerSnapshot?.name
+                  || (booking.user?.firstName ? `${booking.user.firstName} ${booking.user.lastName || ''}`.trim() : '')
+                  || booking.user?.name
+                  || '—';
+                const email = booking.customerSnapshot?.email || booking.user?.email || '—';
+                const phone = booking.customerSnapshot?.phone || booking.user?.phone || booking.teamPhone || '—';
+                const teamName = booking.teamName;
+                const teamSize = booking.teamSize;
+                return (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 uppercase w-16 flex-shrink-0">Name</span>
+                      <span className="font-black text-slate-900 text-sm">{name}</span>
+                    </div>
+                    {teamName && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 uppercase w-16 flex-shrink-0">Team</span>
+                        <span className="font-bold text-slate-800 text-xs">{teamName}</span>
+                      </div>
+                    )}
+                    {teamSize && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 uppercase w-16 flex-shrink-0">Players</span>
+                        <span className="font-bold text-slate-800 text-xs">{teamSize} players · {booking.matchType}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 uppercase w-16 flex-shrink-0">Email</span>
+                      <span className="text-xs text-slate-600">{email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 uppercase w-16 flex-shrink-0">Phone</span>
+                      <span className="text-xs text-slate-600">{phone}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Footer Instructions */}

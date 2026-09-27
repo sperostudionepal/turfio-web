@@ -32,6 +32,7 @@ import { useNavHandlers } from '../../../shared/hooks/useNavHandlers';
 import CustomDropdown from '../../../shared/components/common/CustomDropdown';
 import CustomDatePicker from '../../../shared/components/common/CustomDatePicker';
 import TurfSingleLocationMap from '../../components/turfs/TurfSingleLocationMap';
+import CourtReviewForm from '../../components/turfs/CourtReviewForm';
 import turfService from '../../../shared/services/turfService';
 import { getTodayNepalString, getNepalCurrentDateTime } from '../../../shared/utils/dateTime';
 import { useToast } from '../../../shared/components/common/toastContext';
@@ -599,8 +600,9 @@ export default function TurfDetailsPage({
     }
     const priceStr = turf?.price || '1000';
     const match = priceStr.match(/(\d+,?\d*)/);
-    return match ? parseInt(match[1].replace(/,/g, ''), 10) : 1000;
-  }, [selectedCourt?.hourlyRate, turf]);
+    const fallbackPrice = match ? parseInt(match[1].replace(/,/g, ''), 10) : 1000;
+    return fallbackPrice;
+  }, [selectedCourt?.hourlyRate, turf, selectedCourt]);
 
   const subtotal = baseRateNumeric * duration;
   const totalAmount = subtotal;
@@ -685,8 +687,7 @@ export default function TurfDetailsPage({
 
       // Proceed to checkout with real hold data and selected court
 
-
-      onBookNow?.({
+      const checkoutData = {
         ...turf,
         selectedCourt,
         court: selectedCourt,
@@ -694,9 +695,6 @@ export default function TurfDetailsPage({
         courtNumber: selectedCourt?.courtNumber || 1,
         courtDimension: selectedCourt?.dimension || '25m x 15m (Standard 5v5)',
         courtSurface: selectedCourt?.surface || 'FIFA Quality Synthetic Turf',
-        courtHourlyRate: baseRateNumeric,
-        priceVal: baseRateNumeric,
-        pricePerHour: baseRateNumeric,
         selectedDate,
         selectedTime: selectedTimeSlot,
         duration,
@@ -705,7 +703,25 @@ export default function TurfDetailsPage({
         holdToken: holdData?.holdToken,
         holdExpiresAt: holdData?.expiresAt,
         ttlSeconds: holdData?.ttlSeconds || 300,
-      });
+        // These MUST be last to override any values from ...turf spread
+        courtHourlyRate: baseRateNumeric,
+        priceVal: baseRateNumeric,
+        pricePerHour: baseRateNumeric,
+        price: `NPR ${baseRateNumeric}/hr`, // Also override the price string
+      };
+
+      // Store in sessionStorage as backup
+      try {
+        sessionStorage.setItem('turfio_booking_rate', baseRateNumeric.toString());
+        sessionStorage.setItem('turfio_court_name', selectedCourt?.name || '');
+      } catch (e) {
+        console.error('Failed to save rate to sessionStorage:', e);
+      }
+
+      // Also add to URL as backup
+      checkoutData.rateOverride = baseRateNumeric;
+
+      onBookNow?.(checkoutData);
     } catch (err) {
       console.warn('Hold creation rejected:', err.message);
       const conflictMsg =
@@ -718,6 +734,30 @@ export default function TurfDetailsPage({
       turfService.getTurfAvailability(turfId, selectedDate, selectedCourt?._id || selectedCourt?.id, activeResumableHold?.holdToken || null).then(setAvailabilityData).catch(() => {});
     } finally {
       setIsHoldingSlot(false);
+    }
+  };
+
+  // Reviews & Ratings. The turf payload already carries them; a snapshot replaces them once the
+  // player has submitted, edited or deleted one and the recomputed averages are fetched back.
+  const [reviewSnapshot, setReviewSnapshot] = useState(null);
+  const reviewSource =
+    reviewSnapshot && String(reviewSnapshot.id) === String(turfId) ? reviewSnapshot : turf;
+  const reviews = reviewSource?.reviewsList || [];
+  const ratingSummary = {
+    rating: Number(reviewSource?.rating) || 0,
+    count: Number(reviewSource?.reviews) || 0,
+  };
+
+  const refreshReviews = async () => {
+    if (!turfId) return;
+    try {
+      const fresh = await turfService.getTurfById(turfId);
+      if (!fresh) return;
+      setReviewSnapshot(fresh);
+      // Every court's average moves with a review, so pick up the recomputed ones too.
+      if (Array.isArray(fresh.courts) && fresh.courts.length > 0) setCourts(fresh.courts);
+    } catch (err) {
+      console.warn('Failed to refresh reviews:', err.message);
     }
   };
 
@@ -975,11 +1015,22 @@ export default function TurfDetailsPage({
                       href="#reviews"
                       className="inline-flex items-center gap-1 font-bold text-slate-900 hover:text-lime-700 transition-colors"
                     >
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span>{turf.rating || 4.8}</span>
-                      <span className="font-semibold text-slate-500 underline decoration-slate-300 underline-offset-4 ml-0.5">
-                        ({turf.reviews || 321} reviews)
-                      </span>
+                      {ratingSummary.count > 0 ? (
+                        <>
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                          <span>{ratingSummary.rating.toFixed(1)}</span>
+                          <span className="font-semibold text-slate-500 underline decoration-slate-300 underline-offset-4 ml-0.5">
+                            ({ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'})
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Star className="h-4 w-4 fill-slate-200 text-slate-200" />
+                          <span className="font-semibold text-slate-500 underline decoration-slate-300 underline-offset-4 ml-0.5">
+                            No reviews yet
+                          </span>
+                        </>
+                      )}
                     </a>
                   </div>
 
@@ -1084,6 +1135,8 @@ export default function TurfDetailsPage({
                       selectedCourt?.name === court.name;
                     const isMaintenance = court.status === 'Maintenance';
                     const courtRate = Number(court.hourlyRate) || baseRateNumeric;
+                    const courtRating = Number(court.averageRating) || 0;
+                    const courtReviewCount = Number(court.numberOfReviews) || 0;
                     const courtImg =
                       court.image ||
                       (court.images && court.images[0]) ||
@@ -1135,6 +1188,16 @@ export default function TurfDetailsPage({
                                 <Maximize2 className="h-3 w-3 text-slate-400" />
                                 {court.dimension || '25m x 15m (Standard 5v5)'}
                               </span>
+                              {courtReviewCount > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-slate-300">•</span>
+                                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                  <span className="font-bold text-slate-700">{courtRating.toFixed(1)}</span>
+                                  <span className="text-slate-400">
+                                    ({courtReviewCount} {courtReviewCount === 1 ? 'review' : 'reviews'})
+                                  </span>
+                                </span>
+                              )}
                             </div>
 
                             <div className="mt-2.5 flex items-baseline justify-between">
@@ -1286,47 +1349,115 @@ export default function TurfDetailsPage({
 
             {/* ── SECTION: REVIEWS & RATINGS ── */}
             <section id="reviews" className="space-y-6 pt-2">
-              <div className="flex flex-col items-center justify-center text-center">
-                <div className="flex items-center justify-center gap-6 mb-2">
-                  <img src="/grain_left.png" alt="left laurel" className="h-24 sm:h-26 w-auto object-contain" />
-                  <span className="text-[80px] font-extrabold text-slate-900 leading-none tracking-tight">
-                    {turf.rating}
+              {ratingSummary.count > 0 ? (
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="flex items-center justify-center gap-6 mb-2">
+                    <img src="/grain_left.png" alt="left laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                    <span className="text-[80px] font-extrabold text-slate-900 leading-none tracking-tight">
+                      {ratingSummary.rating.toFixed(1)}
+                    </span>
+                    <img src="/grain_right.png" alt="right laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                  </div>
+                  <StarRating rating={ratingSummary.rating} size="h-5 w-5" />
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight mt-2">Players' favorite</h3>
+                  <p className="mt-2 text-[16px] leading-[26px] font-medium text-slate-800 max-w-sm mx-auto">
+                    One of the most loved turfs on Turfio based on ratings, reviews, and reliability
+                  </p>
+                  <span className="mt-3 text-sm font-bold text-slate-900">
+                    {ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'}
                   </span>
-                  <img src="/grain_right.png" alt="right laurel" className="h-24 sm:h-26 w-auto object-contain" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 tracking-tight mt-2">Players' favorite</h3>
-                <p className="mt-2 text-[16px] leading-[26px] font-medium text-slate-800 max-w-sm mx-auto">
-                  One of the most loved turfs on Turfio based on ratings, reviews, and reliability
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 text-sm font-bold text-slate-900 underline decoration-slate-400 underline-offset-4 hover:text-slate-600 transition-colors cursor-pointer"
-                >
-                  {turf.reviews} reviews
-                </button>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
+                    <MessageCircle className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight mt-4">No reviews yet</h3>
+                  <p className="mt-2 text-[16px] leading-[26px] font-medium text-slate-800 max-w-sm mx-auto">
+                    Be the first player to rate a court at {turf.title} and help others pick their pitch.
+                  </p>
+                </div>
+              )}
+
+              {/* Rating of every court, which is what the turf rating above averages out to */}
+              {ratingSummary.count > 0 && courts.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100">
+                  <div className="bg-slate-50/60 px-5 py-3">
+                    <h4 className="text-sm font-bold text-slate-900">Rating by court</h4>
+                    <p className="mt-0.5 text-xs font-medium text-slate-500">
+                      The turf rating is the average of all its courts.
+                    </p>
+                  </div>
+                  {courts.map((court, index) => {
+                    const courtRating = Number(court.averageRating) || 0;
+                    const courtCount = Number(court.numberOfReviews) || 0;
+                    return (
+                      <div
+                        key={court._id || court.id || index}
+                        className="flex items-center justify-between gap-4 px-5 py-3"
+                      >
+                        <span className="truncate text-sm font-bold text-slate-900">{court.name}</span>
+                        {courtCount > 0 ? (
+                          <span className="flex shrink-0 items-center gap-2">
+                            <StarRating rating={courtRating} size="h-3.5 w-3.5" />
+                            <span className="w-7 text-right text-xs font-bold text-slate-900">
+                              {courtRating.toFixed(1)}
+                            </span>
+                            <span className="text-xs font-medium text-slate-400">({courtCount})</span>
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-xs font-medium text-slate-400">Not rated yet</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <CourtReviewForm
+                key={String(selectedCourt?._id || selectedCourt?.id || 'no-court')}
+                turfId={turfId}
+                courts={courts}
+                defaultCourtId={selectedCourt?._id || selectedCourt?.id}
+                user={user}
+                reviews={reviews}
+                onSaved={refreshReviews}
+              />
 
               {/* Individual reviews (Clean Airbnb Review Architecture) */}
-              {turf.reviewsList && turf.reviewsList.length > 0 && (
+              {reviews.length > 0 && (
                 <div className="pt-2">
-                  {turf.reviewsList.map((review, i) => (
-                    <div key={i}>
+                  {reviews.map((review, i) => (
+                    <div key={review.id || i}>
                       {i > 0 && <div className="my-8 border-t border-slate-100" />}
                       <div className="flex flex-col space-y-3.5">
                         {/* Reviewer Header */}
                         <div className="flex items-center gap-3.5">
-                          <img
-                            src={review.avatar}
-                            alt={review.name}
-                            className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-100 shrink-0 shadow-2xs"
-                          />
+                          {review.avatar ? (
+                            <img
+                              src={review.avatar}
+                              alt={review.name}
+                              className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-100 shrink-0 shadow-2xs"
+                            />
+                          ) : (
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-black text-lime-800 ring-2 ring-slate-100 shadow-2xs">
+                              {review.name
+                                .split(' ')
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map((part) => part[0].toUpperCase())
+                                .join('')}
+                            </span>
+                          )}
                           <div>
                             <h4 className="text-[16px] font-bold text-slate-900 leading-snug">
                               {review.name}
                             </h4>
-                            <p className="text-[13px] font-medium text-slate-500">
-                              2 years on Turfio
-                            </p>
+                            {review.courtName && (
+                              <p className="text-[13px] font-medium text-slate-500">
+                                Played on {review.courtName}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -1459,6 +1590,8 @@ export default function TurfDetailsPage({
                     ⛔ Venue is closed on this day (Holiday). Please select an open date.
                   </div>
                 )}
+
+                
 
                 {/* Price Breakdown */}
                 <div className="space-y-3 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
@@ -1593,17 +1726,29 @@ export default function TurfDetailsPage({
 
                       {/* Rating */}
                       <div className="mt-1 flex items-center gap-1">
-                        <div className="flex text-lime-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-4 w-4 fill-lime-400 text-lime-400"
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-1 text-xs font-semibold text-slate-600">
-                          {t.rating} ({t.reviews})
-                        </span>
+                        {t.reviews > 0 ? (
+                          <>
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < Math.floor(t.rating)
+                                      ? 'fill-lime-400 text-lime-400'
+                                      : i < t.rating
+                                        ? 'fill-lime-400/50 text-lime-400'
+                                        : 'fill-slate-200 text-slate-200'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="ml-1 text-xs font-semibold text-slate-600">
+                              {Number(t.rating).toFixed(1)} ({t.reviews})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">No reviews yet</span>
+                        )}
                       </div>
                     </div>
                   </div>

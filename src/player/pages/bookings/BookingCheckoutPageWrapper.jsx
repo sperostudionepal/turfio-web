@@ -40,6 +40,14 @@ export default function BookingCheckoutPageWrapper() {
             throw new Error('This slot hold has expired. Please select the slot again.');
           }
           if (!cancelled) {
+            // Resolve the full court object (with hourlyRate) from turf.courts so the
+            // checkout pricing waterfall can use the correct per-court rate.
+            const resolvedCourt = item.courtId
+              ? (Array.isArray(turf?.courts)
+                  ? turf.courts.find((c) => String(c._id || c.id) === String(item.courtId))
+                  : null) || { _id: item.courtId, id: item.courtId, name: item.courtName }
+              : turf.selectedCourt;
+
             setCheckoutContext({
               ...turf,
               selectedDate: item.dateStr || item.date,
@@ -49,7 +57,14 @@ export default function BookingCheckoutPageWrapper() {
               holdToken: item.holdToken,
               holdExpiresAt: item.expiresAt,
               courtName: item.courtName,
-              selectedCourt: item.courtId ? { _id: item.courtId, id: item.courtId, name: item.courtName } : turf.selectedCourt,
+              selectedCourt: resolvedCourt,
+              court: resolvedCourt,
+              // Explicitly forward the rate so BookingCheckoutPage never falls back
+              // to the wrong turf-level price string.
+              courtHourlyRate: resolvedCourt?.hourlyRate,
+              pricePerHour: resolvedCourt?.hourlyRate,
+              priceVal: resolvedCourt?.hourlyRate,
+              rateOverride: resolvedCourt?.hourlyRate,
             });
           }
           return;
