@@ -98,7 +98,7 @@ function BookingDateRangeCalendar({ value, onApply, onClose }) {
           const isEnd = day === to;
           const inRange = from && to && day > from && day < to;
           return (
-            <button key={day} type="button" onClick={() => chooseDate(date)} className={`relative flex h-9 items-center justify-center text-[11px] font-semibold transition-colors ${muted ? 'text-slate-300' : 'text-slate-700'} ${inRange ? 'bg-lime-50 text-lime-800' : 'hover:bg-slate-50'} ${isStart || isEnd ? 'rounded-lg bg-lime-400 font-extrabold text-slate-950 hover:bg-lime-500' : ''}`}>
+            <button key={day} type="button" disabled={muted} onClick={() => chooseDate(date)} className={`relative flex h-9 items-center justify-center text-[11px] font-semibold transition-colors ${muted ? 'text-slate-300' : 'text-slate-700'} ${muted ? '' : inRange ? 'bg-lime-50 text-lime-800' : isStart || isEnd ? '' : 'hover:bg-slate-50'} ${isStart || isEnd ? 'rounded-lg bg-lime-400 font-extrabold text-slate-950' : ''}`}>
               {date.getDate()}
             </button>
           );

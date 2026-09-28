@@ -52,6 +52,10 @@ export function getPeriodRange(period, today = getTodayNepalString(), customRang
   switch (period) {
     case 'today':
       return withDays({ start: today, end: today });
+    case 'last7':
+      return withDays({ start: addDays(today, -6), end: today });
+    case 'last30':
+      return withDays({ start: addDays(today, -29), end: today });
     case 'week': {
       const start = startOfWeek(today);
       return withDays({ start, end: addDays(start, 6) });
@@ -76,6 +80,10 @@ export function getPreviousRange(period, today = getTodayNepalString(), customRa
   switch (period) {
     case 'today':
       return withDays({ start: addDays(today, -1), end: addDays(today, -1) });
+    case 'last7':
+      return withDays({ start: addDays(today, -13), end: addDays(today, -7) });
+    case 'last30':
+      return withDays({ start: addDays(today, -59), end: addDays(today, -30) });
     case 'week': {
       const start = addDays(startOfWeek(today), -7);
       return withDays({ start, end: addDays(start, 6) });

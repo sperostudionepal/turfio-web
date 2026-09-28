@@ -8,7 +8,6 @@ import TopBar from '../../components/layout/Topbar';
 import StatCards from '../../components/dashboard/StatCards';
 import RevenueOverview from '../../components/dashboard/RevenueOverview';
 import BookingsByTime from '../../components/dashboard/BookingsByTime';
-import CourtStatus from '../../components/dashboard/CourtStatus';
 
 import TodaysSchedule from '../../components/dashboard/TodaysSchedule';
 import DashboardRecentBookings from '../../components/dashboard/DashboardRecentBookings';
@@ -88,6 +87,16 @@ const PATH_TO_TAB = Object.fromEntries(
   Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab])
 );
 
+const formatDashboardRange = ({ from, to }) => {
+  if (!from || !to) return 'Custom Range';
+  const parse = (value) => { const [y, m, d] = value.split('-').map(Number); return new Date(y, m - 1, d); };
+  const start = parse(from);
+  const end = parse(to);
+  const startLabel = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endLabel = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${startLabel} – ${endLabel}`;
+};
+
 function Dashboard({ user, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -114,10 +123,12 @@ function Dashboard({ user, onLogout }) {
   const [bookingsLoaded, setBookingsLoaded] = useState(false);
 
   const [isRetrying, setIsRetrying] = useState(false);
-  const [period, setPeriod] = useState('month');
-  const [periodSelection, setPeriodSelection] = useState('month');
-  const [customRange, setCustomRange] = useState({ from: '', to: '' });
+  const [activePeriod, setActivePeriod] = useState({ key: 'month', range: null });
   const [dashboardRangeOpen, setDashboardRangeOpen] = useState(false);
+  const [revenuePeriodOverride, setRevenuePeriodOverride] = useState(null);
+  const [heatPeriodOverride, setHeatPeriodOverride] = useState(null);
+  const period = activePeriod.key;
+  const customRange = activePeriod.range;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [bookingIntent, setBookingIntent] = useState({
@@ -407,8 +418,27 @@ function Dashboard({ user, onLogout }) {
     venues,
     customers: ownerCustomers,
     reviews: ownerReviews,
-    period, customRange,
-  }), [ownerBookings, venues, ownerCustomers, ownerReviews, period, customRange]);
+    period: activePeriod.key,
+    customRange: activePeriod.range,
+  }), [ownerBookings, venues, ownerCustomers, ownerReviews, activePeriod]);
+
+  const revenuePeriod = revenuePeriodOverride || activePeriod;
+  const heatPeriod = heatPeriodOverride || activePeriod;
+
+  useEffect(() => {
+    setRevenuePeriodOverride(null);
+    setHeatPeriodOverride(null);
+  }, [activePeriod]);
+
+  const revenueData = useMemo(() => buildDashboardViewData({
+    bookings: ownerBookings, venues, customers: ownerCustomers, reviews: ownerReviews,
+    period: revenuePeriod.key, customRange: revenuePeriod.range,
+  }).revenue, [revenuePeriod, ownerBookings, venues, ownerCustomers, ownerReviews]);
+
+  const heatData = useMemo(() => buildDashboardViewData({
+    bookings: ownerBookings, venues, customers: ownerCustomers, reviews: ownerReviews,
+    period: heatPeriod.key, customRange: heatPeriod.range,
+  }).heatRows, [heatPeriod, ownerBookings, venues, ownerCustomers, ownerReviews]);
 
   if (tabPages[activeTab]) {
     return (
@@ -423,6 +453,10 @@ function Dashboard({ user, onLogout }) {
 
   const noVenue =
     venueStatus === 'ready' && !venue;
+
+  const dashboardPeriodLabel = activePeriod.key === 'custom' && activePeriod.range
+    ? formatDashboardRange(activePeriod.range)
+    : (PERIOD_OPTIONS.find((option) => option.value === activePeriod.key)?.label || 'This Month');
 
   const reportRange = getPeriodRange(period, undefined, customRange);
 
@@ -506,22 +540,29 @@ function Dashboard({ user, onLogout }) {
                   <div className="flex shrink-0 items-center gap-2.5">
                     <div className="relative">
                       <PeriodSelect
-                      value={periodSelection}
-                      onChange={(value) => {
-                        setPeriodSelection(value);
-                        if (value === 'custom') setDashboardRangeOpen(true);
-                        else { setDashboardRangeOpen(false); setPeriod(value); }
-                      }}
-                      options={PERIOD_OPTIONS}
-                      icon={Calendar}
-                      ariaLabel="Dashboard period"
-                      className="bg-white py-1 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:bg-slate-100"
-                    />
-                      {dashboardRangeOpen && period === 'custom' && (
+                        value={activePeriod.key}
+                        onChange={(value) => {
+                          if (value === 'custom') {
+                            setDashboardRangeOpen(true);
+                            return;
+                          }
+                          setDashboardRangeOpen(false);
+                          setActivePeriod({ key: value, range: null });
+                        }}
+                        options={PERIOD_OPTIONS.map((option) => option.value === 'custom' && activePeriod.key === 'custom' && activePeriod.range ? { ...option, label: formatDashboardRange(activePeriod.range) } : option)}
+                        displayLabel={activePeriod.key === 'custom' && activePeriod.range ? formatDashboardRange(activePeriod.range) : undefined}
+                        icon={Calendar}
+                        ariaLabel="Dashboard period"
+                        className="shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
+                      />
+                      {dashboardRangeOpen && (
                         <BookingDateRangeCalendar
-                          value={customRange}
-                          onApply={(range) => { setCustomRange(range); setPeriod('custom'); setPeriodSelection('custom'); setDashboardRangeOpen(false); }}
-                          onClose={() => { setDashboardRangeOpen(false); if (period !== 'custom') setPeriodSelection(period); }}
+                          value={activePeriod.key === 'custom' && activePeriod.range ? activePeriod.range : { from: '', to: '' }}
+                          onApply={(range) => {
+                            setActivePeriod({ key: 'custom', range });
+                            setDashboardRangeOpen(false);
+                          }}
+                          onClose={() => setDashboardRangeOpen(false)}
                         />
                       )}
                     </div>
@@ -621,34 +662,21 @@ function Dashboard({ user, onLogout }) {
 
                       {/* Revenue Overview */}
                       <div className="min-w-0">
-                        <RevenueOverview {...dashboardData.revenue} />
+                        <RevenueOverview {...revenueData} period={revenuePeriod.key} customRange={revenuePeriod.range} onPeriodChange={(key) => setRevenuePeriodOverride({ key, range: null })} onCustomRangeApply={(range) => setRevenuePeriodOverride({ key: 'custom', range })} />
                       </div>
 
                       {/* Bookings Heatmap */}
                       <div className="min-w-0">
-                        <BookingsByTime rows={dashboardData.heatRows} />
+                        <BookingsByTime rows={heatData} period={heatPeriod.key} customRange={heatPeriod.range} onPeriodChange={(key) => setHeatPeriodOverride({ key, range: null })} onCustomRangeApply={(range) => setHeatPeriodOverride({ key: 'custom', range })} />
                       </div>
                     </section>
 
                     {/* =====================================================
                         SECONDARY DASHBOARD ROW
 
-                        Court Status
                         Recent Bookings
                     ====================================================== */}
-                    <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[5fr_8fr]">
-
-                      {/* Court Status */}
-                      <div className="min-w-0">
-                        <CourtStatus
-                          courts={dashboardData.courts}
-                          onViewAll={() =>
-                            goToTab('Courts')
-                          }
-                        />
-                      </div>
-
-                      {/* Recent Bookings */}
+                    <section className="grid grid-cols-1 items-stretch gap-5">
                       <div className="min-w-0">
                         <DashboardRecentBookings
                           bookings={dashboardData.recentBookings}

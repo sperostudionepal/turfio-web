@@ -1,16 +1,11 @@
-import { Circle } from 'lucide-react';
+import StatusBadge from '../common/StatusBadge';
 
-
-
-const statusStyles = {
-    Ongoing: 'bg-emerald-50 text-emerald-600',
-    Upcoming: 'bg-amber-50 text-amber-600',
-    Available: 'bg-lime-50 text-lime-600',
-};
 
 const timelineStyles = {
-    Ongoing: 'bg-emerald-500',
-    Upcoming: 'bg-amber-400',
+    'In Progress': 'bg-blue-500',
+    Confirmed: 'bg-blue-500',
+    Completed: 'bg-emerald-500',
+    Cancelled: 'bg-red-500',
     Available: 'border-2 border-slate-400 bg-white',
 };
 
@@ -90,22 +85,7 @@ function TodaysSchedule({ onViewCalendar, schedule = [] }) {
                             </span>
 
                             {/* Status */}
-                            <span
-                                className={`
-                  min-w-[74px]
-                  shrink-0
-                  rounded-full
-                  px-2.5
-                  py-1.5
-                  text-center
-                  text-[11px]
-                  font-semibold
-                  leading-none
-                  ${statusStyles[item.status]}
-                `}
-                            >
-                                {item.status}
-                            </span>
+                            <StatusBadge status={item.status} className="min-w-[74px] justify-center py-1.5" />
                         </div>
                     </div>
                 ))}
