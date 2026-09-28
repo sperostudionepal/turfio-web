@@ -12,7 +12,7 @@ import {
   Banknote,
 } from 'lucide-react';
 
-const statPresentation = {
+export const statPresentation = {
   'Total Revenue': {
     icon: Wallet,
     iconWrapper: 'bg-lime-100',

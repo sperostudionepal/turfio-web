@@ -1,12 +1,7 @@
+import StatusBadge from '../common/StatusBadge';
 import { deriveBookingStatus, getBookingDateStr } from '../../../shared/utils/bookingStatus';
 import { useOwnerContext } from '../../context/ownerContext';
 
-const STATUS_STYLES = {
-  Confirmed: 'bg-lime-50 text-lime-600',
-  Pending: 'bg-amber-50 text-amber-600',
-  Cancelled: 'bg-rose-50 text-rose-600',
-  Completed: 'bg-slate-100 text-slate-600',
-};
 
 function RecentBookingsTable({ bookings = [] }) {
   const { openBookings } = useOwnerContext();
@@ -26,7 +21,6 @@ function RecentBookingsTable({ bookings = [] }) {
       time: booking.timeSlot || '—',
       amount: `NRs. ${Number(booking.totalAmount || 0).toLocaleString('en-NP')}`,
       status,
-      statusStyle: STATUS_STYLES[status] || STATUS_STYLES.Pending,
     };
   });
 
@@ -86,9 +80,7 @@ function RecentBookingsTable({ bookings = [] }) {
 
                 {/* Status Badge */}
                 <div className="col-span-2 flex items-center justify-end">
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold whitespace-nowrap ${booking.statusStyle}`}>
-                    {booking.status}
-                  </span>
+                  <StatusBadge status={booking.status} />
                 </div>
               </div>
             ))}

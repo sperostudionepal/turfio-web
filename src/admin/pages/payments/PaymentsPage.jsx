@@ -18,7 +18,7 @@ import PayoutSummaryCard from '../../components/payments/PayoutSummaryCard';
 import PaymentRevenueOverview from '../../components/payments/PaymentRevenueOverview';
 import StatCards from '../../components/dashboard/StatCards';
 import SharedAvatar from '../../components/common/Avatar';
-import { StatCardsSkeleton, ChartSkeleton } from '../../components/skeletons/AdminSkeletons';
+import { LabeledStatCardsSkeleton, ChartSkeleton, PaymentTableSkeleton, PayoutSummarySkeleton } from '../../components/skeletons/AdminSkeletons';
 
 import turfService from '../../../shared/services/turfService';
 import { formatNepalDateStr, getTodayNepalString } from '../../../shared/utils/dateTime';
@@ -30,6 +30,8 @@ import {
 } from '../../../shared/utils/dashboardStats';
 import { buildPaymentsCsv, downloadCsv } from '../../../shared/utils/reportExport';
 import { formatNpr, isVenuePayment } from '../../components/payments/paymentUtils';
+import StatusBadge from '../../components/common/StatusBadge';
+import PaymentMethodBadge from '../../components/payments/PaymentMethodBadge';
 
 
 
@@ -54,25 +56,6 @@ const avatarColorFor = (name = '') => {
   return AVATAR_COLORS[code % AVATAR_COLORS.length];
 };
 
-const STATUS_STYLES = {
-  Completed: 'bg-emerald-50 text-emerald-700',
-  Pending: 'bg-amber-50 text-amber-700',
-  Failed: 'bg-rose-50 text-rose-700',
-  'Partially Paid': 'bg-amber-50 text-amber-700',
-  Paid: 'bg-emerald-50 text-emerald-700',
-  Unpaid: 'bg-slate-100 text-slate-600',
-};
-
-function StatusBadge({ status }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[status] || 'bg-slate-100 text-slate-600'
-        }`}
-    >
-      {status}
-    </span>
-  );
-}
 
 function Avatar({ name, src, size = 9 }) {
   return <SharedAvatar name={name} src={src} className="" style={{ height: size * 4, width: size * 4 }} />;
@@ -118,7 +101,7 @@ function TabBar({ active, onChange }) {
    HEADER — title/subtitle + date range, payment method filter,
    export button, exactly matching reference layout
 ============================================================ */
-function PaymentsHeader({ currentTab, onTabChange, exportCount, onExport }) {
+function PaymentsHeader({ currentTab, onTabChange, exportCount, onExport, dateLabel, methodFilter, onMethodFilterChange, methods }) {
   return (
     <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
       <div className="min-w-0">
@@ -129,6 +112,14 @@ function PaymentsHeader({ currentTab, onTabChange, exportCount, onExport }) {
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <button type="button" className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600"><Calendar size={14} />{dateLabel}</button>
+        <div className="flex items-center gap-1.5">
+          {methodFilter !== 'All' && <PaymentMethodBadge method={methodFilter} compact />}
+          <FilterSelect value={methodFilter} onChange={onMethodFilterChange}>
+            <option value="All">All Payment Methods</option>
+            {methods.map((method) => <option key={method} value={method}>{method}</option>)}
+          </FilterSelect>
+        </div>
         <TabBar active={currentTab} onChange={onTabChange} />
 
         <button
@@ -194,14 +185,13 @@ function TableToolbar({
         )}
 
         {methods && (
-          <FilterSelect value={methodFilter} onChange={onMethodFilterChange}>
-            <option value="All">All Payment Methods</option>
-            {methods.map((method) => (
-              <option key={method} value={method}>
-                {method}
-              </option>
-            ))}
-          </FilterSelect>
+          <div className="flex items-center gap-1.5">
+            {methodFilter !== 'All' && <PaymentMethodBadge method={methodFilter} compact />}
+            <FilterSelect value={methodFilter} onChange={onMethodFilterChange}>
+              <option value="All">All Payment Methods</option>
+              {methods.map((method) => <option key={method} value={method}>{method}</option>)}
+            </FilterSelect>
+          </div>
         )}
 
         <button
@@ -337,7 +327,7 @@ function TransactionsTable({ rows, page, totalPages, startIndex, total, onPageCh
                 <td className="px-4 py-3.5 text-slate-500">{row.bookingId}</td>
                 <td className="px-4 py-3.5 text-slate-500">{row.invoiceId}</td>
                 <td className="px-4 py-3.5 font-bold text-slate-700">{formatNpr(row.amount)}</td>
-                <td className="px-4 py-3.5 text-slate-500">{row.method}</td>
+                <td className="px-4 py-3.5"><PaymentMethodBadge method={row.method} /></td>
                 <td className="px-4 py-3.5">
                   <StatusBadge status={row.status} />
                 </td>
@@ -425,7 +415,7 @@ function InvoicesTable({ rows, page, totalPages, startIndex, total, onPageChange
                 <td className="px-4 py-3.5">
                   <StatusBadge status={row.status} />
                 </td>
-                <td className="px-4 py-3.5 text-slate-500">{row.method || '—'}</td>
+                <td className="px-4 py-3.5"><PaymentMethodBadge method={row.method} /></td>
                 <td className="px-4 py-3.5">
                   <button
                     type="button"
@@ -639,7 +629,7 @@ function DetailsDrawer({ record, kind, onClose }) {
               <DetailRow label="Transaction ID" value={record.transactionId} />
               <DetailRow label="Status" value={<StatusBadge status={record.status} />} />
               <DetailRow label="Amount" value={formatNpr(record.amount ?? record.total)} />
-              <DetailRow label="Payment Method" value={record.method} />
+              <DetailRow label="Payment Method" value={<PaymentMethodBadge method={record.method} />} />
               <DetailRow label="Transaction Reference" value={record.reference} />
               <DetailRow label="Paid At" value={record.dateLabel} />
             </section>
@@ -1049,6 +1039,10 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                 onTabChange={setCurrentTab}
                 exportCount={filteredTransactions.length}
                 onExport={handleExport}
+                dateLabel={monthChipLabel}
+                methodFilter={headerMethodFilter}
+                onMethodFilterChange={setHeaderMethodFilter}
+                methods={uniqueMethods}
               />
 
               {status === 'error' && (
@@ -1058,7 +1052,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
               )}
 
               {status === 'loading' ? (
-<StatCardsSkeleton />
+<LabeledStatCardsSkeleton labels={stats.map((item) => item.title)} />
               ) : (
                 <StatCards stats={stats} />
               )}
@@ -1068,11 +1062,11 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   {status === 'loading' ? <ChartSkeleton /> : <PaymentRevenueOverview data={chartData} maxValue={chartMax} />}
                 </div>
                 <div className="min-w-0">
-                  <PayoutSummaryCard availableBalance={onlineTotal} />
+                  {status === 'loading' ? <PayoutSummarySkeleton /> : <PayoutSummaryCard availableBalance={onlineTotal} />}
                 </div>
               </section>
 
-              {currentTab === 'Transactions' && (
+              {currentTab === 'Transactions' && (status === 'loading' ? <PaymentTableSkeleton columns={['Transaction ID','Customer','Booking ID','Invoice ID','Amount','Method','Status','Date & Time','Actions']} /> : (
                 <TransactionsTable
                   rows={paginatedRows}
                   page={page}
@@ -1084,9 +1078,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              )}
+              ))}
 
-              {currentTab === 'Invoices' && (
+              {currentTab === 'Invoices' && (status === 'loading' ? <PaymentTableSkeleton columns={['Invoice ID','Customer','Booking ID','Date','Amount','Status','Payment Method','Actions']} /> : (
                 <InvoicesTable
                   rows={paginatedRows}
                   page={page}
@@ -1098,9 +1092,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              )}
+              ))}
 
-              {currentTab === 'Receipts' && (
+              {currentTab === 'Receipts' && (status === 'loading' ? <PaymentTableSkeleton columns={['Receipt ID','Customer','Transaction ID','Invoice ID','Booking ID','Amount','Date & Time','Actions']} /> : (
                 <ReceiptsTable
                   rows={paginatedRows}
                   page={page}
@@ -1112,7 +1106,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              )}
+              ))}
             </div>
           </div>
         </main>

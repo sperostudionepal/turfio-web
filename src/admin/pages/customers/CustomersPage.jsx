@@ -21,74 +21,21 @@ import {
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
 import StatCards from '../../components/dashboard/StatCards';
+import SharedAvatar from '../../components/common/Avatar';
+import StatusBadge from '../../components/common/StatusBadge';
 
 import turfService from '../../../shared/services/turfService';
 
 const money = (n) => `NRs. ${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
 const csvCell = (v) => `"${String(v ?? '').replaceAll('"', '""')}"`;
 
-const AVATAR_COLORS = [
-  { bg: 'bg-violet-100', text: 'text-violet-600' },
-  { bg: 'bg-teal-100', text: 'text-teal-600' },
-  { bg: 'bg-amber-100', text: 'text-amber-600' },
-  { bg: 'bg-pink-100', text: 'text-pink-600' },
-  { bg: 'bg-blue-100', text: 'text-blue-600' },
-  { bg: 'bg-emerald-100', text: 'text-emerald-600' },
-];
-
-const avatarColorFor = (name = '') => {
-  const code = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length];
-};
-
-const STATUS_STYLES = {
-  Active: 'bg-lime-50 text-lime-700',
-  Inactive: 'bg-slate-100 text-slate-500',
-};
-
-function StatusBadge({ status }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[status] || STATUS_STYLES.Active
-        }`}
-    >
-      {status}
-    </span>
-  );
-}
 
 // TODO(BACKEND): swap for a real `status` field once the API tracks active/inactive.
 const deriveStatus = (customer) =>
   customer?.status || (Number(customer?.totalBookings || 0) > 0 ? 'Active' : 'Inactive');
 
 function Avatar({ name, src, size = 10 }) {
-  const initials = (name || '?')
-    .split(' ')
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-  const color = avatarColorFor(name);
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name || 'Customer'}
-        className="shrink-0 rounded-full object-cover"
-        style={{ height: size * 4, width: size * 4 }}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`flex shrink-0 items-center justify-center rounded-full text-xs font-bold ${color.bg} ${color.text}`}
-      style={{ height: size * 4, width: size * 4 }}
-    >
-      {initials}
-    </div>
-  );
+  return <SharedAvatar name={name} src={src} style={{ height: size * 4, width: size * 4 }} />;
 }
 
 function FilterSelect({ value, onChange, children }) {
@@ -308,7 +255,7 @@ function CustomersTable({
                     <div>
                       <div className="font-bold text-slate-900">{customer.name}</div>
                       <div className="text-[11px] text-slate-400">
-                        #{customer.customerId || customer.key}
+                        #{customer.customerId || 'Pending ID'}
                       </div>
                     </div>
                   </div>
@@ -407,7 +354,7 @@ function CustomerDetailModal({ customer, onClose }) {
             <div className="min-w-0">
               <h3 className="truncate text-base font-extrabold text-slate-900">{customer.name}</h3>
               <p className="text-[11px] font-semibold text-slate-400">
-                #{customer.customerId || customer.key}
+                #{customer.customerId || 'Pending ID'}
               </p>
             </div>
           </div>

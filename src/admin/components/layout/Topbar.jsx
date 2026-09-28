@@ -29,7 +29,7 @@ function TopBar(props) {
 
     if (upper.startsWith('PAY-') && openPayments) {
       openPayments({ search: query });
-    } else if (upper.startsWith('TUF-') && openCustomers) {
+    } else if (upper.startsWith('CUS-') && openCustomers) {
       openCustomers({ search: query });
     } else if (openBookings) {
       openBookings({ search: query });
