@@ -83,7 +83,7 @@ export const authService = {
    * @param {string} [roleContext] 'player' or 'owner'
    */
   async getCurrentUser(roleContext = 'player') {
-    const endpoint = roleContext === 'owner' ? '/admin/auth/me' : '/auth/me';
+    const endpoint = roleContext === 'superadmin' ? '/superadmin/auth/me' : roleContext === 'admin' || roleContext === 'owner' ? '/admin/auth/me' : '/auth/me';
     const response = await apiClient.get(endpoint, {
       headers: { 'X-Role-Context': roleContext },
     });
@@ -103,12 +103,16 @@ export const authService = {
   /**
    * Revoke Owner session server-side
    */
-  async logoutOwner() {
-    const response = await apiClient.post('/admin/auth/logout', {}, {
-      headers: { 'X-Role-Context': 'owner' },
-    });
-    return response;
+  async logoutAdmin() {
+    return apiClient.post('/admin/auth/logout', {}, { headers: { 'X-Role-Context': 'admin' } });
   },
+
+  async logoutSuperadmin() {
+    return apiClient.post('/superadmin/auth/logout', {}, { headers: { 'X-Role-Context': 'superadmin' } });
+  },
+
+  // Backwards-compatible alias for admin callers.
+  async logoutOwner() { return this.logoutAdmin(); },
 
   /**
    * Self-delete the current account (only permitted for a pending_owner).

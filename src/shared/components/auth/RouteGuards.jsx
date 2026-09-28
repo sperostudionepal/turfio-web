@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { usePlayerAuth, useOwnerAuth } from '../../store/useAuthStore';
+import { usePlayerAuth, useOwnerAuth, useSuperadminAuth } from '../../store/useAuthStore';
 
 export function RequirePlayer({ children }) {
   const { user, isInitializing } = usePlayerAuth();
@@ -42,7 +42,7 @@ export function RequireOwner({ children }) {
 }
 
 export function RequireSuperadmin({ children }) {
-  const { user, isInitializing } = useOwnerAuth();
+  const { user, isInitializing } = useSuperadminAuth();
   const location = useLocation();
 
   if (isInitializing) {
