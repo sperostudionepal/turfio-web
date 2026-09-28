@@ -4,33 +4,17 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Banknote,
   Check,
   Copy,
 } from 'lucide-react';
 import Avatar from '../common/Avatar';
 
-export function BookingStatusBadge({ status }) {
-  const styles = {
-    Confirmed: 'bg-lime-50 text-lime-700',
-    Completed: 'bg-slate-100 text-slate-600',
-    Cancelled: 'bg-rose-50 text-rose-600',
-  };
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${styles[status] ||
-        'bg-slate-100 text-slate-600'
-        }`}
-    >
-      {status}
-    </span>
-  );
-}
+export { default as BookingStatusBadge } from '../common/StatusBadge';
+import StatusBadge from '../common/StatusBadge';
+import PaymentMethodBadge from '../payments/PaymentMethodBadge';
 
 function BookingsTable({
   bookings,
-  onClearFilters,
   onSelectBooking,
   onSort,
   paginatedBookings,
@@ -154,15 +138,6 @@ function BookingsTable({
                     : 'Try changing or clearing your filters.'}
                 </p>
 
-                {bookings.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={onClearFilters}
-                    className="mt-3 text-[12px] font-bold text-lime-600"
-                  >
-                    Clear filters
-                  </button>
-                )}
               </td>
             </tr>
           ) : (
@@ -253,36 +228,18 @@ function BookingsTable({
 
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${booking.paymentStatus === 'Paid'
-                        ? 'bg-lime-50 text-lime-700'
-                        : 'bg-slate-100 text-slate-500'
-                        }`}
-                    >
-                      <Banknote size={12} />
-                    </div>
-
-                    <div>
-                      <p className="whitespace-nowrap text-[13px] font-medium text-slate-600">
-                        {booking.paymentMethod}
-                      </p>
-
-                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
-                        {booking.paymentStatus}
-                      </p>
+                    <div className="flex flex-col items-start gap-1">
+                      <PaymentMethodBadge method={booking.paymentMethod} compact />
+                      <StatusBadge status={booking.paymentStatus} className="text-[10px]" />
                     </div>
                   </div>
                 </td>
 
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-start gap-1">
-                    <BookingStatusBadge status={booking.bookingStatus} />
+                    <StatusBadge status={booking.bookingStatus} />
 
-                    {booking.cancellationRequest?.status === 'Pending' && (
-                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700">
-                        Cancellation Requested
-                      </span>
-                    )}
+                    {booking.cancellationRequest?.status === 'Pending' && <StatusBadge status="Pending" label="Cancellation Requested" className="text-[10px]" />}
                   </div>
                 </td>
 

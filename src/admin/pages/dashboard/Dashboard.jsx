@@ -38,6 +38,7 @@ import { buildDashboardViewData } from '../../../shared/utils/dashboardViewData'
 import { OwnerContext } from '../../context/ownerContext';
 
 import PeriodSelect from '../../components/dashboard/PeriodSelect';
+import BookingDateRangeCalendar from '../../components/bookings/BookingDateRangeCalendar';
 
 import {
   DashboardSkeleton,
@@ -114,6 +115,9 @@ function Dashboard({ user, onLogout }) {
 
   const [isRetrying, setIsRetrying] = useState(false);
   const [period, setPeriod] = useState('month');
+  const [periodSelection, setPeriodSelection] = useState('month');
+  const [customRange, setCustomRange] = useState({ from: '', to: '' });
+  const [dashboardRangeOpen, setDashboardRangeOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [bookingIntent, setBookingIntent] = useState({
@@ -403,8 +407,8 @@ function Dashboard({ user, onLogout }) {
     venues,
     customers: ownerCustomers,
     reviews: ownerReviews,
-    period,
-  }), [ownerBookings, venues, ownerCustomers, ownerReviews, period]);
+    period, customRange,
+  }), [ownerBookings, venues, ownerCustomers, ownerReviews, period, customRange]);
 
   if (tabPages[activeTab]) {
     return (
@@ -420,7 +424,7 @@ function Dashboard({ user, onLogout }) {
   const noVenue =
     venueStatus === 'ready' && !venue;
 
-  const reportRange = getPeriodRange(period);
+  const reportRange = getPeriodRange(period, undefined, customRange);
 
   const reportCount = getReportBookings(
     ownerBookings,
@@ -500,14 +504,27 @@ function Dashboard({ user, onLogout }) {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2.5">
-                    <PeriodSelect
-                      value={period}
-                      onChange={setPeriod}
+                    <div className="relative">
+                      <PeriodSelect
+                      value={periodSelection}
+                      onChange={(value) => {
+                        setPeriodSelection(value);
+                        if (value === 'custom') setDashboardRangeOpen(true);
+                        else { setDashboardRangeOpen(false); setPeriod(value); }
+                      }}
                       options={PERIOD_OPTIONS}
                       icon={Calendar}
                       ariaLabel="Dashboard period"
                       className="bg-white py-1 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:bg-slate-100"
                     />
+                      {dashboardRangeOpen && period === 'custom' && (
+                        <BookingDateRangeCalendar
+                          value={customRange}
+                          onApply={(range) => { setCustomRange(range); setPeriod('custom'); setPeriodSelection('custom'); setDashboardRangeOpen(false); }}
+                          onClose={() => { setDashboardRangeOpen(false); if (period !== 'custom') setPeriodSelection(period); }}
+                        />
+                      )}
+                    </div>
 
                     <button
                       type="button"

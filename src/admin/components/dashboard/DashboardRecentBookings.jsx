@@ -1,9 +1,5 @@
+import StatusBadge from '../common/StatusBadge';
 import Avatar from '../common/Avatar';
-const statusStyles = {
-    Confirmed: 'bg-lime-50 text-lime-600',
-    Completed: 'bg-slate-100 text-slate-600',
-    Cancelled: 'bg-rose-50 text-rose-600',
-};
 
 function DashboardRecentBookings({ onViewAll, bookings = [] }) {
     return (
@@ -92,13 +88,7 @@ function DashboardRecentBookings({ onViewAll, bookings = [] }) {
 
                                 {/* Status */}
                                 <div>
-                                    <span
-                                        className={`inline-flex rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${statusStyles[booking.status] ||
-                                            statusStyles.Confirmed
-                                            }`}
-                                    >
-                                        {booking.status}
-                                    </span>
+                                    <StatusBadge status={booking.status} />
                                 </div>
                             </div>
                         ))}

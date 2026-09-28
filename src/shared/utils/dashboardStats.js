@@ -12,6 +12,7 @@ export const PERIOD_OPTIONS = [
   { value: 'month', label: 'This Month' },
   { value: 'lastMonth', label: 'Last Month' },
   { value: 'all', label: 'All Time' },
+  { value: 'custom', label: 'Custom Range' },
 ];
 
 export const periodLabel = (period) => PERIOD_OPTIONS.find((p) => p.value === period)?.label || 'This Month';
@@ -45,8 +46,9 @@ const withDays = ({ start, end }) => ({
 });
 
 /** Inclusive { start, end, days } for a period, or null for "all time". */
-export function getPeriodRange(period, today = getTodayNepalString()) {
+export function getPeriodRange(period, today = getTodayNepalString(), customRange = null) {
   const [year, month] = today.split('-').map(Number);
+  if (period === 'custom' && customRange?.from && customRange?.to) return withDays({ start: customRange.from, end: customRange.to });
   switch (period) {
     case 'today':
       return withDays({ start: today, end: today });
@@ -64,8 +66,13 @@ export function getPeriodRange(period, today = getTodayNepalString()) {
 }
 
 /** The period immediately before `period`, used for "vs previous" trends. Null for all time. */
-export function getPreviousRange(period, today = getTodayNepalString()) {
+export function getPreviousRange(period, today = getTodayNepalString(), customRange = null) {
   const [year, month] = today.split('-').map(Number);
+  if (period === 'custom' && customRange?.from && customRange?.to) {
+    const current = withDays({ start: customRange.from, end: customRange.to });
+    const end = addDays(current.start, -1);
+    return withDays({ start: addDays(end, -(current.days - 1)), end });
+  }
   switch (period) {
     case 'today':
       return withDays({ start: addDays(today, -1), end: addDays(today, -1) });
@@ -83,7 +90,7 @@ export function getPreviousRange(period, today = getTodayNepalString()) {
 }
 
 export const previousPeriodText = (period) =>
-  ({ today: 'vs yesterday', week: 'vs last week', month: 'vs last month', lastMonth: 'vs the month before' })[period] || 'all time';
+  ({ today: 'vs yesterday', week: 'vs last week', month: 'vs last month', lastMonth: 'vs the month before', custom: 'vs previous range' })[period] || 'all time';
 
 export const inRange = (dateStr, range) => !range || (Boolean(dateStr) && dateStr >= range.start && dateStr <= range.end);
 

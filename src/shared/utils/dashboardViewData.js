@@ -10,10 +10,10 @@ const avatarClasses = ['bg-lime-100 text-lime-700','bg-purple-100 text-purple-70
 const dateShort = (s) => { if (!s) return '—'; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
 const percent = (v) => v == null ? '0%' : `${Math.abs(v)}%`;
 
-export function buildDashboardViewData({ bookings = [], venues = [], customers = [], reviews = [], period = 'month' }) {
+export function buildDashboardViewData({ bookings = [], venues = [], customers = [], reviews = [], period = 'month', customRange = null }) {
   const venue = venues[0] || null;
-  const range = getPeriodRange(period);
-  const previousRange = getPreviousRange(period);
+  const range = getPeriodRange(period, undefined, customRange);
+  const previousRange = getPreviousRange(period, undefined, customRange);
   const current = summarizeBookings(bookings, range, { venues });
   const previous = summarizeBookings(bookings, previousRange, { venues });
   const today = getTodayNepalString();
@@ -49,7 +49,7 @@ export function buildDashboardViewData({ bookings = [], venues = [], customers =
   const courtBookings = todays;
   const courts = (venue?.courts || []).slice(0,4).map((court,i)=>{ const match=courtBookings.find(b=>String(b.court?.id)===String(court._id||court.id) && (b.endMinutes ?? parseSlotInterval(b.timeSlot).endMinutes)>now.minutes); const slot=match ? parseSlotInterval(match.timeSlot) : null; const start=match ? (match.startMinutes ?? slot.startMinutes) : null; const end=match ? (match.endMinutes ?? slot.endMinutes) : null; return { id:court._id||court.id||i, name:court.name||`Court ${i+1}`, type:`${court.matchType || '5v5'} · ${court.surface || 'Synthetic'}`, status:court.status==='Maintenance'?'Maintenance':match?(start<=now.minutes&&end>now.minutes?'In Use':'Upcoming'):'Available', time:match?`${minutesToTime12(start)} – ${minutesToTime12(end)}`:'—', customer:match?customerName(match):'', image:court.image || court.images?.[0] || venue?.image || venue?.images?.[0] || '' }; });
 
-  const recentBookings = [...bookings].sort((a,b)=>new Date(b.createdAt||b.date)-new Date(a.createdAt||a.date)).slice(0,5).map((b,i)=>({ id:b._id||b.id||i, initials:initials(customerName(b)), customer:customerName(b), court:b.court?.name||'Court', date:dateShort(getBookingDateStr(b)), time:b.timeSlot||'—', amount:money(b.totalAmount), status:deriveBookingStatus(b), avatarUrl:b.user?.profilePicture || b.customerSnapshot?.profilePicture || '', avatarClass:avatarClasses[i%avatarClasses.length] }));
+  const recentBookings = bookings.filter(b => !range || (getBookingDateStr(b) >= range.start && getBookingDateStr(b) <= range.end)).sort((a,b)=>new Date(b.createdAt||b.date)-new Date(a.createdAt||a.date)).slice(0,5).map((b,i)=>({ id:b._id||b.id||i, initials:initials(customerName(b)), customer:customerName(b), court:b.court?.name||'Court', date:dateShort(getBookingDateStr(b)), time:b.timeSlot||'—', amount:money(b.totalAmount), status:deriveBookingStatus(b), avatarUrl:b.user?.profilePicture || b.customerSnapshot?.profilePicture || '', avatarClass:avatarClasses[i%avatarClasses.length] }));
 
   const grouped = new Map(); bookings.filter(isActiveBooking).forEach(b=>{ const key=customerKey(b); if(!key)return; const item=grouped.get(key)||{name:customerName(b),bookings:0,amount:0,first:getBookingDateStr(b),walkIn:!b.user}; item.bookings++; item.amount+=paidAmount(b); const ds=getBookingDateStr(b); if(ds && (!item.first||ds<item.first))item.first=ds; grouped.set(key,item); });
   const allCustomerRows=[...grouped.values()];
