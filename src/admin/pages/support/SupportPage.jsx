@@ -22,6 +22,8 @@ import {
   LifeBuoy
 } from 'lucide-react';
 
+import StatusBadge from '../../components/common/StatusBadge';
+
 function SupportPage({ activeTab, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -97,28 +99,24 @@ function SupportPage({ activeTab, setActiveTab }) {
       id: '#TK-2026-0012',
       subject: 'eSewa payment callback delay on weekend peak',
       status: 'Open',
-      statusBg: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
       lastUpdated: '12 Jun 2026',
     },
     {
       id: '#TK-2026-0011',
       subject: 'Request for secondary landline receipt print header',
       status: 'In Progress',
-      statusBg: 'bg-blue-50 text-blue-700 border border-blue-200',
       lastUpdated: '10 Jun 2026',
     },
     {
       id: '#TK-2026-0010',
       subject: 'Court 2 floodlight schedule not auto-locking',
       status: 'Resolved',
-      statusBg: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
       lastUpdated: '08 Jun 2026',
     },
     {
       id: '#TK-2026-0009',
       subject: 'Invoice PDF download logo alignment issue',
       status: 'Closed',
-      statusBg: 'bg-slate-100 text-slate-600 border border-slate-200',
       lastUpdated: '05 Jun 2026',
     },
   ];
@@ -356,9 +354,7 @@ function SupportPage({ activeTab, setActiveTab }) {
                           <td className="py-3 px-3 font-extrabold text-slate-900 whitespace-nowrap">{t.id}</td>
                           <td className="py-3 px-3 font-semibold text-slate-700 leading-tight">{t.subject}</td>
                           <td className="py-3 px-3 whitespace-nowrap">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${t.statusBg}`}>
-                              {t.status}
-                            </span>
+                            <StatusBadge status={t.status} />
                           </td>
                           <td className="py-3 px-3 text-right text-slate-500 font-medium whitespace-nowrap">
                             <div className="inline-flex items-center gap-1">
