@@ -272,6 +272,11 @@ export const turfService = {
     return response?.data || response;
   },
 
+  async getOwnerFinanceSummary() {
+    const response = await apiClient.get('/finance/owner/summary', ownerRequest);
+    return response?.data || response;
+  },
+
   async getOwnerTransactions() {
     const response = await apiClient.get('/finance/owner/transactions', ownerRequest);
     return response?.data || response;
