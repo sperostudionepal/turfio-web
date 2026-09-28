@@ -26,66 +26,35 @@ const parseSessionToken = (key) => {
   }
 };
 
-// Request Interceptor: Attach role-scoped JWT Bearer Token
-apiClient.interceptors.request.use(
-  (config) => {
-    const roleContext = config.authScope || config.headers?.['X-Role-Context'];
+const sessionKeyForScope = (scope) => ({
+  player: 'turfio_player_session',
+  admin: 'turfio_admin_session',
+  superadmin: 'turfio_superadmin_session',
+}[scope] || 'turfio_player_session');
 
-    const isOwnerRequest =
-      roleContext === 'owner' ||
-      config.url?.includes('/admin') ||
-      config.url?.includes('/superadmin') ||
-      config.url?.includes('/bookings/owner') ||
-      config.url?.includes('/owner-applications');
+const inferAuthScope = (config) => {
+  const explicit = config.authScope || config.headers?.['X-Role-Context'];
+  if (explicit) return explicit === 'owner' ? 'admin' : explicit;
+  const url = config.url || '';
+  if (url.includes('/superadmin/')) return 'superadmin';
+  if (url.includes('/admin/') || url.includes('/bookings/owner') || url.includes('/finance/owner') || url.includes('/reviews/owner') || url.includes('/customers/owner') || url.includes('/turfs/owner') || url.includes('/promo-codes')) return 'admin';
+  return 'player';
+};
 
-    const tokenKey = isOwnerRequest ? 'turfio_owner_session' : 'turfio_player_session';
-    let token = parseSessionToken(tokenKey);
+// Attach only the token belonging to the portal making this request.
+apiClient.interceptors.request.use((config) => {
+  const token = parseSessionToken(sessionKeyForScope(inferAuthScope(config)));
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+}, (error) => Promise.reject(error));
 
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response Interceptor: Extract clean error messages & handle 401 Unauthorized
-apiClient.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    const responseData = error.response?.data;
-    let errorMessage = responseData?.message;
-
-    if (!errorMessage && responseData?.errors && Array.isArray(responseData.errors)) {
-      errorMessage = responseData.errors.map((e) => e.message).join(', ');
-    }
-
-    if (!errorMessage) {
-      errorMessage = error.message || 'An unexpected error occurred. Please try again.';
-    }
-
-    // Auto clear namespaced token on 401 Unauthorized
-    if (error.response?.status === 401) {
-      const config = error.config || {};
-      const roleContext = config.authScope || config.headers?.['X-Role-Context'];
-
-      const isOwnerRequest =
-        roleContext === 'owner' ||
-        config.url?.includes('/admin') ||
-        config.url?.includes('/superadmin') ||
-        config.url?.includes('/bookings/owner') ||
-        config.url?.includes('/owner-applications');
-
-      if (isOwnerRequest) {
-        localStorage.removeItem('turfio_owner_session');
-      } else {
-        localStorage.removeItem('turfio_player_session');
-      }
-    }
-
-    return Promise.reject(new Error(errorMessage));
-  }
-);
+apiClient.interceptors.response.use((response) => response.data, (error) => {
+  const responseData = error.response?.data;
+  let errorMessage = responseData?.message;
+  if (!errorMessage && Array.isArray(responseData?.errors)) errorMessage = responseData.errors.map((e) => e.message).join(', ');
+  if (!errorMessage) errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+  if (error.response?.status === 401) localStorage.removeItem(sessionKeyForScope(inferAuthScope(error.config || {})));
+  return Promise.reject(new Error(errorMessage));
+});
 
 export default apiClient;

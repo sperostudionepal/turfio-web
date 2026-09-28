@@ -15,7 +15,7 @@ import SetupDashboardPage from '../../admin/pages/owner/SetupDashboardPage';
 import NotFoundPage from '../../shared/pages/NotFoundPage';
 
 import { RequirePlayer } from '../../shared/components/auth/RouteGuards';
-import { usePlayerAuth, useOwnerAuth } from '../../shared/store/useAuthStore';
+import { usePlayerAuth, useOwnerAuth, useSuperadminAuth } from '../../shared/store/useAuthStore';
 
 const lazyPage = (load, exportName = 'default') => async () => ({ Component: (await load())[exportName] });
 
@@ -42,7 +42,7 @@ const handleAdminLoginSuccess = async (credentials) => {
 };
 
 const handleSuperadminLoginSuccess = async (credentials) => {
-  return useOwnerAuth.getState().loginSuperadmin(credentials);
+  return useSuperadminAuth.getState().loginSuperadmin(credentials);
 };
 
 const routes = [

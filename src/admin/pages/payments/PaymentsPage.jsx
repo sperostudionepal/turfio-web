@@ -18,7 +18,7 @@ import PayoutSummaryCard from '../../components/payments/PayoutSummaryCard';
 import PaymentRevenueOverview from '../../components/payments/PaymentRevenueOverview';
 import StatCards from '../../components/dashboard/StatCards';
 import SharedAvatar from '../../components/common/Avatar';
-import { LabeledStatCardsSkeleton, ChartSkeleton, PaymentTableSkeleton, PayoutSummarySkeleton } from '../../components/skeletons/AdminSkeletons';
+import PaymentsPageSkeleton from '../../components/payments/PaymentsPageSkeleton';
 
 import turfService from '../../../shared/services/turfService';
 import { formatNepalDateStr, getTodayNepalString } from '../../../shared/utils/dateTime';
@@ -1052,21 +1052,16 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
               )}
 
               {status === 'loading' ? (
-<LabeledStatCardsSkeleton labels={stats.map((item) => item.title)} />
+                <PaymentsPageSkeleton tab={currentTab} />
               ) : (
-                <StatCards stats={stats} />
-              )}
+                <>
+                  <StatCards stats={stats} />
+                  <section className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <div className="min-w-0"><PaymentRevenueOverview data={chartData} maxValue={chartMax} /></div>
+                    <div className="min-w-0"><PayoutSummaryCard availableBalance={onlineTotal} /></div>
+                  </section>
 
-              <section className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                <div className="min-w-0">
-                  {status === 'loading' ? <ChartSkeleton /> : <PaymentRevenueOverview data={chartData} maxValue={chartMax} />}
-                </div>
-                <div className="min-w-0">
-                  {status === 'loading' ? <PayoutSummarySkeleton /> : <PayoutSummaryCard availableBalance={onlineTotal} />}
-                </div>
-              </section>
-
-              {currentTab === 'Transactions' && (status === 'loading' ? <PaymentTableSkeleton columns={['Transaction ID','Customer','Booking ID','Invoice ID','Amount','Method','Status','Date & Time','Actions']} /> : (
+              {currentTab === 'Transactions' && (
                 <TransactionsTable
                   rows={paginatedRows}
                   page={page}
@@ -1078,9 +1073,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              ))}
+              )}
 
-              {currentTab === 'Invoices' && (status === 'loading' ? <PaymentTableSkeleton columns={['Invoice ID','Customer','Booking ID','Date','Amount','Status','Payment Method','Actions']} /> : (
+              {currentTab === 'Invoices' && (
                 <InvoicesTable
                   rows={paginatedRows}
                   page={page}
@@ -1092,9 +1087,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              ))}
+              )}
 
-              {currentTab === 'Receipts' && (status === 'loading' ? <PaymentTableSkeleton columns={['Receipt ID','Customer','Transaction ID','Invoice ID','Booking ID','Amount','Date & Time','Actions']} /> : (
+              {currentTab === 'Receipts' && (
                 <ReceiptsTable
                   rows={paginatedRows}
                   page={page}
@@ -1106,7 +1101,9 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
                   toolbarProps={toolbarProps}
                   paginationProps={paginationProps}
                 />
-              ))}
+              )}
+                </>
+              )}
             </div>
           </div>
         </main>

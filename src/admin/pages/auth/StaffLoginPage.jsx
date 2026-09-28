@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useToast } from '../../../shared/components/common/toastContext';
-import { useOwnerAuth } from '../../../shared/store/useAuthStore';
+import { useOwnerAuth, useSuperadminAuth } from '../../../shared/store/useAuthStore';
 import { safeRedirectPath } from '../../../shared/utils/redirect';
 
 export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN PORTAL', targetRole = 'admin' }) {
@@ -27,7 +27,9 @@ export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN P
   const [mfaCode, setMfaCode] = useState('');
   const { showToast } = useToast();
 
-  const verifyMfaLogin = useOwnerAuth((s) => s.verifyMfaLogin);
+  const verifyAdminMfa = useOwnerAuth((s) => s.verifyMfaLogin);
+  const verifySuperadminMfa = useSuperadminAuth((s) => s.verifyMfaLogin);
+  const verifyMfaLogin = targetRole === 'superadmin' ? verifySuperadminMfa : verifyAdminMfa;
 
   // Add noindex meta tag dynamically for staff privacy
   useEffect(() => {
