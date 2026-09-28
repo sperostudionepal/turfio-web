@@ -126,7 +126,7 @@ export function ErrorNotice({ message, onRetry, busy = false }) {
           disabled={busy}
           className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-colors disabled:opacity-50 cursor-pointer"
         >
-          <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
+          <RefreshCw size={13} className={busy ? 'animate-pulse' : ''} />
           <span>{busy ? 'Retrying...' : 'Retry'}</span>
         </button>
       )}

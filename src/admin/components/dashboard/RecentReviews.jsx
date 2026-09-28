@@ -2,6 +2,7 @@ import {
     MoreVertical,
     Star,
 } from 'lucide-react';
+import Avatar from '../common/Avatar';
 
 
 
@@ -59,22 +60,7 @@ function RecentReviews({ onViewAll, reviews = [] }) {
             `}
                     >
                         {/* Avatar */}
-                        <div
-                            className={`
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                text-[11px]
-                font-bold
-                ${review.avatar}
-              `}
-                        >
-                            {review.initials}
-                        </div>
+                        <Avatar name={review.name} src={review.avatarUrl} className="h-10 w-10" />
 
                         {/* Review */}
                         <div className="min-w-0 flex-1">

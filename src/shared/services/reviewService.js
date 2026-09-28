@@ -25,12 +25,12 @@ export function transformReview(review) {
   return {
     id: review._id || review.id,
     _id: review._id,
-    rating: Number(review.rating) || 0,
+    rating: Number(review.rating),
     comment: review.comment || '',
     courtId: review.courtId || null,
     courtName: review.courtName || '',
     userId: user._id || null,
-    name: [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Turfio Player',
+    name: [user.firstName, user.lastName].filter(Boolean).join(' '),
     avatar: user.profilePicture || '',
     date: formatReviewDate(review.createdAt),
     createdAt: review.createdAt || null,
@@ -52,6 +52,11 @@ export function transformOwnerReview(review) {
     email: user.email || '',
     turfName: review.turfName || '',
     time: formatReviewTime(review.createdAt),
+    bookingId: review.bookingId || review.booking?.bookingId || null,
+    status: review.status || null,
+    reply: review.ownerReply?.text || null,
+    isHidden: Boolean(review.isHidden),
+    isReported: Boolean(review.isReported),
   };
 }
 
@@ -66,6 +71,26 @@ export const reviewService = {
     const response = await apiClient.get('/reviews/owner', { authScope: 'owner' });
     const items = response?.data || [];
     return items.map(transformOwnerReview).filter(Boolean);
+  },
+
+  async getOwnerReviewStats() {
+    const response = await apiClient.get('/reviews/owner/stats', { authScope: 'owner' });
+    return response?.data || null;
+  },
+
+  async replyToReview(reviewId, text) {
+    const response = await apiClient.post(`/reviews/${reviewId}/reply`, { text }, { authScope: 'owner' });
+    return response?.data || response;
+  },
+
+  async setReviewVisibility(reviewId, hidden) {
+    const response = await apiClient.patch(`/reviews/${reviewId}/visibility`, { hidden }, { authScope: 'owner' });
+    return response?.data || response;
+  },
+
+  async reportReview(reviewId) {
+    const response = await apiClient.post(`/reviews/${reviewId}/report`, {}, { authScope: 'owner' });
+    return response?.data || response;
   },
 
   async createReview(turfId, { courtId, rating, comment }) {

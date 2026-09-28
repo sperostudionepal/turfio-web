@@ -1,3 +1,4 @@
+import Avatar from '../common/Avatar';
 const statusStyles = {
     Confirmed: 'bg-lime-50 text-lime-600',
     Completed: 'bg-slate-100 text-slate-600',
@@ -54,21 +55,7 @@ function DashboardRecentBookings({ onViewAll, bookings = [] }) {
                             >
                                 {/* Customer */}
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    {booking.avatarUrl ? (
-                                        <img
-                                            src={booking.avatarUrl}
-                                            alt={booking.customer}
-                                            className="h-8 w-8 shrink-0 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div
-                                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${booking.avatarClass ||
-                                                'bg-lime-100 text-lime-700'
-                                                }`}
-                                        >
-                                            {booking.initials}
-                                        </div>
-                                    )}
+                                    <Avatar name={booking.customer} src={booking.avatarUrl} className="h-8 w-8" />
 
                                     <div className="min-w-0">
                                         <p className="truncate text-[13px] font-bold text-slate-700">

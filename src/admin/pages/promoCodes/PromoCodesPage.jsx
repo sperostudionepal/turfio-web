@@ -1,29 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Ban,
+  Globe2,
+  Megaphone,
+  Pencil,
+  Percent,
+  Power,
+  Search,
+  Tag,
+  Ticket,
+  Trash2,
+} from 'lucide-react';
+
 import Sidebar from '../../components/layout/Sidebar';
 import TopBar from '../../components/layout/Topbar';
-import {
-  Ticket,
-  Search,
-  Plus,
-  X,
-  Pencil,
-  Trash2,
-  Power,
-  Tag,
-  Percent,
-  Globe2,
-  Loader2,
-  AlertCircle,
-  Ban,
-} from 'lucide-react';
+import BookingFilterSelect from '../../components/bookings/BookingFilterSelect';
+import BookingPagination from '../../components/bookings/BookingPagination';
+import { ErrorNotice } from '../../components/dashboard/DashboardNotices';
+
 import promoService from '../../../shared/services/promoService';
 import turfService from '../../../shared/services/turfService';
 import { formatNepalDateTime } from '../../../shared/utils/dateTime';
 
-const NPT = 'Asia/Kathmandu';
-const money = (n) => `NRs. ${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
 
-// Nepal has no DST, so the +05:45 offset is constant and the owner's input maps to one instant.
+const NPT = 'Asia/Kathmandu';
+
+const money = (n) =>
+  `NRs. ${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+
+// Nepal has no DST, so the +05:45 offset is constant and the input maps to one instant.
 const toDateTimeInput = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -51,39 +59,95 @@ const toIso = (inputValue) => {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
-const discountLabel = (promo) =>
-  promo.discountType === 'percentage' ? `${promo.discountValue}% OFF` : `${money(promo.discountValue)} OFF`;
-
-const STATUS_STYLES = {
-  Active: 'bg-emerald-50 text-emerald-700',
-  Scheduled: 'bg-blue-50 text-blue-700',
-  Expired: 'bg-slate-100 text-slate-500',
-  Depleted: 'bg-amber-50 text-amber-700',
-  Disabled: 'bg-rose-50 text-rose-600',
+const numberOr = (value, fallback) => {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const STATUS_FILTERS = [
-  { label: 'All', value: '' },
-  { label: 'Active', value: 'active' },
-  { label: 'Scheduled', value: 'scheduled' },
-  { label: 'Expired', value: 'expired' },
-  { label: 'Disabled', value: 'disabled' },
+const STATUS_STYLES = {
+  Active: 'bg-lime-50 text-lime-700',
+  Scheduled: 'bg-blue-50 text-blue-700',
+  Expired: 'bg-rose-50 text-rose-600',
+  Depleted: 'bg-amber-50 text-amber-700',
+  Disabled: 'bg-slate-100 text-slate-600',
+};
+
+const TYPE_STYLES = {
+  percentage: { label: 'Percentage', className: 'bg-blue-50 text-blue-700' },
+  fixed: { label: 'Fixed Amount', className: 'bg-amber-50 text-amber-700' },
+};
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'active', label: 'Active' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'disabled', label: 'Disabled' },
 ];
+
+const TYPE_OPTIONS = [
+  { value: 'All', label: 'All Types' },
+  { value: 'percentage', label: 'Percentage' },
+  { value: 'fixed', label: 'Fixed Amount' },
+];
+
+const HEADER_CLASS =
+  'px-4 py-3 text-left text-[12px] font-bold uppercase tracking-wide text-slate-400';
+
+const INPUT_CLASS =
+  'h-[44px] w-full rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-700 outline-none placeholder:text-slate-400 focus:border-lime-400 disabled:bg-slate-50 disabled:text-slate-400';
+
+const LABEL_CLASS = 'mb-1.5 block text-[12px] font-bold text-slate-700';
 
 const EMPTY_FORM = {
   code: '',
   description: '',
   discountType: 'percentage',
   discountValue: '',
-  maxDiscountAmount: '',
-  minBookingAmount: '',
-  turf: '',
   startsAt: '',
   expiresAt: '',
   usageLimit: '',
-  perUserLimit: '1',
-  isActive: true,
+  turf: '',
 };
+
+/* -------------------------------------------------------------------------- */
+/* Stat card (same markup and sizing as the dashboard StatCards)              */
+/* -------------------------------------------------------------------------- */
+
+function PromoStatCard({ icon: Icon, iconWrapper, iconColor, title, value, subtext, loading }) {
+  return (
+    <div className="flex items-center rounded-xl border border-slate-100 bg-white px-4 py-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
+      <div
+        className={`mr-4 flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-xl ${iconWrapper}`}
+      >
+        <Icon size={23} strokeWidth={2} className={iconColor} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="mb-2 text-[13px] font-medium leading-tight text-slate-500">
+          {title}
+        </p>
+
+        <h3 className="truncate text-[20px] font-extrabold leading-none tracking-[-0.025em] text-slate-950">
+          {loading ? (
+            <span className="inline-block h-5 w-16 animate-pulse rounded-md bg-slate-100 align-middle" />
+          ) : (
+            value
+          )}
+        </h3>
+
+        <p className="mt-2 truncate text-[12px] font-medium leading-tight text-slate-400">
+          {subtext}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page                                                                       */
+/* -------------------------------------------------------------------------- */
 
 function PromoCodesPage({ activeTab, setActiveTab, venue }) {
   const [venues, setVenues] = useState([]);
@@ -91,31 +155,41 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRetrying, setIsRetrying] = useState(false);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [editing, setEditing] = useState(null); // null = closed, 'new' = create, object = edit
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const [editing, setEditing] = useState(null); // null = create mode, object = edit mode
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async (searchValue = search, status = statusFilter) => {
-    setLoading(true);
-    setError('');
-    try {
-      const result = await promoService.listForOwner({
-        search: searchValue.trim() || undefined,
-        status: status || undefined,
-      });
-      setPromoCodes(result.promoCodes);
-      setStats(result.stats);
-    } catch (e) {
-      setError(e.message || 'Unable to load promo codes.');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, statusFilter]);
+  const load = useCallback(
+    async (searchValue = search, status = statusFilter) => {
+      setLoading(true);
+      setError('');
+      try {
+        const result = await promoService.listForOwner({
+          search: searchValue.trim() || undefined,
+          status: status || undefined,
+        });
+        setPromoCodes(result.promoCodes);
+        setStats(result.stats);
+      } catch (e) {
+        setError(e.message || 'Unable to load promo codes.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, statusFilter]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => load(search, statusFilter), 250);
@@ -129,10 +203,23 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
       .catch(() => setVenues([]));
   }, []);
 
-  const openCreate = () => {
+  const retryLoad = async () => {
+    setIsRetrying(true);
+    await load();
+    setIsRetrying(false);
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Form                                                                   */
+  /* ---------------------------------------------------------------------- */
+
+  const setField = (field) => (event) =>
+    setForm((current) => ({ ...current, [field]: event.target.value }));
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(EMPTY_FORM);
     setFormError('');
-    setForm({ ...EMPTY_FORM, turf: venue?.id || venues[0]?.id || '' });
-    setEditing('new');
   };
 
   const openEdit = (promo) => {
@@ -142,64 +229,60 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
       description: promo.description || '',
       discountType: promo.discountType,
       discountValue: String(promo.discountValue ?? ''),
-      maxDiscountAmount: promo.maxDiscountAmount ? String(promo.maxDiscountAmount) : '',
-      minBookingAmount: promo.minBookingAmount ? String(promo.minBookingAmount) : '',
-      turf: promo.turf?._id || promo.turf || '',
       startsAt: toDateTimeInput(promo.startsAt),
       expiresAt: toDateTimeInput(promo.expiresAt),
       usageLimit: promo.usageLimit ? String(promo.usageLimit) : '',
-      perUserLimit: String(promo.perUserLimit ?? 1),
-      isActive: Boolean(promo.isActive),
+      turf: promo.turf?._id || promo.turf || '',
     });
     setEditing(promo);
   };
 
-  const numberOr = (value, fallback) => {
-    if (value === '' || value === null || value === undefined) return fallback;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
+  // With a single venue the picker is hidden and that venue is used automatically.
+  const effectiveTurf = form.turf || venue?.id || venues[0]?.id || '';
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+  const submit = async (event) => {
+    event.preventDefault();
     setFormError('');
 
-    const isCreate = editing === 'new';
     const expiresAt = toIso(form.expiresAt);
     if (!expiresAt) {
-      setFormError('An expiry date is required.');
-      setSaving(false);
+      setFormError('An end date is required.');
       return;
     }
-    if (isCreate && !form.turf) {
+    if (!editing && !effectiveTurf) {
       setFormError('Choose the venue this code applies to.');
-      setSaving(false);
       return;
     }
 
-    // The create/update schemas are strict, so omitted optional fields must be absent, not null.
+    // Schemas are strict, so optional fields must be absent rather than null.
     const shared = {
       description: form.description.trim() || undefined,
       discountType: form.discountType,
       discountValue: Number(form.discountValue),
-      maxDiscountAmount: form.discountType === 'percentage' ? numberOr(form.maxDiscountAmount, 0) : 0,
-      minBookingAmount: numberOr(form.minBookingAmount, 0),
       startsAt: toIso(form.startsAt),
       expiresAt,
       usageLimit: numberOr(form.usageLimit, 0),
-      perUserLimit: numberOr(form.perUserLimit, 1),
-      isActive: form.isActive,
     };
 
+    setSaving(true);
     try {
-      if (isCreate) {
-        await promoService.createForOwner({ ...shared, code: form.code.trim().toUpperCase(), scope: 'turf', turf: form.turf });
-      } else {
-        // code, scope and turf are fixed after creation; the server rejects them on update.
+      if (editing) {
+        // Code, scope and venue are fixed after creation.
         await promoService.updateForOwner(editing._id, shared);
+      } else {
+        await promoService.createForOwner({
+          ...shared,
+          code: form.code.trim().toUpperCase(),
+          scope: 'turf',
+          turf: effectiveTurf,
+          // Fields removed from the form for now, sent with safe defaults.
+          maxDiscountAmount: 0,
+          minBookingAmount: 0,
+          perUserLimit: 1,
+          isActive: true,
+        });
       }
-      setEditing(null);
+      resetForm();
       await load(search, statusFilter);
     } catch (err) {
       setFormError(err.message || 'Unable to save the promo code.');
@@ -207,6 +290,10 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
       setSaving(false);
     }
   };
+
+  /* ---------------------------------------------------------------------- */
+  /* Row actions                                                            */
+  /* ---------------------------------------------------------------------- */
 
   const toggleActive = async (promo) => {
     try {
@@ -221,6 +308,7 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
     setDeleting(true);
     try {
       await promoService.deleteForOwner(pendingDelete._id);
+      if (editing?._id === pendingDelete._id) resetForm();
       setPendingDelete(null);
       await load(search, statusFilter);
     } catch (e) {
@@ -231,433 +319,668 @@ function PromoCodesPage({ activeTab, setActiveTab, venue }) {
     }
   };
 
-  const statCards = useMemo(
-    () => [
-      { title: 'Active Codes', value: stats.active ?? 0, caption: 'Redeemable right now', icon: Ticket, iconBg: 'bg-emerald-50 text-emerald-600' },
-      { title: 'Total Redemptions', value: stats.totalRedemptions ?? 0, caption: 'Bookings discounted', icon: Tag, iconBg: 'bg-blue-50 text-blue-600' },
-      { title: 'Discount Given', value: money(stats.totalDiscountGiven), caption: 'Total player savings', icon: Percent, iconBg: 'bg-purple-50 text-purple-600' },
-      { title: 'Expired', value: stats.expired ?? 0, caption: `of ${stats.total ?? 0} venue codes`, icon: Ban, iconBg: 'bg-amber-50 text-amber-600' },
-    ],
-    [stats]
-  );
+  /* ---------------------------------------------------------------------- */
+  /* Derived data                                                           */
+  /* ---------------------------------------------------------------------- */
 
   const venueName = (promo) => {
     if (promo.scope === 'global') return 'All venues';
-    return promo.turf?.name || venues.find((v) => v.id === (promo.turf?._id || promo.turf))?.name || '—';
+    return (
+      promo.turf?.name ||
+      venues.find((v) => v.id === (promo.turf?._id || promo.turf))?.name ||
+      '—'
+    );
   };
 
-  const isReadOnly = (promo) => promo.scope === 'global';
+  const filteredCodes = useMemo(
+    () =>
+      typeFilter === 'All'
+        ? promoCodes
+        : promoCodes.filter((promo) => promo.discountType === typeFilter),
+    [promoCodes, typeFilter]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCodes.length / itemsPerPage));
+  const page = Math.min(currentPage, totalPages);
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedCodes = filteredCodes.slice(startIndex, startIndex + itemsPerPage);
+
+  const hasActiveFilters =
+    Boolean(search.trim()) || Boolean(statusFilter) || typeFilter !== 'All';
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('');
+    setTypeFilter('All');
+    setCurrentPage(1);
+  };
+
+  const previewLabel =
+    form.discountType === 'percentage'
+      ? `${form.discountValue || 0}% OFF`
+      : `${money(form.discountValue)} OFF`;
+
+  const previewExpiry = toIso(form.expiresAt);
+
+  /* ---------------------------------------------------------------------- */
+  /* Render                                                                 */
+  /* ---------------------------------------------------------------------- */
 
   return (
-    <div className="flex flex-col h-screen bg-[#f3f5fc] text-slate-900 font-sans antialiased overflow-hidden select-none relative">
-      <TopBar />
-      <div className="flex flex-1 min-h-0 relative">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <>
+      <div className="relative flex h-screen flex-col overflow-hidden bg-white font-sans text-slate-900 antialiased select-none">
+        <TopBar />
 
-        <main className="flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-8 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">Promo Codes</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Discount codes players can redeem when booking your venue. Every code applies to all courts.
-              </p>
-            </div>
-            <button
-              onClick={openCreate}
-              disabled={!venues.length}
-              title={venues.length ? '' : 'Add a venue before creating promo codes'}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <Plus size={16} /> Create Promo Code
-            </button>
-          </div>
+        <div className="relative flex min-h-0 flex-1">
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {statCards.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div key={stat.title} className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-xl ${stat.iconBg}`}>
-                      <Icon size={20} />
+          <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="scrollbar-thin flex-1 overflow-y-auto">
+              <div className="mx-auto w-full space-y-6 px-5 py-6 md:px-6 md:py-7 xl:px-7">
+                {/* Header */}
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                    Promotions
+                  </h1>
+
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    Create and manage promo codes to attract more players and
+                    boost your bookings.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_380px]">
+                  {/* Left: stats + table */}
+                  <div className="min-w-0 space-y-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+                      <PromoStatCard
+                        icon={Ticket}
+                        iconWrapper="bg-lime-100"
+                        iconColor="text-green-600"
+                        title="Active Codes"
+                        value={stats.active ?? 0}
+                        subtext="Redeemable right now"
+                        loading={loading && !promoCodes.length}
+                      />
+                      <PromoStatCard
+                        icon={Tag}
+                        iconWrapper="bg-blue-50"
+                        iconColor="text-blue-600"
+                        title="Total Redemptions"
+                        value={stats.totalRedemptions ?? 0}
+                        subtext="Bookings discounted"
+                        loading={loading && !promoCodes.length}
+                      />
+                      <PromoStatCard
+                        icon={Percent}
+                        iconWrapper="bg-purple-50"
+                        iconColor="text-purple-600"
+                        title="Discount Given"
+                        value={money(stats.totalDiscountGiven)}
+                        subtext="Total player savings"
+                        loading={loading && !promoCodes.length}
+                      />
+                      <PromoStatCard
+                        icon={Ban}
+                        iconWrapper="bg-amber-50"
+                        iconColor="text-amber-500"
+                        title="Expired"
+                        value={stats.expired ?? 0}
+                        subtext={`of ${stats.total ?? 0} venue codes`}
+                        loading={loading && !promoCodes.length}
+                      />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500">{stat.title}</p>
-                      <p className="text-xl font-black mt-1">{stat.value}</p>
+
+                    <div className="overflow-visible rounded-xl border border-slate-100 bg-white shadow-[0_3px_18px_rgba(15,23,42,0.02)]">
+                      {/* Filters */}
+                      <div className="border-b border-slate-100 px-5 py-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="relative min-w-[220px] flex-1 lg:max-w-[340px]">
+                            <Search
+                              size={16}
+                              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <input
+                              type="text"
+                              value={search}
+                              onChange={(event) => {
+                                setSearch(event.target.value);
+                                setCurrentPage(1);
+                              }}
+                              placeholder="Search by code..."
+                              className="h-[44px] w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[12px] font-medium text-slate-700 outline-none placeholder:text-slate-400 focus:border-lime-400"
+                            />
+                          </div>
+
+                          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:justify-end">
+                            <BookingFilterSelect
+                              value={statusFilter}
+                              onChange={(value) => {
+                                setStatusFilter(value);
+                                setCurrentPage(1);
+                              }}
+                              className="w-full sm:w-[150px]"
+                              options={STATUS_OPTIONS}
+                            />
+
+                            <BookingFilterSelect
+                              value={typeFilter}
+                              onChange={(value) => {
+                                setTypeFilter(value);
+                                setCurrentPage(1);
+                              }}
+                              className="w-full sm:w-[150px]"
+                              options={TYPE_OPTIONS}
+                            />
+
+                            {hasActiveFilters && (
+                              <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="h-[44px] shrink-0 px-2 text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                              >
+                                Clear filters
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {error && (
+                        <div className="px-5 pt-4">
+                          <ErrorNotice
+                            message={error}
+                            onRetry={retryLoad}
+                            busy={isRetrying}
+                          />
+                        </div>
+                      )}
+
+                      {/* Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[980px] border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-100">
+                              <th className={HEADER_CLASS}>Promotion</th>
+                              <th className={HEADER_CLASS}>Type</th>
+                              <th className={HEADER_CLASS}>Discount</th>
+                              <th className={HEADER_CLASS}>Validity</th>
+                              <th className={HEADER_CLASS}>Usage</th>
+                              <th className={HEADER_CLASS}>Status</th>
+                              <th className={`${HEADER_CLASS} text-right`}>Actions</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {loading ? (
+                              Array.from({ length: 6 }, (_, index) => (
+                                <tr key={index} className="border-b border-slate-100">
+                                  <td colSpan={7} className="px-5 py-3">
+                                    <div className="h-11 animate-pulse rounded-lg bg-slate-50" />
+                                  </td>
+                                </tr>
+                              ))
+                            ) : paginatedCodes.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} className="py-16 text-center">
+                                  <p className="text-[14px] font-bold text-slate-800">
+                                    {promoCodes.length === 0 && !hasActiveFilters
+                                      ? 'No promo codes yet'
+                                      : 'No promo codes match your filters'}
+                                  </p>
+
+                                  <p className="mx-auto mt-1 max-w-sm text-[12px] font-medium text-slate-400">
+                                    {promoCodes.length === 0 && !hasActiveFilters
+                                      ? 'Create a code with a discount and a validity window. Players apply it at checkout.'
+                                      : 'Try changing or clearing your filters.'}
+                                  </p>
+
+                                  {hasActiveFilters && (
+                                    <button
+                                      type="button"
+                                      onClick={clearFilters}
+                                      className="mt-3 text-[12px] font-bold text-lime-600"
+                                    >
+                                      Clear filters
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ) : (
+                              paginatedCodes.map((promo) => {
+                                const type =
+                                  TYPE_STYLES[promo.discountType] || TYPE_STYLES.fixed;
+                                const limit = promo.usageLimit > 0 ? promo.usageLimit : 0;
+                                const usedPercent = limit
+                                  ? Math.min(100, Math.round((promo.usedCount / limit) * 100))
+                                  : 0;
+                                const readOnly = promo.scope === 'global';
+
+                                return (
+                                  <tr
+                                    key={promo._id}
+                                    className="h-[58px] border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
+                                  >
+                                    {/* Promotion */}
+                                    <td className="px-4 py-3">
+                                      <div className="flex min-w-[220px] items-center gap-2.5">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-100 text-lime-700">
+                                          <Ticket size={16} />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                          <p className="truncate text-[13px] font-bold tracking-wide text-slate-900">
+                                            {promo.code}
+                                          </p>
+
+                                          <p className="mt-0.5 max-w-[200px] truncate text-[11px] font-medium text-slate-400">
+                                            {promo.description || venueName(promo)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    {/* Type */}
+                                    <td className="px-4 py-3">
+                                      {readOnly ? (
+                                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1.5 text-[11px] font-bold leading-none text-indigo-700">
+                                          <Globe2 size={11} /> Platform-wide
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${type.className}`}
+                                        >
+                                          {type.label}
+                                        </span>
+                                      )}
+                                    </td>
+
+                                    {/* Discount */}
+                                    <td className="px-4 py-3">
+                                      <p className="whitespace-nowrap text-[13px] font-semibold text-slate-700">
+                                        {promo.discountType === 'percentage'
+                                          ? `${promo.discountValue}%`
+                                          : money(promo.discountValue)}
+                                      </p>
+
+                                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+                                        {promo.discountType === 'percentage' ? 'discount' : 'off'}
+                                      </p>
+                                    </td>
+
+                                    {/* Validity */}
+                                    <td className="px-4 py-3">
+                                      <p className="whitespace-nowrap text-[13px] font-medium text-slate-600">
+                                        {formatNepalDateTime(promo.startsAt)}
+                                      </p>
+
+                                      <p className="mt-0.5 whitespace-nowrap text-[11px] font-medium text-slate-400">
+                                        to {formatNepalDateTime(promo.expiresAt)}
+                                      </p>
+                                    </td>
+
+                                    {/* Usage */}
+                                    <td className="px-4 py-3">
+                                      <p className="whitespace-nowrap text-[13px] font-semibold text-slate-700">
+                                        {promo.usedCount} / {limit || '∞'}
+                                      </p>
+
+                                      {limit > 0 && (
+                                        <div className="mt-1.5 h-1.5 w-28 overflow-hidden rounded-full bg-slate-100">
+                                          <div
+                                            className={`h-full rounded-full ${usedPercent >= 100 ? 'bg-rose-500' : 'bg-lime-500'
+                                              }`}
+                                            style={{ width: `${usedPercent}%` }}
+                                          />
+                                        </div>
+                                      )}
+                                    </td>
+
+                                    {/* Status */}
+                                    <td className="px-4 py-3">
+                                      <span
+                                        className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${STATUS_STYLES[promo.status] || 'bg-slate-100 text-slate-600'
+                                          }`}
+                                      >
+                                        {promo.status}
+                                      </span>
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="px-4 py-3">
+                                      {readOnly ? (
+                                        <p
+                                          className="text-right text-[11px] font-medium text-slate-400"
+                                          title="Platform-wide codes are managed by the super admin"
+                                        >
+                                          Read only
+                                        </p>
+                                      ) : (
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => openEdit(promo)}
+                                            title="Edit"
+                                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+                                          >
+                                            <Pencil size={14} />
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleActive(promo)}
+                                            title={promo.isActive ? 'Disable' : 'Enable'}
+                                            className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:text-white ${promo.isActive
+                                              ? 'hover:border-amber-500 hover:bg-amber-500'
+                                              : 'hover:border-lime-500 hover:bg-lime-500'
+                                              }`}
+                                          >
+                                            <Power size={14} />
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => setPendingDelete(promo)}
+                                            title={
+                                              promo.usedCount > 0
+                                                ? 'Disable (already redeemed)'
+                                                : 'Delete'
+                                            }
+                                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:border-rose-600 hover:bg-rose-600 hover:text-white"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <BookingPagination
+                        filteredBookingsCount={filteredCodes.length}
+                        itemsPerPage={itemsPerPage}
+                        label="promotions"
+                        onItemsPerPageChange={(value) => {
+                          setItemsPerPage(Number(value));
+                          setCurrentPage(1);
+                        }}
+                        onPageChange={setCurrentPage}
+                        page={page}
+                        startIndex={startIndex}
+                        totalPages={totalPages}
+                      />
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-4">{stat.caption}</p>
-                </div>
-              );
-            })}
-          </div>
 
-          <section className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="relative w-full md:max-w-xs">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by code..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div className="flex items-center gap-2 overflow-x-auto">
-                {STATUS_FILTERS.map((filter) => (
-                  <button
-                    key={filter.label}
-                    onClick={() => setStatusFilter(filter.value)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                      statusFilter === filter.value
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
+                  {/* Right: create / edit form + preview */}
+                  <div className="min-w-0 space-y-5">
+                    <form
+                      onSubmit={submit}
+                      className="rounded-xl border border-slate-100 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.02)]"
+                    >
+                      <div className="mb-4 flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-green-600">
+                          <Megaphone size={19} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h2 className="truncate text-[16px] font-bold text-slate-900">
+                            {editing ? `Edit ${editing.code}` : 'Create New Promotion'}
+                          </h2>
+
+                          <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+                            {editing
+                              ? 'The code and venue cannot be changed.'
+                              : 'Applies to every court at your venue.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {formError && (
+                          <p className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[12px] font-bold text-rose-600">
+                            {formError}
+                          </p>
+                        )}
+
+                        <div>
+                          <label className={LABEL_CLASS}>
+                            Promotion Code <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            value={form.code}
+                            onChange={(event) =>
+                              setForm({ ...form, code: event.target.value.toUpperCase() })
+                            }
+                            disabled={Boolean(editing)}
+                            required={!editing}
+                            minLength={3}
+                            maxLength={32}
+                            pattern="[A-Za-z0-9_-]+"
+                            placeholder="e.g. WKND20"
+                            className={`${INPUT_CLASS} uppercase tracking-wider`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={LABEL_CLASS}>Description</label>
+                          <textarea
+                            value={form.description}
+                            onChange={setField('description')}
+                            maxLength={200}
+                            rows={3}
+                            placeholder="Brief description shown to players"
+                            className="w-full resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-[13px] font-medium text-slate-700 outline-none placeholder:text-slate-400 focus:border-lime-400"
+                          />
+                        </div>
+
+                        {!editing && venues.length > 1 && (
+                          <div>
+                            <label className={LABEL_CLASS}>
+                              Venue <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                              value={effectiveTurf}
+                              onChange={setField('turf')}
+                              required
+                              className={INPUT_CLASS}
+                            >
+                              <option value="">Select a venue</option>
+                              {venues.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className={LABEL_CLASS}>Discount Type</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { value: 'percentage', label: 'Percentage (%)' },
+                              { value: 'fixed', label: 'Fixed (NRs.)' },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setForm({ ...form, discountType: option.value })}
+                                className={`h-[44px] cursor-pointer rounded-lg border text-[12px] font-bold transition-colors ${form.discountType === option.value
+                                  ? 'border-lime-400 bg-lime-50 text-slate-900'
+                                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                  }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={LABEL_CLASS}>
+                            Discount Value <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={form.discountValue}
+                              onChange={setField('discountValue')}
+                              required
+                              min={0.01}
+                              max={form.discountType === 'percentage' ? 100 : undefined}
+                              step="any"
+                              placeholder={form.discountType === 'percentage' ? 'e.g. 20' : 'e.g. 500'}
+                              className={`${INPUT_CLASS} pr-14`}
+                            />
+                            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">
+                              {form.discountType === 'percentage' ? '%' : 'NRs.'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={LABEL_CLASS}>
+                            Validity Period <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                            <input
+                              type="datetime-local"
+                              value={form.startsAt}
+                              onChange={setField('startsAt')}
+                              aria-label="Start date"
+                              className={`${INPUT_CLASS} px-3`}
+                            />
+                            <input
+                              type="datetime-local"
+                              value={form.expiresAt}
+                              onChange={setField('expiresAt')}
+                              required
+                              aria-label="End date"
+                              className={`${INPUT_CLASS} px-3`}
+                            />
+                          </div>
+                          <p className="mt-1.5 text-[11px] font-medium text-slate-400">
+                            Leave the start blank to begin immediately.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className={LABEL_CLASS}>
+                            Usage Limit{' '}
+                            <span className="font-medium text-slate-400">(Optional)</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={form.usageLimit}
+                            onChange={setField('usageLimit')}
+                            min={0}
+                            step={1}
+                            placeholder="e.g. 100 (leave empty for unlimited)"
+                            className={INPUT_CLASS}
+                          />
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          {editing && (
+                            <button
+                              type="button"
+                              onClick={resetForm}
+                              className="cursor-pointer rounded-full bg-slate-100 px-5 py-3 text-xs font-bold text-slate-800 transition-colors hover:bg-slate-200"
+                            >
+                              Cancel
+                            </button>
+                          )}
+
+                          <button
+                            type="submit"
+                            disabled={saving || (!editing && !venues.length)}
+                            title={!editing && !venues.length ? 'Add a venue before creating promo codes' : ''}
+                            className="flex-1 cursor-pointer rounded-full bg-lime-400 px-5 py-3 text-xs font-bold text-slate-900 transition-colors hover:bg-lime-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Promotion'}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* Preview */}
+                    <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.02)]">
+                      <h3 className="mb-3 text-[14px] font-bold text-slate-900">Preview</h3>
+
+                      <div className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-5 text-white">
+                        <span className="inline-flex rounded-full bg-lime-400 px-2.5 py-1.5 text-[11px] font-extrabold leading-none text-slate-900">
+                          {previewLabel}
+                        </span>
+
+                        <p className="mt-4 text-[22px] font-extrabold leading-tight tracking-wide">
+                          {form.code || 'YOURCODE'}
+                        </p>
+
+                        <p className="mt-1.5 text-[12px] font-medium text-slate-300">
+                          {form.description || 'Your description appears here.'}
+                        </p>
+
+                        <p className="mt-4 text-[11px] font-medium text-slate-400">
+                          {previewExpiry
+                            ? `Valid until ${formatNepalDateTime(previewExpiry)}`
+                            : 'Set an end date to finish the preview.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {loading ? (
-              <div className="py-20 flex justify-center items-center text-slate-500 text-sm">
-                <Loader2 className="animate-spin mr-2" size={18} /> Loading promo codes…
-              </div>
-            ) : error ? (
-              <div className="m-5 p-4 rounded-xl bg-red-50 text-red-700 flex items-center gap-2">
-                <AlertCircle size={18} />
-                <span className="text-sm">{error}</span>
-                <button onClick={() => load()} className="ml-auto font-bold text-sm">Retry</button>
-              </div>
-            ) : !promoCodes.length ? (
-              <div className="py-20 text-center">
-                <Ticket size={30} className="mx-auto text-slate-300" />
-                <h3 className="font-bold mt-3">No promo codes yet</h3>
-                <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-                  Create a code with a discount and a validity window. Players apply it at checkout and the
-                  discount is deducted from the booking total.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      {['Code', 'Discount', 'Venue', 'Validity', 'Usage', 'Status', ''].map((heading) => (
-                        <th key={heading} className="text-left px-5 py-3 font-bold">{heading}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {promoCodes.map((promo) => (
-                      <tr key={promo._id} className="hover:bg-slate-50/70">
-                        <td className="px-5 py-4">
-                          <div className="font-black text-emerald-700 tracking-wider">{promo.code}</div>
-                          {promo.description && <div className="text-xs text-slate-400 mt-0.5 max-w-[220px] truncate">{promo.description}</div>}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="font-bold">{discountLabel(promo)}</div>
-                          {promo.discountType === 'percentage' && promo.maxDiscountAmount > 0 && (
-                            <div className="text-xs text-slate-400">capped at {money(promo.maxDiscountAmount)}</div>
-                          )}
-                          {promo.minBookingAmount > 0 && (
-                            <div className="text-xs text-slate-400">min. booking {money(promo.minBookingAmount)}</div>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          {promo.scope === 'global' ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">
-                              <Globe2 size={12} /> Platform-wide
-                            </span>
-                          ) : (
-                            <span className="text-slate-600">{venueName(promo)}</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">
-                          <div>From {formatNepalDateTime(promo.startsAt)}</div>
-                          <div className="mt-0.5">Until {formatNepalDateTime(promo.expiresAt)}</div>
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap font-semibold">
-                          {promo.usedCount} / {promo.usageLimit > 0 ? promo.usageLimit : '∞'}
-                          <div className="text-xs text-slate-400 font-medium">max {promo.perUserLimit} per player</div>
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[promo.status] || 'bg-slate-100 text-slate-500'}`}>
-                            {promo.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          {isReadOnly(promo) ? (
-                            <span className="text-xs text-slate-400 font-medium" title="Platform-wide codes are managed by the super admin">
-                              Read only
-                            </span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => openEdit(promo)}
-                                title="Edit"
-                                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                onClick={() => toggleActive(promo)}
-                                title={promo.isActive ? 'Disable' : 'Enable'}
-                                className={`p-2 rounded-lg border transition-all ${
-                                  promo.isActive
-                                    ? 'border-slate-200 text-slate-600 hover:bg-amber-500 hover:text-white hover:border-amber-500'
-                                    : 'border-slate-200 text-slate-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
-                                }`}
-                              >
-                                <Power size={14} />
-                              </button>
-                              <button
-                                onClick={() => setPendingDelete(promo)}
-                                title={promo.usedCount > 0 ? 'Disable (already redeemed)' : 'Delete'}
-                                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        </main>
+          </main>
+        </div>
       </div>
 
-      {editing && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-black text-lg">{editing === 'new' ? 'Create Promo Code' : `Edit ${editing.code}`}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {editing === 'new'
-                    ? 'The code applies to every court at the selected venue.'
-                    : 'The code itself and its venue cannot be changed after creation.'}
-                </p>
-              </div>
-              <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
-            </div>
-
-            <form onSubmit={submit} className="p-5 space-y-4">
-              {formError && <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm font-medium">{formError}</div>}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="block text-sm font-bold">
-                  Code *
-                  <input
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    disabled={editing !== 'new'}
-                    required={editing === 'new'}
-                    minLength={3}
-                    maxLength={32}
-                    pattern="[A-Za-z0-9_-]+"
-                    placeholder="WEEKEND20"
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 uppercase tracking-wider disabled:bg-slate-50 disabled:text-slate-400"
-                  />
-                </label>
-
-                <label className="block text-sm font-bold">
-                  Venue *
-                  {editing === 'new' ? (
-                    <select
-                      value={form.turf}
-                      onChange={(e) => setForm({ ...form, turf: e.target.value })}
-                      required
-                      className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white outline-none focus:border-emerald-500"
-                    >
-                      <option value="">Select a venue</option>
-                      {venues.map((item) => (
-                        <option key={item.id} value={item.id}>{item.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      value={venueName(editing)}
-                      disabled
-                      className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-400"
-                    />
-                  )}
-                </label>
-              </div>
-
-              <label className="block text-sm font-bold">
-                Description
-                <input
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  maxLength={200}
-                  placeholder="Optional note shown to players"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 font-medium"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <label className="block text-sm font-bold">
-                  Discount type *
-                  <select
-                    value={form.discountType}
-                    onChange={(e) => setForm({ ...form, discountType: e.target.value })}
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white outline-none focus:border-emerald-500"
-                  >
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed">Fixed amount</option>
-                  </select>
-                </label>
-
-                <label className="block text-sm font-bold">
-                  {form.discountType === 'percentage' ? 'Percent off *' : 'Amount off (NRs.) *'}
-                  <input
-                    type="number"
-                    value={form.discountValue}
-                    onChange={(e) => setForm({ ...form, discountValue: e.target.value })}
-                    required
-                    min={0.01}
-                    max={form.discountType === 'percentage' ? 100 : undefined}
-                    step="any"
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                </label>
-
-                {form.discountType === 'percentage' && (
-                  <label className="block text-sm font-bold">
-                    Max discount (NRs.)
-                    <input
-                      type="number"
-                      value={form.maxDiscountAmount}
-                      onChange={(e) => setForm({ ...form, maxDiscountAmount: e.target.value })}
-                      min={0}
-                      step="any"
-                      placeholder="0 = no cap"
-                      className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    />
-                  </label>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="block text-sm font-bold">
-                  Starts at
-                  <input
-                    type="datetime-local"
-                    value={form.startsAt}
-                    onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                  <span className="block text-xs font-medium text-slate-400 mt-1">Leave blank to start immediately.</span>
-                </label>
-
-                <label className="block text-sm font-bold">
-                  Expires at *
-                  <input
-                    type="datetime-local"
-                    value={form.expiresAt}
-                    onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-                    required
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                  <span className="block text-xs font-medium text-slate-400 mt-1">After this the code gives no discount.</span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <label className="block text-sm font-bold">
-                  Total usage limit
-                  <input
-                    type="number"
-                    value={form.usageLimit}
-                    onChange={(e) => setForm({ ...form, usageLimit: e.target.value })}
-                    min={0}
-                    step={1}
-                    placeholder="0 = unlimited"
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                </label>
-
-                <label className="block text-sm font-bold">
-                  Per player limit
-                  <input
-                    type="number"
-                    value={form.perUserLimit}
-                    onChange={(e) => setForm({ ...form, perUserLimit: e.target.value })}
-                    min={1}
-                    step={1}
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                </label>
-
-                <label className="block text-sm font-bold">
-                  Minimum booking (NRs.)
-                  <input
-                    type="number"
-                    value={form.minBookingAmount}
-                    onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
-                    min={0}
-                    step="any"
-                    placeholder="0 = none"
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                  />
-                </label>
-              </div>
-
-              <label className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                  className="w-4 h-4 accent-emerald-600"
-                />
-                <span className="text-sm font-bold">Active</span>
-                <span className="text-xs text-slate-500 font-medium">Players can redeem this code while it is active and within its validity window.</span>
-              </label>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50">
-                  Cancel
-                </button>
-                <button disabled={saving} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm disabled:opacity-50">
-                  {saving ? 'Saving…' : editing === 'new' ? 'Create Code' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Delete / disable confirmation */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-            <h3 className="font-black text-lg">Delete {pendingDelete.code}?</h3>
-            <p className="text-sm text-slate-500 mt-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl">
+            <h3 className="text-[16px] font-extrabold text-slate-900">
+              {pendingDelete.usedCount > 0 ? 'Disable' : 'Delete'} {pendingDelete.code}?
+            </h3>
+
+            <p className="mt-2 text-[13px] font-medium leading-relaxed text-slate-500">
               {pendingDelete.usedCount > 0
                 ? `This code has been redeemed ${pendingDelete.usedCount} time${pendingDelete.usedCount === 1 ? '' : 's'}, so it will be disabled instead of deleted to keep past bookings accurate.`
                 : 'Players will no longer be able to redeem this code.'}
             </p>
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setPendingDelete(null)} className="px-4 py-2.5 border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50">
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                className="cursor-pointer rounded-full bg-slate-100 px-5 py-3 text-xs font-bold text-slate-800 transition-colors hover:bg-slate-200"
+              >
                 Cancel
               </button>
+
               <button
+                type="button"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-rose-600 px-5 py-3 text-xs font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deleting ? 'Working…' : pendingDelete.usedCount > 0 ? 'Disable Code' : 'Delete Code'}
+                {deleting
+                  ? 'Working…'
+                  : pendingDelete.usedCount > 0
+                    ? 'Disable Code'
+                    : 'Delete Code'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

@@ -63,6 +63,6 @@ export function buildDashboardViewData({ bookings = [], venues = [], customers =
   const labels=['New Customers','Returning Customers','Walk-ins']; const colors=['#8DE600','#08B77B','#2494E8'];
   const insights=labels.map((label,i)=>({label,value:insightValues[i],percentage:insightTotal?Math.round(insightValues[i]/insightTotal*100):0,color:colors[i]}));
   const topCustomers=allCustomerRows.sort((a,b)=>b.amount-a.amount||b.bookings-a.bookings).slice(0,3).map((c,i)=>({id:i+1,rank:i+1,name:c.name,bookings:c.bookings,amount:money(c.amount),logoBg:i===1?'bg-amber-50':'bg-slate-100',logoColor:i===1?'text-amber-700':'text-slate-700'}));
-  const recentReviews=[...reviews].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,2).map((r,i)=>({id:r.id||r._id||i,name:r.name||'Turfio Player',initials:initials(r.name||'Turfio Player'),rating:Number(r.rating)||0,date:r.date||'',review:r.comment||'',avatar:avatarClasses[(i+1)%avatarClasses.length]}));
+  const recentReviews=[...reviews].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,2).map((r,i)=>({id:r.id||r._id||i,name:r.name,initials:initials(r.name),rating:Number(r.rating),date:r.date||'',review:r.comment||'',avatarUrl:r.avatar||'',avatar:avatarClasses[(i+1)%avatarClasses.length]}));
   return { stats, revenue:{ data:revenueData,total:todaySummary.revenue,change:pctChange(todaySummary.revenue,yesterdaySummary.revenue) ?? 0}, heatRows, schedule, courts, recentBookings, insights, topCustomers, recentReviews, customersCount:customers.length };
 }

@@ -100,7 +100,7 @@ const mapServerBooking = (booking) => ({
     booking.user?.email ||
     '—',
 
-  avatar: booking.user?.profilePicture || '/logo.png',
+  avatar: booking.user?.profilePicture || null,
 
   courtName:
     booking.court?.name ||

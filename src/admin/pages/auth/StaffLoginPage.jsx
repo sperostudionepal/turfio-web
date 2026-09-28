@@ -128,11 +128,29 @@ export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN P
         </span>
       </a>
 
-      {/* Left Column: Full Flush Gray Background */}
-      <div className="hidden lg:block lg:w-1/2 bg-slate-100 min-h-screen" />
+      {/* Left Column: Hero Background + Floating Dashboard Mockup (matches ListTurfPage hero) */}
+      <div className="hidden lg:block lg:flex-1 min-h-screen relative isolate overflow-hidden bg-white">
+        {/* Background Image — identical treatment to ListTurfPage hero section */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-[0.07]">
+          <img
+            src="/hero-image.png"
+            alt="Hero Background"
+            className="h-full w-full object-cover object-center grayscale"
+          />
+        </div>
+
+        {/* Floating Dashboard Mockup — zoomed in, anchored bottom-right with top/left breathing room */}
+        <div className="absolute inset-0 pt-16 pl-16 xl:pt-24 xl:pl-24">
+          <img
+            src="/tablet-mockup.png"
+            alt="Turfio Arena Owner Dashboard Mockup"
+            className="w-full h-full object-cover object-left-top drop-shadow-xl rounded-tl-2xl"
+          />
+        </div>
+      </div>
 
       {/* Right Column: Exact Reference Form Layout */}
-      <div className="flex-1 bg-white min-h-screen flex flex-col justify-center items-center px-6 sm:px-12 lg:px-16 xl:px-20 py-12">
+      <div className="flex-1 lg:flex-none lg:w-[530px] xl:w-[580px] bg-white min-h-screen flex flex-col justify-center items-center px-6 sm:px-10 lg:px-8 py-12">
         <div className="w-full max-w-[400px] space-y-6">
           {/* Header Block */}
           <div className="space-y-2 text-left">
