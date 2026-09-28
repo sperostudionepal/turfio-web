@@ -8,6 +8,7 @@ import {
   Check,
   Copy,
 } from 'lucide-react';
+import Avatar from '../common/Avatar';
 
 export function BookingStatusBadge({ status }) {
   const styles = {
@@ -18,7 +19,7 @@ export function BookingStatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold leading-none ${styles[status] ||
+      className={`inline-flex rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${styles[status] ||
         'bg-slate-100 text-slate-600'
         }`}
     >
@@ -74,12 +75,12 @@ function BookingsTable({
         <button
           type="button"
           onClick={() => onSort(key)}
-          className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400 transition-colors hover:text-slate-700"
+          className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:text-slate-700"
         >
           {label}
 
           <Icon
-            size={11}
+            size={12}
             className={
               active ? 'text-lime-600' : 'text-slate-300'
             }
@@ -91,7 +92,7 @@ function BookingsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1180px] border-collapse">
+      <table className="w-full min-w-[1280px] border-collapse">
         <thead>
           <tr className="border-b border-slate-100">
             <th className="w-[45px] px-4 py-3">
@@ -101,7 +102,7 @@ function BookingsTable({
               />
             </th>
 
-            <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
+            <th className="px-4 py-3 text-left text-[12px] font-bold uppercase tracking-wide text-slate-400">
               Booking ID
             </th>
 
@@ -109,7 +110,7 @@ function BookingsTable({
             {sortHeader('Court', 'court')}
             {sortHeader('Date & Time', 'when')}
 
-            <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
+            <th className="px-4 py-3 text-left text-[12px] font-bold uppercase tracking-wide text-slate-400">
               Duration
             </th>
 
@@ -169,7 +170,7 @@ function BookingsTable({
               <tr
                 key={booking.id}
                 onClick={() => onSelectBooking(booking)}
-                className="cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
+                className="h-[58px] cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
               >
                 <td
                   className="px-4 py-3"
@@ -183,7 +184,7 @@ function BookingsTable({
 
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-[12px] font-bold text-slate-900">{booking.id}</p>
+                    <p className="text-[13px] font-bold text-slate-900">{booking.id}</p>
                     <button
                       type="button"
                       onClick={(event) => { event.stopPropagation(); copyBookingId(booking.id); }}
@@ -193,27 +194,23 @@ function BookingsTable({
                     >
                       {copiedId === booking.id ? <Check size={12} className="text-lime-600" /> : <Copy size={12} />}
                       {copiedId === booking.id && (
-                        <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-[9px] font-bold text-white shadow-sm">Copied!</span>
+                        <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white shadow-sm">Copied!</span>
                       )}
                     </button>
                   </div>
-                  <p className="mt-1 text-[10px] font-medium text-slate-400">{booking.bookedOn}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-400">{booking.bookedOn}</p>
                 </td>
 
                 <td className="px-4 py-3">
-                  <div className="flex min-w-[175px] items-center gap-3">
-                    <img
-                      src={booking.avatar}
-                      alt={booking.customerName}
-                      className="h-9 w-9 shrink-0 rounded-full border border-slate-100 object-cover"
-                    />
+                  <div className="flex min-w-[190px] items-center gap-2.5">
+                    <Avatar name={booking.customerName} src={booking.avatar} className="h-8 w-8 border border-slate-100" />
 
                     <div className="min-w-0">
-                      <p className="max-w-[150px] truncate text-[12px] font-bold text-slate-900">
+                      <p className="max-w-[160px] truncate text-[13px] font-bold text-slate-900">
                         {booking.customerName}
                       </p>
 
-                      <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                         {booking.customerPhone}
                       </p>
                     </div>
@@ -223,11 +220,11 @@ function BookingsTable({
                 <td className="px-4 py-3">
                   <div className="min-w-[135px]">
                     <div>
-                      <p className="text-[12px] font-bold text-slate-900">
+                      <p className="text-[13px] font-medium text-slate-600">
                         {booking.courtName}
                       </p>
 
-                      <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                         {booking.courtDimension}
                       </p>
                     </div>
@@ -235,21 +232,21 @@ function BookingsTable({
                 </td>
 
                 <td className="px-4 py-3">
-                  <p className="text-[12px] font-bold text-slate-900">
+                  <p className="text-[13px] font-medium text-slate-600">
                     {booking.date}
                   </p>
 
-                  <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                     {booking.timeSlot}
                   </p>
                 </td>
 
-                <td className="px-4 py-3 text-[12px] font-medium text-slate-500">
+                <td className="px-4 py-3 text-[13px] font-medium text-slate-600">
                   {booking.duration}
                 </td>
 
                 <td className="px-4 py-3">
-                  <p className="whitespace-nowrap text-[12px] font-bold text-slate-900">
+                  <p className="whitespace-nowrap text-[13px] font-semibold text-slate-700">
                     NRs. {Number(booking.amount || 0).toLocaleString('en-NP')}
                   </p>
                 </td>
@@ -266,11 +263,11 @@ function BookingsTable({
                     </div>
 
                     <div>
-                      <p className="whitespace-nowrap text-[11px] font-semibold text-slate-700">
+                      <p className="whitespace-nowrap text-[13px] font-medium text-slate-600">
                         {booking.paymentMethod}
                       </p>
 
-                      <p className="mt-0.5 text-[9px] font-medium text-slate-400">
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                         {booking.paymentStatus}
                       </p>
                     </div>
@@ -282,7 +279,7 @@ function BookingsTable({
                     <BookingStatusBadge status={booking.bookingStatus} />
 
                     {booking.cancellationRequest?.status === 'Pending' && (
-                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-700">
+                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700">
                         Cancellation Requested
                       </span>
                     )}

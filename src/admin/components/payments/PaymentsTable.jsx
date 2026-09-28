@@ -23,6 +23,9 @@ const STATUS_OPTIONS = [
   { value: 'RefundFailed', label: 'Refund Failed' },
 ];
 
+const HEADER_CLASS =
+  'px-4 py-3 text-[12px] font-bold uppercase tracking-wide text-slate-400';
+
 const customerInitials = (name) =>
   (name || 'C')
     .split(/\s+/)
@@ -116,36 +119,18 @@ function PaymentsTable({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1100px] border-collapse">
+        <table className="w-full min-w-[1200px] border-collapse">
           <thead>
             <tr className="border-b border-slate-100">
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Payment ID
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Customer
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Booking ID
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Venue
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Date & Time
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Amount
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Payment Method
-              </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Status
-              </th>
-              <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-[0.04em] text-slate-400">
-                Actions
-              </th>
+              <th className={`${HEADER_CLASS} text-left`}>Payment ID</th>
+              <th className={`${HEADER_CLASS} text-left`}>Customer</th>
+              <th className={`${HEADER_CLASS} text-left`}>Booking ID</th>
+              <th className={`${HEADER_CLASS} text-left`}>Venue</th>
+              <th className={`${HEADER_CLASS} text-left`}>Date & Time</th>
+              <th className={`${HEADER_CLASS} text-left`}>Amount</th>
+              <th className={`${HEADER_CLASS} text-left`}>Payment Method</th>
+              <th className={`${HEADER_CLASS} text-left`}>Status</th>
+              <th className={`${HEADER_CLASS} text-right`}>Actions</th>
             </tr>
           </thead>
 
@@ -191,26 +176,26 @@ function PaymentsTable({
                   <tr
                     key={`${payment.paymentId}-${payment.bookingId}`}
                     onClick={() => onSelectPayment(payment)}
-                    className="cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
+                    className="h-[58px] cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
                   >
                     <td className="px-4 py-3">
-                      <p className="whitespace-nowrap text-[12px] font-bold text-slate-900">
+                      <p className="whitespace-nowrap text-[13px] font-bold text-slate-900">
                         {payment.paymentId || 'Unavailable'}
                       </p>
                     </td>
 
                     <td className="px-4 py-3">
-                      <div className="flex min-w-[160px] items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-500">
+                      <div className="flex min-w-[175px] items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-500">
                           {customerInitials(payment.customer?.name)}
                         </div>
 
                         <div className="min-w-0">
-                          <p className="max-w-[150px] truncate text-[12px] font-bold text-slate-900">
+                          <p className="max-w-[160px] truncate text-[13px] font-bold text-slate-900">
                             {payment.customer?.name || 'Customer'}
                           </p>
 
-                          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                          <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                             {payment.customer?.phone || '—'}
                           </p>
                         </div>
@@ -218,36 +203,36 @@ function PaymentsTable({
                     </td>
 
                     <td className="px-4 py-3">
-                      <p className="whitespace-nowrap text-[12px] font-bold text-slate-800">
+                      <p className="whitespace-nowrap text-[13px] font-bold text-slate-800">
                         {payment.bookingId}
                       </p>
                     </td>
 
                     <td className="px-4 py-3">
-                      <p className="max-w-[140px] truncate text-[12px] font-medium text-slate-500">
+                      <p className="max-w-[150px] truncate text-[13px] font-medium text-slate-600">
                         {payment.turfName || '—'}
                       </p>
                     </td>
 
                     <td className="px-4 py-3">
-                      <p className="whitespace-nowrap text-[12px] font-bold text-slate-900">
+                      <p className="whitespace-nowrap text-[13px] font-medium text-slate-600">
                         {date}
                       </p>
 
-                      <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
                         {time}
                       </p>
                     </td>
 
                     <td className="px-4 py-3">
-                      <p className="whitespace-nowrap text-[12px] font-bold text-slate-900">
+                      <p className="whitespace-nowrap text-[13px] font-semibold text-slate-700">
                         {formatNpr(payment.amount)}
                       </p>
                     </td>
 
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-bold leading-none ${METHOD_BADGE[payment.method] ||
+                        className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-bold leading-none ${METHOD_BADGE[payment.method] ||
                           'bg-slate-100 text-slate-700'
                           }`}
                       >
@@ -266,7 +251,7 @@ function PaymentsTable({
                           event.stopPropagation();
                           onSelectPayment(payment);
                         }}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-bold text-slate-700 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                       >
                         Receipt
                       </button>

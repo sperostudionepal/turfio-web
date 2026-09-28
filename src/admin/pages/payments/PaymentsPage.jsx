@@ -17,6 +17,8 @@ import TopBar from '../../components/layout/Topbar';
 import PayoutSummaryCard from '../../components/payments/PayoutSummaryCard';
 import PaymentRevenueOverview from '../../components/payments/PaymentRevenueOverview';
 import StatCards from '../../components/dashboard/StatCards';
+import SharedAvatar from '../../components/common/Avatar';
+import { StatCardsSkeleton, ChartSkeleton } from '../../components/skeletons/AdminSkeletons';
 
 import turfService from '../../../shared/services/turfService';
 import { formatNepalDateStr, getTodayNepalString } from '../../../shared/utils/dateTime';
@@ -29,15 +31,7 @@ import {
 import { buildPaymentsCsv, downloadCsv } from '../../../shared/utils/reportExport';
 import { formatNpr, isVenuePayment } from '../../components/payments/paymentUtils';
 
-/* ============================================================
-   NOTE FOR BACKEND INTEGRATION
-   ------------------------------------------------------------
-   turfService.getOwnerTransactions() / getOwnerInvoices() /
-   getOwnerReceipts() don't exist yet. This file falls back to
-   getOwnerPayments() and derives Invoices/Receipts client-side,
-   marked with TODO(BACKEND). Swap these once real endpoints
-   exist — nothing above the fetch layer needs to change.
-============================================================ */
+
 
 const DEFAULT_STATS = { totalCollected: 0, byMethod: {}, outstandingBalance: 0 };
 
@@ -81,33 +75,7 @@ function StatusBadge({ status }) {
 }
 
 function Avatar({ name, src, size = 9 }) {
-  const initials = (name || '?')
-    .split(' ')
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-  const color = avatarColorFor(name);
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name || 'Customer'}
-        className="shrink-0 rounded-full object-cover"
-        style={{ height: size * 4, width: size * 4 }}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`flex shrink-0 items-center justify-center rounded-full text-xs font-bold ${color.bg} ${color.text}`}
-      style={{ height: size * 4, width: size * 4 }}
-    >
-      {initials}
-    </div>
-  );
+  return <SharedAvatar name={name} src={src} className="" style={{ height: size * 4, width: size * 4 }} />;
 }
 
 function CopyableText({ value }) {
@@ -731,6 +699,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
   const [invoices, setInvoices] = useState([]);
   const [receipts, setReceipts] = useState([]);
   const [paymentStats, setPaymentStats] = useState(DEFAULT_STATS);
+  const [financeSummary, setFinanceSummary] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
 
   const [currentTab, setCurrentTab] = useState(initialTab);
@@ -750,11 +719,12 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
     let cancelled = false;
     const loadAll = async () => {
       try {
-        const [txRows, invoiceRows, receiptRows, paymentRows] = await Promise.all([
+        const [txRows, invoiceRows, receiptRows, paymentRows, summary] = await Promise.all([
           turfService.getOwnerTransactions(),
           turfService.getOwnerInvoices(),
           turfService.getOwnerReceipts(),
           turfService.getOwnerFinancialPayments(),
+          turfService.getOwnerFinanceSummary(),
         ]);
         if (cancelled) return;
         const txs = (txRows || []).map((tx) => ({
@@ -766,6 +736,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
         setTransactions(txs);
         setInvoices((invoiceRows || []).map((inv) => ({ ...inv, invoiceId: inv.invoiceId, bookingId: inv.booking?.bookingId || inv.bookingId, customer: { ...(inv.billingSnapshot?.customer || inv.booking?.customerSnapshot || {}), name: inv.billingSnapshot?.customer?.name || inv.booking?.customerSnapshot?.name || [inv.booking?.user?.firstName, inv.booking?.user?.lastName].filter(Boolean).join(' ') || 'Customer', avatar: inv.booking?.user?.profilePicture || null }, total: Number(inv.totalAmount || 0), paid: Number(inv.amountPaid || 0), balance: Number(inv.amountDue || 0), status: inv.status === 'PAID' ? 'Paid' : Number(inv.amountPaid || 0) > 0 ? 'Partially Paid' : 'Unpaid', method: inv.booking?.paymentMethod || '—', paidAt: inv.issuedAt })));
         setReceipts((receiptRows || []).map((r) => ({ ...r, receiptId: r.receiptId, transactionId: r.transaction?.transactionId, invoiceId: r.invoice?.invoiceId, bookingId: r.booking?.bookingId, customer: { ...(r.payerSnapshot || r.booking?.customerSnapshot || {}), name: r.payerSnapshot?.name || r.booking?.customerSnapshot?.name || [r.booking?.user?.firstName, r.booking?.user?.lastName].filter(Boolean).join(' ') || 'Customer', avatar: r.booking?.user?.profilePicture || null }, amount: Number(r.amount || 0), method: r.method === 'CASH' ? 'Pay at Venue' : r.method === 'ESEWA' ? 'eSewa' : r.method, status: 'Completed', paidAt: r.paidAt })));
+        setFinanceSummary(summary);
         const ps = paymentRows || [];
         setPaymentStats({ totalCollected: ps.reduce((a, p) => a + Number(p.paidAmount || 0), 0), outstandingBalance: ps.reduce((a, p) => a + Number(p.remainingAmount || 0), 0), byMethod: {} });
         setStatus('ready');
@@ -843,52 +814,26 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
     [completedTransactions]
   );
 
+  const txSummary = financeSummary?.transactions;
+  const invSummary = financeSummary?.invoices;
+  const recSummary = financeSummary?.receipts;
   const transactionStats = [
-    {
-      title: 'Total Revenue',
-      value: formatNpr(totalCollected),
-      change: revenueChange == null ? null : `${revenueChange}%`,
-      subtext: `vs. last month (${formatNpr(previousMonthRevenue)})`,
-    },
-    {
-      title: 'Paid Online',
-      value: formatNpr(onlineTotal),
-      change: `${onlineShare}%`,
-      subtext: onlineMethods.length > 0 ? `${onlineShare}% of total revenue` : 'No online payments yet',
-      showTrendArrow: false,
-    },
-    {
-      title: 'Pay at Venue',
-      value: formatNpr(venueTotal),
-      change: `${totalCollected > 0 ? 100 - onlineShare : 0}%`,
-      subtext: `${totalCollected > 0 ? 100 - onlineShare : 0}% of total revenue`,
-      showTrendArrow: false,
-    },
-    {
-      title: 'Pending Payments',
-      value: formatNpr(paymentStats.outstandingBalance || pendingTotal),
-      change: pendingTransactions.length ? String(pendingTransactions.length) : null,
-      subtext: `${pendingTransactions.length} bookings awaiting payment`,
-      showTrendArrow: false,
-    },
+    { title:'Total Revenue', value: txSummary ? formatNpr(txSummary.totalRevenue) : '—', change: txSummary?.revenueChange == null ? null : `${txSummary.revenueChange}%`, subtext: txSummary ? `vs. last month (${formatNpr(txSummary.previousMonthRevenue)})` : 'Loading' },
+    { title:'Paid Online', value: txSummary ? formatNpr(txSummary.onlineTotal) : '—', change: txSummary ? `${txSummary.onlineShare}%` : null, subtext: txSummary ? `${txSummary.onlineShare}% of total revenue` : 'Loading', showTrendArrow:false },
+    { title:'Pay at Venue', value: txSummary ? formatNpr(txSummary.venueTotal) : '—', change: txSummary ? `${100-txSummary.onlineShare}%` : null, subtext: txSummary ? `${100-txSummary.onlineShare}% of total revenue` : 'Loading', showTrendArrow:false },
+    { title:'Pending Payments', value: txSummary ? formatNpr(txSummary.pendingAmount) : '—', change: txSummary?.pendingCount ? String(txSummary.pendingCount) : null, subtext: txSummary ? `${txSummary.pendingCount} bookings awaiting payment` : 'Loading', showTrendArrow:false },
   ];
-
-  const invoicesThisMonth = invoices.filter((invoice) => inRange(formatNepalDateStr(invoice.paidAt), monthRange));
-  const invoicesLastMonth = invoices.filter((invoice) => inRange(formatNepalDateStr(invoice.paidAt), previousMonthRange));
-  const invoiceCountChange = pctChange(invoicesThisMonth.length, invoicesLastMonth.length);
-  const pendingInvoices = invoices.filter((invoice) => invoice.status === 'Unpaid' || invoice.status === 'Partially Paid');
   const invoiceStats = [
-    { title: 'Total Invoices', value: String(invoices.length), change: invoiceCountChange == null ? null : `${invoiceCountChange}%`, subtext: `vs. last month (${invoicesLastMonth.length})` },
-    { title: 'Total Amount', value: formatNpr(invoices.reduce((a, x) => a + Number(x.total || 0), 0)), subtext: 'Across all invoices', showTrendArrow: false },
-    { title: 'Paid Invoices Total Amount', value: formatNpr(invoices.filter(x => x.status === 'Paid').reduce((a, x) => a + Number(x.total || 0), 0)), subtext: 'Paid invoices only', showTrendArrow: false },
-    { title: 'Pending Invoices', value: String(pendingInvoices.length), subtext: `${formatNpr(pendingInvoices.reduce((a, x) => a + Number(x.balance || 0), 0))} outstanding`, showTrendArrow: false },
+    { title:'Total Invoices', value: invSummary ? String(invSummary.total) : '—', change: invSummary?.countChange == null ? null : `${invSummary.countChange}%`, subtext: invSummary ? `vs. last month (${invSummary.lastMonth})` : 'Loading' },
+    { title:'Total Amount', value: invSummary ? formatNpr(invSummary.totalAmount) : '—', subtext:'Across all invoices', showTrendArrow:false },
+    { title:'Paid Invoices Total Amount', value: invSummary ? formatNpr(invSummary.paidAmount) : '—', subtext:'Paid invoices only', showTrendArrow:false },
+    { title:'Pending Invoices', value: invSummary ? String(invSummary.pendingCount) : '—', subtext: invSummary ? `${formatNpr(invSummary.pendingAmount)} outstanding` : 'Loading', showTrendArrow:false },
   ];
-  const receiptsThisMonth = receipts.filter(r => inRange(formatNepalDateStr(r.paidAt), monthRange));
   const receiptStats = [
-    { title: 'Total Receipts Issued', value: String(receipts.length), subtext: 'Successful payments receipted', showTrendArrow: false },
-    { title: 'Total Amount Receipted', value: formatNpr(sumAmount(receipts)), subtext: 'Across all receipts', showTrendArrow: false },
-    { title: 'Receipts This Month', value: String(receiptsThisMonth.length), subtext: formatNpr(sumAmount(receiptsThisMonth)), showTrendArrow: false },
-    { title: 'Average Receipt', value: formatNpr(receipts.length ? sumAmount(receipts) / receipts.length : 0), subtext: 'Average successful payment', showTrendArrow: false },
+    { title:'Total Receipts Issued', value: recSummary ? String(recSummary.total) : '—', subtext:'Successful payments receipted', showTrendArrow:false },
+    { title:'Total Amount Receipted', value: recSummary ? formatNpr(recSummary.totalAmount) : '—', subtext:'Across all receipts', showTrendArrow:false },
+    { title:'Receipts This Month', value: recSummary ? String(recSummary.thisMonth) : '—', subtext: recSummary ? formatNpr(recSummary.thisMonthAmount) : 'Loading', showTrendArrow:false },
+    { title:'Average Receipt', value: recSummary ? formatNpr(recSummary.average) : '—', subtext:'Average successful payment', showTrendArrow:false },
   ];
   const stats = currentTab === 'Invoices' ? invoiceStats : currentTab === 'Receipts' ? receiptStats : transactionStats;
 
@@ -1113,18 +1058,14 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
               )}
 
               {status === 'loading' ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {Array.from({ length: 4 }, (_, index) => (
-                    <div key={index} className="h-[86px] animate-pulse rounded-xl border border-slate-100 bg-white" />
-                  ))}
-                </div>
+<StatCardsSkeleton />
               ) : (
                 <StatCards stats={stats} />
               )}
 
               <section className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="min-w-0">
-                  <PaymentRevenueOverview data={chartData} maxValue={chartMax} />
+                  {status === 'loading' ? <ChartSkeleton /> : <PaymentRevenueOverview data={chartData} maxValue={chartMax} />}
                 </div>
                 <div className="min-w-0">
                   <PayoutSummaryCard availableBalance={onlineTotal} />
