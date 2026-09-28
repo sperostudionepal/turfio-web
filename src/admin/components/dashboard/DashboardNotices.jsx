@@ -71,14 +71,8 @@ export function DashboardSkeleton() {
         </SkeletonCard>
       </section>
 
-      {/* Court Status / Recent Bookings. */}
-      <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[5fr_8fr]">
-        <SkeletonCard>
-          <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-24" /><SkeletonLine className="h-3 w-14" /></div>
-          <div className="mt-4 space-y-2">
-            {[0, 1, 2, 3].map((n) => <SkeletonLine key={n} className="h-[48px] w-full rounded-lg" />)}
-          </div>
-        </SkeletonCard>
+      {/* Recent Bookings: full-width, matching the loaded dashboard row. */}
+      <section className="grid grid-cols-1 items-stretch gap-5">
         <SkeletonCard>
           <div className="flex items-center justify-between"><SkeletonLine className="h-4 w-32" /><SkeletonLine className="h-3 w-14" /></div>
           <SkeletonLine className="mt-4 h-5 w-full rounded-md" />
