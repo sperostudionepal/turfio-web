@@ -11,8 +11,6 @@ import {
   Eye,
   Edit2,
   X,
-  Building2,
-  MoreHorizontal,
   Upload,
   Trash2,
 } from 'lucide-react';

@@ -506,7 +506,7 @@ export default function TurfDetailsPage({
     const closeMin = toMinutes(close);
     const isOpen = openMin != null && closeMin != null && current >= openMin && current < closeMin;
     return { isOpen, label: isOpen ? 'Open Now' : 'Closed Now', hours: `${format(open)} – ${format(close)}` };
-  }, [turf?.operatingHoursByDay, turf?.openingHours]);
+  }, [turf?.operatingHoursByDay, turf?.openingHours?.start, turf?.openingHours?.end]);
 
   // Check if current selected date is a holiday/closed day
   const isSelectedDateHoliday = useMemo(() => {
@@ -564,7 +564,7 @@ export default function TurfDetailsPage({
       if (!isPast) generated.push({ value: to12(m), label: to12(m), disabled: false });
     }
     return generated;
-  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours, selectedDate, duration]);
+  }, [isSelectedDateHoliday, availabilityData, turf?.openingHours?.start, turf?.openingHours?.end, selectedDate, duration]);
 
   // Keep selection valid, but never overwrite the player's own restored hold while
   // availability is refreshing after back-navigation.

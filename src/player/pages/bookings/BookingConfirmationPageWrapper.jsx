@@ -40,6 +40,15 @@ export default function BookingConfirmationPageWrapper() {
     return () => { cancelled = true; };
   }, [bookingId]);
 
+  // Keep the confirmation Back destination tied to the booking that was actually
+  // loaded, not to transient checkout/payment state. A ref must not be written
+  // during render, so this runs as a side effect once the booking is available.
+  useEffect(() => {
+    if (booking?.turf) {
+      backTargetRef.current = getTurfDetailsPath(booking.turf);
+    }
+  }, [booking]);
+
   if (!booking && !error) {
     return <div className="min-h-screen flex items-center justify-center bg-white"><div className="w-12 h-12 border-4 border-lime-400 border-t-transparent rounded-full animate-spin" /></div>;
   }
@@ -48,9 +57,6 @@ export default function BookingConfirmationPageWrapper() {
   }
 
   const turfDoc = booking.turf || {};
-  // Keep the confirmation Back destination tied to the booking that was actually
-  // loaded, not to transient checkout/payment state.
-  backTargetRef.current = getTurfDetailsPath(turfDoc);
   const bookedCourtId = booking.court?.id || booking.court?._id;
   const liveCourt = Array.isArray(turfDoc.courts)
     ? turfDoc.courts.find((court) => String(court?._id || court?.id) === String(bookedCourtId || ''))

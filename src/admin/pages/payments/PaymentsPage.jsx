@@ -24,9 +24,7 @@ import turfService from '../../../shared/services/turfService';
 import { formatNepalDateStr, getTodayNepalString } from '../../../shared/utils/dateTime';
 import {
   getPeriodRange,
-  getPreviousRange,
   inRange,
-  pctChange,
 } from '../../../shared/utils/dashboardStats';
 import { buildPaymentsCsv, downloadCsv } from '../../../shared/utils/reportExport';
 import { formatNpr, isVenuePayment } from '../../components/payments/paymentUtils';
@@ -35,27 +33,7 @@ import PaymentMethodBadge from '../../components/payments/PaymentMethodBadge';
 
 
 
-const DEFAULT_STATS = { totalCollected: 0, byMethod: {}, outstandingBalance: 0 };
-
 const sumAmount = (list) => list.reduce((total, item) => total + Number(item.amount || 0), 0);
-
-// TODO(BACKEND): remove once the real transactionId (TXN-XXXXXXX) comes from the API.
-const toTxnId = (paymentId) => (paymentId ? paymentId.replace(/^PAY-/, 'TXN-') : paymentId);
-
-const AVATAR_COLORS = [
-  { bg: 'bg-violet-100', text: 'text-violet-600' },
-  { bg: 'bg-teal-100', text: 'text-teal-600' },
-  { bg: 'bg-amber-100', text: 'text-amber-600' },
-  { bg: 'bg-pink-100', text: 'text-pink-600' },
-  { bg: 'bg-blue-100', text: 'text-blue-600' },
-  { bg: 'bg-emerald-100', text: 'text-emerald-600' },
-];
-
-const avatarColorFor = (name = '') => {
-  const code = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length];
-};
-
 
 function Avatar({ name, src, size = 9 }) {
   return <SharedAvatar name={name} src={src} className="" style={{ height: size * 4, width: size * 4 }} />;
@@ -688,7 +666,6 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
   const [transactions, setTransactions] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [receipts, setReceipts] = useState([]);
-  const [paymentStats, setPaymentStats] = useState(DEFAULT_STATS);
   const [financeSummary, setFinanceSummary] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
 
@@ -709,7 +686,7 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
     let cancelled = false;
     const loadAll = async () => {
       try {
-        const [txRows, invoiceRows, receiptRows, paymentRows, summary] = await Promise.all([
+        const [txRows, invoiceRows, receiptRows, , summary] = await Promise.all([
           turfService.getOwnerTransactions(),
           turfService.getOwnerInvoices(),
           turfService.getOwnerReceipts(),
@@ -727,8 +704,6 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
         setInvoices((invoiceRows || []).map((inv) => ({ ...inv, invoiceId: inv.invoiceId, bookingId: inv.booking?.bookingId || inv.bookingId, customer: { ...(inv.billingSnapshot?.customer || inv.booking?.customerSnapshot || {}), name: inv.billingSnapshot?.customer?.name || inv.booking?.customerSnapshot?.name || [inv.booking?.user?.firstName, inv.booking?.user?.lastName].filter(Boolean).join(' ') || 'Customer', avatar: inv.booking?.user?.profilePicture || null }, total: Number(inv.totalAmount || 0), paid: Number(inv.amountPaid || 0), balance: Number(inv.amountDue || 0), status: inv.status === 'PAID' ? 'Paid' : Number(inv.amountPaid || 0) > 0 ? 'Partially Paid' : 'Unpaid', method: inv.booking?.paymentMethod || '—', paidAt: inv.issuedAt })));
         setReceipts((receiptRows || []).map((r) => ({ ...r, receiptId: r.receiptId, transactionId: r.transaction?.transactionId, invoiceId: r.invoice?.invoiceId, bookingId: r.booking?.bookingId, customer: { ...(r.payerSnapshot || r.booking?.customerSnapshot || {}), name: r.payerSnapshot?.name || r.booking?.customerSnapshot?.name || [r.booking?.user?.firstName, r.booking?.user?.lastName].filter(Boolean).join(' ') || 'Customer', avatar: r.booking?.user?.profilePicture || null }, amount: Number(r.amount || 0), method: r.method === 'CASH' ? 'Pay at Venue' : r.method === 'ESEWA' ? 'eSewa' : r.method, status: 'Completed', paidAt: r.paidAt })));
         setFinanceSummary(summary);
-        const ps = paymentRows || [];
-        setPaymentStats({ totalCollected: ps.reduce((a, p) => a + Number(p.paidAmount || 0), 0), outstandingBalance: ps.reduce((a, p) => a + Number(p.remainingAmount || 0), 0), byMethod: {} });
         setStatus('ready');
       } catch { if (!cancelled) setStatus('error'); }
     };
@@ -773,7 +748,6 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
   );
 
   const monthRange = useMemo(() => getPeriodRange('month'), []);
-  const previousMonthRange = useMemo(() => getPreviousRange('month'), []);
 
   const totalCollected = useMemo(() => sumAmount(completedTransactions), [completedTransactions]);
   const venueTotal = useMemo(
@@ -781,28 +755,6 @@ function PaymentsPage({ activeTab, setActiveTab, initialSearch = '', initialTab 
     [completedTransactions]
   );
   const onlineTotal = totalCollected - venueTotal;
-
-  const monthRevenue = useMemo(
-    () => sumAmount(completedTransactions.filter((txn) => inRange(txn.nepalDate, monthRange))),
-    [completedTransactions, monthRange]
-  );
-
-  const previousMonthRevenue = useMemo(
-    () => sumAmount(completedTransactions.filter((txn) => inRange(txn.nepalDate, previousMonthRange))),
-    [completedTransactions, previousMonthRange]
-  );
-
-  const revenueChange = pctChange(monthRevenue, previousMonthRevenue);
-  const onlineShare = totalCollected > 0 ? Math.round((onlineTotal / totalCollected) * 100) : 0;
-  const pendingTransactions = transactionsWithDates.filter((txn) =>
-    String(txn.status || '').toLowerCase().includes('pending')
-  );
-  const pendingTotal = sumAmount(pendingTransactions);
-
-  const onlineMethods = useMemo(
-    () => [...new Set(completedTransactions.filter((txn) => !isVenuePayment(txn)).map((txn) => txn.method))],
-    [completedTransactions]
-  );
 
   const txSummary = financeSummary?.transactions;
   const invSummary = financeSummary?.invoices;
