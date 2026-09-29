@@ -413,11 +413,11 @@ export default function TurfListingPage({
     (maxPrice < 2500 ? 1 : 0);
 
   // Helper: Determine which filtering tier is active
-  const filteringTier = useMemo(() => {
-    if (!appliedDate) return 'no-date'; // Tier 1: No date selected
-    if (!appliedTime) return 'date-only'; // Tier 2: Date selected, no time
-    return 'date-and-time'; // Tier 3: Both date and time selected
-  }, [appliedDate, appliedTime]);
+  const filteringTier = !appliedDate
+    ? 'no-date' // Tier 1: No date selected
+    : !appliedTime
+      ? 'date-only' // Tier 2: Date selected, no time
+      : 'date-and-time'; // Tier 3: Both date and time selected
 
   // Text used to filter turfs by title/location.
   // When the location was picked from autocomplete (or "Nearby location"), we have
@@ -467,7 +467,7 @@ export default function TurfListingPage({
 
     // Apply tier-specific filtering
     const applySorting = (results) => {
-      return results.sort((a, b) => {
+      return [...results].sort((a, b) => {
         if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
         if (sortBy === 'reviews') return (b.reviews || 0) - (a.reviews || 0);
         if (sortBy === 'price-low') return (a.priceVal || 0) - (b.priceVal || 0);

@@ -4,16 +4,19 @@
 
 function CustomerInsights({ onViewAll, insights = [] }) {
     const TOTAL = insights.reduce((sum, item) => sum + item.value, 0);
-    let currentPercentage = 0;
 
-    const gradientSegments = insights.map((item) => {
-        const start = currentPercentage;
-        const end = start + item.percentage;
+    const { segments: gradientSegments } = insights.reduce(
+        (acc, item) => {
+            const start = acc.currentPercentage;
+            const end = start + item.percentage;
 
-        currentPercentage = end;
-
-        return `${item.color} ${start}% ${end}%`;
-    });
+            return {
+                currentPercentage: end,
+                segments: [...acc.segments, `${item.color} ${start}% ${end}%`],
+            };
+        },
+        { currentPercentage: 0, segments: [] }
+    );
 
     const chartBackground = `conic-gradient(${gradientSegments.join(', ')})`;
 

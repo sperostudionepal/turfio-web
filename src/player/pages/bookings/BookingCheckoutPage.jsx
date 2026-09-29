@@ -334,44 +334,43 @@ export default function BookingCheckoutPage({
     return newKey;
   });
 
-  // Fetch turf and court details from backend to get accurate pricing
-  useEffect(() => {
-    const fetchCourtPrice = async () => {
-      const turfId = turf?.id || turf?._id;
-      const courtId = turf?.selectedCourt?._id || turf?.selectedCourt?.id || turf?.court?._id || turf?.court?.id;
-      
-      // Only fetch if we don't have the rate and we have IDs
-      if (turfId && courtId && !turf?.rateOverride) {
-        try {
-          const turfDetails = await turfService.getTurfById(turfId);
-          
-          if (turfDetails?.courts) {
-            const court = turfDetails.courts.find(c => 
-              String(c._id || c.id) === String(courtId)
-            );
-            
-            if (court?.hourlyRate) {
-              // Force update the turf object
-              if (turf) {
-                turf.courtHourlyRate = court.hourlyRate;
-                turf.rateOverride = court.hourlyRate;
-                turf.pricePerHour = court.hourlyRate;
-                turf.priceVal = court.hourlyRate;
-                turf.selectedCourt = court;
-                turf.court = court;
-              }
-              // Trigger re-render
-              setFormData(prev => ({ ...prev }));
-            }
-          }
-        } catch (error) {
-          console.error('Failed to fetch court price:', error);
-        }
-      }
-    };
+  // Fetch turf and court details from backend to get accurate pricing.
+  // React props must stay immutable, so the fetched rate is tracked as its own
+  // piece of state instead of being written back onto the `turf` prop.
+  const [fetchedCourtRate, setFetchedCourtRate] = useState(null);
 
-    fetchCourtPrice();
-  }, [turf?.id, turf?._id, currentStep]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const turfId = turf?.id || turf?._id;
+    const courtId =
+      turf?.selectedCourt?._id ||
+      turf?.selectedCourt?.id ||
+      turf?.court?._id ||
+      turf?.court?.id;
+
+    if (!turfId || !courtId || turf?.rateOverride) return;
+
+    let cancelled = false;
+
+    turfService.getTurfById(turfId)
+      .then((turfDetails) => {
+        if (cancelled) return;
+
+        const court = turfDetails?.courts?.find(
+          (item) => String(item._id || item.id) === String(courtId)
+        );
+
+        if (court?.hourlyRate) {
+          setFetchedCourtRate(Number(court.hourlyRate));
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch court price:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [turf?.id, turf?._id, turf?.selectedCourt, turf?.court, turf?.rateOverride]);
 
   // Sync user info if loaded later (auto-populate for logged in user)
   useEffect(() => {
@@ -509,7 +508,12 @@ export default function BookingCheckoutPage({
       return Number(turf.rateOverride);
     }
 
-    // PRIORITY 1: Court-specific rate from selected court object
+    // PRIORITY 1: Rate fetched from the backend for the selected court (see effect above)
+    if (fetchedCourtRate && fetchedCourtRate > 0) {
+      return fetchedCourtRate;
+    }
+
+    // PRIORITY 1b: Court-specific rate from selected court object
     const courtRate = turf?.selectedCourt?.hourlyRate || turf?.court?.hourlyRate;
     if (courtRate && Number(courtRate) > 0) {
       return Number(courtRate);
@@ -554,7 +558,7 @@ export default function BookingCheckoutPage({
     }
     
     return 1250;
-  }, [turf, duration]);
+  }, [turf, duration, fetchedCourtRate]);
 
   // Rounded to match the server, which prices a hold as round(rate x duration) and overwrites
   // any client-supplied amount, so the quote on screen is the quote that gets charged.

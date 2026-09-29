@@ -149,7 +149,7 @@ function Dashboard({ user, onLogout }) {
     search: '',
   });
 
-  const loadVenue = () => {
+  const loadVenue = useCallback(() => {
     const userId = user?._id || user?.id;
 
     if (!userId) {
@@ -169,7 +169,7 @@ function Dashboard({ user, onLogout }) {
         setVenueStatus('error');
         throw error;
       });
-  };
+  }, [user?._id, user?.id]);
 
   const loadBookings = useCallback(
     () => Promise.all([
@@ -193,12 +193,10 @@ function Dashboard({ user, onLogout }) {
   const userId = user?._id || user?.id;
 
   useEffect(() => {
-    if (!userId) {
-      return;
+    if (userId) {
+      loadVenue().catch(() => { });
     }
-
-    loadVenue().catch(() => { });
-  }, [userId]);
+  }, [userId, loadVenue]);
 
   useEffect(() => {
     if (!userId || activeTab !== 'Dashboard') {
@@ -453,10 +451,6 @@ function Dashboard({ user, onLogout }) {
 
   const noVenue =
     venueStatus === 'ready' && !venue;
-
-  const dashboardPeriodLabel = activePeriod.key === 'custom' && activePeriod.range
-    ? formatDashboardRange(activePeriod.range)
-    : (PERIOD_OPTIONS.find((option) => option.value === activePeriod.key)?.label || 'This Month');
 
   const reportRange = getPeriodRange(period, undefined, customRange);
 
