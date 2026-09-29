@@ -10,28 +10,13 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
+  withCredentials: true,
 });
 
-const parseSessionToken = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    if (raw.startsWith('{')) {
-      const parsed = JSON.parse(raw);
-      return parsed.token || null;
-    }
-    return raw;
-  } catch {
-    return null;
-  }
-};
-
-const sessionKeyForScope = (scope) => ({
-  player: 'turfio_player_session',
-  admin: 'turfio_admin_session',
-  superadmin: 'turfio_superadmin_session',
-}[scope] || 'turfio_player_session');
-
+// Authentication is cookie-based. Session JWTs are HttpOnly and are never read by JavaScript.
+// `withCredentials` above sends the correct portal cookie with API requests.
+// The non-secret role context only helps the server select between admin and superadmin
+// cookies when both portals are open; the server still verifies the JWT and required role.
 const inferAuthScope = (config) => {
   const explicit = config.authScope || config.headers?.['X-Role-Context'];
   if (explicit) return explicit === 'owner' ? 'admin' : explicit;
@@ -41,10 +26,8 @@ const inferAuthScope = (config) => {
   return 'player';
 };
 
-// Attach only the token belonging to the portal making this request.
 apiClient.interceptors.request.use((config) => {
-  const token = parseSessionToken(sessionKeyForScope(inferAuthScope(config)));
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['X-Role-Context'] = inferAuthScope(config);
   return config;
 }, (error) => Promise.reject(error));
 
@@ -53,7 +36,6 @@ apiClient.interceptors.response.use((response) => response.data, (error) => {
   let errorMessage = responseData?.message;
   if (!errorMessage && Array.isArray(responseData?.errors)) errorMessage = responseData.errors.map((e) => e.message).join(', ');
   if (!errorMessage) errorMessage = error.message || 'An unexpected error occurred. Please try again.';
-  if (error.response?.status === 401) localStorage.removeItem(sessionKeyForScope(inferAuthScope(error.config || {})));
   return Promise.reject(new Error(errorMessage));
 });
 

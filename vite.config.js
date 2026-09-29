@@ -4,6 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { ViteImageOptimizer } from 'vite-plugin-image-optimizer'
 
 export default defineConfig({
+  resolve: {
+    // Ensure hooks/context always resolve through one React runtime, including HMR.
+    dedupe: ['react', 'react-dom'],
+  },
   plugins: [
     react(),
     tailwindcss(),

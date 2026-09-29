@@ -3,21 +3,31 @@ import RedirectWithSearch from './RedirectWithSearch';
 import RootLayout from '../layouts/RootLayout';
 import PublicLayout from '../layouts/PublicLayout';
 import AuthLayout from '../layouts/AuthLayout';
-import RouteErrorPage from '../layouts/RouteErrorPage';
-import { pageLoaders } from './pageLoaders';
 
-// Landing and auth pages stay in the main bundle (first paint / tiny); everything else is a lazy chunk.
+// Route components are imported directly instead of through runtime dynamic imports.
+// This keeps Vite's development module graph deterministic during navigation/HMR and
+// avoids intermittent "Failed to fetch dynamically imported module" route failures.
 import HomePage from '../../player/pages/HomePage';
 import LoginPage from '../../player/pages/auth/LoginPage';
 import SignUpPage from '../../player/pages/auth/SignUpPage';
 import StaffLoginPage from '../../admin/pages/auth/StaffLoginPage';
 import SetupDashboardPage from '../../admin/pages/owner/SetupDashboardPage';
+import ApplicationStatusPage from '../../admin/pages/owner/ApplicationStatusPage';
+import TurfListingPage from '../../player/pages/turfs/TurfListingPage';
+import TurfDetailsPageWrapper from '../../player/pages/turfs/TurfDetailsPageWrapper';
+import BookingCheckoutPageWrapper from '../../player/pages/bookings/BookingCheckoutPageWrapper';
+import TurfRoutePageWrapper from '../../player/pages/turfs/TurfRoutePageWrapper';
+import ListTurfPage from '../../player/pages/listTurf/ListTurfPage';
+import ProfilePage from '../../player/pages/profile/ProfilePage';
+import BookingConfirmationPageWrapper from '../../player/pages/bookings/BookingConfirmationPageWrapper';
+import BookingPassPublicPage from '../../shared/pages/BookingPassPublicPage';
+import PaymentSuccess from '../../shared/pages/PaymentSuccess';
+import PaymentFailure from '../../shared/pages/PaymentFailure';
 import NotFoundPage from '../../shared/pages/NotFoundPage';
+import { DashboardWrapper, SuperadminDashboardWrapper } from './DashboardRoutes';
 
 import { RequirePlayer } from '../../shared/components/auth/RouteGuards';
 import { usePlayerAuth, useOwnerAuth, useSuperadminAuth } from '../../shared/store/useAuthStore';
-
-const lazyPage = (load, exportName = 'default') => async () => ({ Component: (await load())[exportName] });
 
 const handleLoginSuccess = async (credentials) => {
   const searchParams = new URLSearchParams(window.location.search);
@@ -49,30 +59,24 @@ const routes = [
   {
     element: <PublicLayout />,
     children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/turfs', element: <TurfListingPage /> },
+      { path: '/find-turfs', element: <RedirectWithSearch to="/turfs" /> },
+      { path: '/turfs/:slug', element: <TurfDetailsPageWrapper /> },
+      { path: '/turfs/:slug/book', element: <BookingCheckoutPageWrapper /> },
+      { path: '/route', element: <TurfRoutePageWrapper /> },
+      { path: '/directions', element: <RedirectWithSearch to="/route" /> },
+      { path: '/list-turf', element: <ListTurfPage /> },
+      { path: '/application-status', element: <ApplicationStatusPage /> },
       {
-        // Keeps the navbar/footer on screen when a page inside the layout throws.
-        errorElement: <RouteErrorPage />,
+        element: (
+          <RequirePlayer>
+            <Outlet />
+          </RequirePlayer>
+        ),
         children: [
-          { path: '/', element: <HomePage /> },
-          { path: '/turfs', lazy: lazyPage(pageLoaders.turfListing) },
-          { path: '/find-turfs', element: <RedirectWithSearch to="/turfs" /> },
-          { path: '/turfs/:slug', lazy: lazyPage(pageLoaders.turfDetails) },
-          { path: '/turfs/:slug/book', lazy: lazyPage(pageLoaders.checkout) },
-          { path: '/route', lazy: lazyPage(pageLoaders.turfRoute) },
-          { path: '/directions', element: <RedirectWithSearch to="/route" /> },
-          { path: '/list-turf', lazy: lazyPage(pageLoaders.listTurf) },
-          { path: '/application-status', lazy: lazyPage(pageLoaders.applicationStatus) },
-          {
-            element: (
-              <RequirePlayer>
-                <Outlet />
-              </RequirePlayer>
-            ),
-            children: [
-              { path: '/profile', lazy: lazyPage(pageLoaders.profile) },
-              { path: '/bookings/:bookingId/confirmation', lazy: lazyPage(pageLoaders.confirmation) },
-            ],
-          },
+          { path: '/profile', element: <ProfilePage /> },
+          { path: '/bookings/:bookingId/confirmation', element: <BookingConfirmationPageWrapper /> },
         ],
       },
     ],
@@ -85,28 +89,22 @@ const routes = [
       { path: '/signup', element: <SignUpPage onSignUp={handleSignUpSuccess} /> },
     ],
   },
-  { path: '/booking-pass/:id', lazy: lazyPage(pageLoaders.bookingPass) },
-  { path: '/payment-success', lazy: lazyPage(pageLoaders.paymentSuccess) },
-  { path: '/payment-failure', lazy: lazyPage(pageLoaders.paymentFailure) },
+  { path: '/booking-pass/:id', element: <BookingPassPublicPage /> },
+  { path: '/payment-success', element: <PaymentSuccess /> },
+  { path: '/payment-failure', element: <PaymentFailure /> },
   { path: '/admin/login', element: <RedirectWithSearch to="/owner/login" /> },
   { path: '/owner/login', element: <StaffLoginPage onLogin={handleAdminLoginSuccess} portalTitle="OWNER PORTAL" targetRole="admin" /> },
   { path: '/superadmin/login', element: <StaffLoginPage onLogin={handleSuperadminLoginSuccess} portalTitle="SUPERADMIN PORTAL" targetRole="superadmin" /> },
   { path: '/superadmin-login', element: <RedirectWithSearch to="/superadmin/login" /> },
   { path: '/setup-dashboard', element: <SetupDashboardPage onSetupSuccess={() => (window.location.href = '/dashboard')} /> },
-  { path: '/dashboard/*', lazy: lazyPage(pageLoaders.dashboards, 'DashboardWrapper') },
-  { path: '/superadmin/dashboard', lazy: lazyPage(pageLoaders.dashboards, 'SuperadminDashboardWrapper') },
+  { path: '/dashboard/*', element: <DashboardWrapper /> },
+  { path: '/superadmin/dashboard', element: <SuperadminDashboardWrapper /> },
   { path: '*', element: <NotFoundPage /> },
 ];
 
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
-    errorElement: <RouteErrorPage />,
-    hydrateFallbackElement: (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-10 h-10 border-4 border-lime-400 border-t-transparent rounded-full animate-spin" />
-      </div>
-    ),
     children: routes,
   },
 ]);
