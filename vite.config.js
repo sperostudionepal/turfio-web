@@ -8,6 +8,14 @@ export default defineConfig({
     // Ensure hooks/context always resolve through one React runtime, including HMR.
     dedupe: ['react', 'react-dom'],
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

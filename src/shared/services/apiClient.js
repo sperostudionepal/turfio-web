@@ -1,7 +1,31 @@
 import axios from 'axios';
 
 // Base API URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+const resolveBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  // If explicitly set to a relative path like '/api', use it directly
+  if (envUrl && envUrl.startsWith('/')) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  // When running in the browser on Vercel or any non-localhost host:
+  // always route through the same-origin '/api' proxy so SameSite=Strict HttpOnly cookies work
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return '/api';
+  }
+  // If an envUrl is provided (and ends with / or not), normalize it to /api
+  if (envUrl) {
+    const trimmed = envUrl.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  }
+  return '/api';
+};
+
+const API_BASE_URL = resolveBaseUrl();
 
 // Create Axios Client Instance
 const apiClient = axios.create({

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { ArrowRight, ArrowLeft, Check, Calendar, MapPin, Clock, Shield, Footprints, Users, ChevronDown, X, AtSign, Hand, Compass, Target, Zap } from 'lucide-react';
 
-function OnboardingPage({ onComplete, onClose, userData = {} }) {
+function OnboardingPage({ onComplete, onClose, userData = {}, isSubmitting = false }) {
   const [step, setStep] = useState(1);
 
   // Step 1 Form Data - Personal Details
@@ -99,22 +99,28 @@ function OnboardingPage({ onComplete, onClose, userData = {} }) {
     } else {
       // Complete Onboarding
       if (onComplete) {
+        const travelDistNum = parseInt(travelDistance, 10) || 5;
         onComplete({
           username,
           dob,
+          dateOfBirth: dob,
           gender,
           city,
           preferredFoot,
           position,
+          primaryPosition: position,
           skillLevel,
           playingStyle,
           matchType,
+          preferredMatchType: matchType,
           playFrequency,
           preferredTime,
           travelDistance,
+          travelPreference: travelDistNum,
           weeklyAvailability,
-          gameVibe,
-          fitnessLevel,
+          gameVibe: Array.isArray(gameVibe) ? gameVibe : [gameVibe],
+          fitnessLevel: Number(fitnessLevel) || 3,
+          isProfileCompleted: true,
         });
       }
     }
@@ -646,10 +652,22 @@ function OnboardingPage({ onComplete, onClose, userData = {} }) {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex-1 py-3.5 px-6 rounded-full bg-lime-400 hover:bg-lime-500 active:scale-95 text-slate-900 font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  disabled={isSubmitting}
+                  className={`flex-1 py-3.5 px-6 rounded-full bg-lime-400 hover:bg-lime-500 active:scale-95 text-slate-900 font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-xs ${
+                    isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
-                  <span>Complete Setup & Launch</span>
-                  <ArrowRight size={16} />
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                      <span>Saving Profile...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Complete Setup & Launch</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
