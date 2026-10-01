@@ -122,29 +122,6 @@ export default function TurfMap({
     if (!mapContainerRef.current) return;
 
     const initialStyle = getActiveStyle('vector');
-    const maskMapTilerKey = (value) => {
-      if (!value) return 'NOT SET';
-      if (value.length <= 8) return 'SET (masked)';
-      return `${value.slice(0, 4)}...${value.slice(-4)}`;
-    };
-    const sanitizeMapUrl = (value) => {
-      if (typeof value !== 'string') return value;
-      return value.replace(/([?&]key=)[^&}]+/g, '$1<masked>');
-    };
-
-    console.group('[Turfio Map] Initialization');
-    console.log('Hostname:', window.location.hostname);
-    console.log('Requested style mode:', 'vector');
-    console.log('VITE_MAPTILER_API_KEY present:', Boolean(import.meta.env.VITE_MAPTILER_API_KEY));
-    console.log('VITE_MAPTILER_API_KEY preview:', maskMapTilerKey(import.meta.env.VITE_MAPTILER_API_KEY));
-    console.log('Resolved MAPTILER_KEY preview:', maskMapTilerKey(MAPTILER_KEY));
-    console.log('Style name:', initialStyle?.name || '(external style URL)');
-    console.log('Vector source:', sanitizeMapUrl(initialStyle?.sources?.openmaptiles?.url));
-    console.log('Glyphs:', sanitizeMapUrl(initialStyle?.glyphs));
-    console.log('Sprite:', sanitizeMapUrl(initialStyle?.sprite));
-    console.log('Raw style type:', typeof initialStyle);
-    console.groupEnd();
-
     let map;
     try {
       map = new maplibregl.Map({
@@ -457,11 +434,6 @@ export default function TurfMap({
     };
 
     map.on('load', () => {
-      console.log('[Turfio Map] Map loaded', {
-        styleMode: 'vector',
-        styleLoaded: map.isStyleLoaded(),
-        sourceIds: Object.keys(map.getStyle()?.sources || {}),
-      });
       registerCustomIcons(map);
       emitBounds();
       setMapReady(true);
@@ -477,14 +449,6 @@ export default function TurfMap({
 
     // Graceful fallback for unauthorized/offline key errors or missing vector source errors
     map.on('error', (e) => {
-      console.group('[Turfio Map] MapLibre error');
-      console.error('Error object:', e?.error || e);
-      console.log('Status:', e?.error?.status || e?.status || '(none)');
-      console.log('Message:', e?.error?.message || e?.message || '(none)');
-      console.log('Source ID:', e?.sourceId || '(none)');
-      console.log('Style loaded:', map.isStyleLoaded());
-      console.groupEnd();
-
       const errStatus = e?.error?.status || e?.status;
       if (errStatus === 401 || errStatus === 403 || errStatus === 404 || e?.error?.message?.includes('403') || e?.error?.message?.includes('401')) {
         console.warn('Map style restricted or unavailable, switching to OSM fallback:', e);
@@ -523,13 +487,7 @@ export default function TurfMap({
     activeStyleModeRef.current = mapStyleMode;
 
     const targetStyle = getActiveStyle(mapStyleMode);
-    console.group('[Turfio Map] Style switch');
-    console.log('Target mode:', mapStyleMode);
-    console.log('Target style:', typeof targetStyle === 'string'
-      ? targetStyle.replace(/([?&]key=)[^&}]+/g, '$1<masked>')
-      : targetStyle?.name);
-    console.log('Current style loaded:', map.isStyleLoaded());
-    console.groupEnd();
+
     if (!map.isStyleLoaded()) {
       map.once('styledata', () => {
         map.setStyle(targetStyle);
