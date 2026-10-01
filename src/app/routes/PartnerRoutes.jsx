@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import RootLayout from '../layouts/RootLayout';
 import RedirectWithSearch from './RedirectWithSearch';
-import { portalRedirectRoutes } from './PortalRedirects';
+import { portalRedirectRoutes } from './portalRedirectRoutes';
 import StaffLoginPage from '../../admin/pages/auth/StaffLoginPage';
 import SetupDashboardPage from '../../admin/pages/owner/SetupDashboardPage';
 import Dashboard from '../../admin/pages/dashboard/Dashboard';

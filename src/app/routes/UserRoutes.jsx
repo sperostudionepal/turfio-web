@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
 import RedirectWithSearch from './RedirectWithSearch';
-import { portalRedirectRoutes } from './PortalRedirects';
+import { portalRedirectRoutes } from './portalRedirectRoutes';
 import RootLayout from '../layouts/RootLayout';
 import PublicLayout from '../layouts/PublicLayout';
 import AuthLayout from '../layouts/AuthLayout';

@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import RootLayout from '../layouts/RootLayout';
 import RedirectWithSearch from './RedirectWithSearch';
-import { portalRedirectRoutes } from './PortalRedirects';
+import { portalRedirectRoutes } from './portalRedirectRoutes';
 import StaffLoginPage from '../../admin/pages/auth/StaffLoginPage';
 import SuperadminDashboard from '../../superadmin/pages/SuperadminDashboard';
 import { RequireSuperadmin } from '../../shared/components/auth/RouteGuards';

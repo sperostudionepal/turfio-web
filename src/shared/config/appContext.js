@@ -21,7 +21,7 @@ export function getAppContext({
   for (const app of contexts) {
     if (!env[urlKeys[app]]) continue;
     try {
-      if (new URL(env[urlKeys[app]]).hostname.toLowerCase() === host) {
+      if (new URL(getAppBaseUrl(app, { env })).hostname.toLowerCase() === host) {
         // Multiple apps may use localhost in override mode. Explicit host mappings win.
         context ||= app;
       }
@@ -57,10 +57,15 @@ export function getAppBaseUrl(app, {
 }
 
 export function appUrl(app, path = '/', options) {
-  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || /[\\\x00-\x1f]/.test(path)) {
+  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || [...path].some((ch) => ch === '\\' || ch.charCodeAt(0) < 32)) {
     throw new Error('App links require a local absolute path');
   }
-  return new URL(path, getAppBaseUrl(app, options)).href;
+  const env = options?.env || import.meta.env || {};
+  const url = new URL(path, getAppBaseUrl(app, options));
+  // Do not carry a development override into a different portal.
+  url.searchParams.delete('app');
+  if (env.DEV && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && app !== 'user') url.searchParams.set('app', app);
+  return url.href;
 }
 
 export const roleContext = (context = getAppContext()) => ({ user: 'player', partner: 'admin', superadmin: 'superadmin' })[context];

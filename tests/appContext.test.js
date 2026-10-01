@@ -39,3 +39,9 @@ test('cross-app links use configured origins and reject external path injection'
   assert.throws(() => getAppBaseUrl('user', { env: { VITE_USER_APP_URL: 'https://u:p@turfio.com' } }));
   assert.equal(roleContext('partner'), 'admin');
 });
+
+test('cross-app redirects discard stale overrides and set fallback context explicitly', () => {
+  assert.equal(appUrl('superadmin', '/superadmin/login?app=partner', { env: { DEV: true } }), 'http://superadmin.localhost:5173/superadmin/login');
+  assert.equal(appUrl('partner', '/owner/login', { env: { DEV: true, VITE_PARTNER_APP_URL: 'http://localhost:5173' } }), 'http://localhost:5173/owner/login?app=partner');
+  assert.equal(getAppContext({ hostname: 'localhost', env: { DEV: false, VITE_USER_APP_URL: 'http://localhost:5173' } }), null);
+});
