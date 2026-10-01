@@ -1,12 +1,64 @@
 {
   "rewrites": [
     {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "partner.turfio.com"
+        }
+      ],
+      "destination": "/robots-staff.txt"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "superadmin.turfio.com"
+        }
+      ],
+      "destination": "/robots-staff.txt"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://turfio-server-1.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "partner.turfio.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "superadmin.turfio.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ]
 }
