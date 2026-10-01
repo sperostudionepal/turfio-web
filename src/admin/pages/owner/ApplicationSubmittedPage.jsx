@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from '../../../shared/config/appContext';
 import {
   ArrowRight,
   Mail,
@@ -12,7 +13,7 @@ export default function ApplicationSubmittedPage({
 }) {
   const trackingUrl =
     data?.trackingUrl ||
-    `${window.location.origin}/application-status?token=${data?.trackingToken || ''}`;
+    `${getAppBaseUrl('user')}/application-status?token=${data?.trackingToken || ''}`;
 
   const steps = [
     {

@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from '../../../shared/config/appContext';
 import { X, Download, Calendar, MapPin, Users, Clock, CheckCircle2, Printer } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRef, useState } from 'react';
@@ -14,7 +15,7 @@ function BookingPassModal({ booking, qrToken, onClose }) {
   if (!booking || !qrToken) return null;
 
   // Generate shareable URL that will work when deployed
-  const bookingPassUrl = `${window.location.origin}/booking-pass/${booking.bookingId || booking.shortCode}?token=${qrToken}`;
+  const bookingPassUrl = `${getAppBaseUrl('user')}/booking-pass/${booking.bookingId || booking.shortCode}?token=${qrToken}`;
 
   // QR code will contain the URL so scanning redirects to the booking pass page
   const qrData = bookingPassUrl;

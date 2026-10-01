@@ -1,3 +1,4 @@
+import { appUrl } from '../../../shared/config/appContext';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Download } from 'lucide-react';
@@ -601,8 +602,7 @@ function Dashboard({ user, onLogout }) {
                 {noVenue && (
                   <NoVenueNotice
                     onListTurf={() => {
-                      window.location.href =
-                        '/list-turf';
+                      window.location.href = appUrl('user', '/list-turf');
                     }}
                   />
                 )}

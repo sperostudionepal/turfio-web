@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from '../../../shared/config/appContext';
 import {
   X,
   Calendar as CalendarIcon,
@@ -246,7 +247,7 @@ function UserBookingDetailModal({
 
   // ── QR URL (same as BookingPassModal) ──────────────────────────
   const bookingPassUrl = qrToken
-    ? `${window.location.origin}/booking-pass/${booking.bookingId || booking.shortCode}?token=${qrToken}`
+    ? `${getAppBaseUrl('user')}/booking-pass/${booking.bookingId || booking.shortCode}?token=${qrToken}`
     : null;
 
   // ── Direct PDF download ─────────────────────────────────────────

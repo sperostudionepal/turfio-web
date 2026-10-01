@@ -1,31 +1,13 @@
 import axios from 'axios';
 
-// Base API URL configuration
-const resolveBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  // If explicitly set to a relative path like '/api', use it directly
-  if (envUrl && envUrl.startsWith('/')) {
-    return envUrl.replace(/\/+$/, '');
-  }
-  // When running in the browser on Vercel or any non-localhost host:
-  // always route through the same-origin '/api' proxy so SameSite=Strict HttpOnly cookies work
-  if (
-    typeof window !== 'undefined' &&
-    window.location.hostname &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1'
-  ) {
-    return '/api';
-  }
-  // If an envUrl is provided (and ends with / or not), normalize it to /api
-  if (envUrl) {
-    const trimmed = envUrl.replace(/\/+$/, '');
-    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-  }
-  return '/api';
-};
+import { roleContext } from '../config/appContext';
 
-const API_BASE_URL = resolveBaseUrl();
+// Browser sessions always use the current host's /api proxy. An absolute API
+// origin would store all three sessions on that API hostname instead.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+if (!API_BASE_URL.startsWith('/') || API_BASE_URL.startsWith('//')) {
+  throw new Error('VITE_API_URL must be a same-origin path for host-only sessions');
+}
 
 // Create Axios Client Instance
 const apiClient = axios.create({
@@ -44,10 +26,7 @@ const apiClient = axios.create({
 const inferAuthScope = (config) => {
   const explicit = config.authScope || config.headers?.['X-Role-Context'];
   if (explicit) return explicit === 'owner' ? 'admin' : explicit;
-  const url = config.url || '';
-  if (url.includes('/superadmin/')) return 'superadmin';
-  if (url.includes('/admin/') || url.includes('/bookings/owner') || url.includes('/finance/owner') || url.includes('/reviews/owner') || url.includes('/customers/owner') || url.includes('/turfs/owner') || url.includes('/promo-codes')) return 'admin';
-  return 'player';
+  return roleContext() || 'player';
 };
 
 apiClient.interceptors.request.use((config) => {

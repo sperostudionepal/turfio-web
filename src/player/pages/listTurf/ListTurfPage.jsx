@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from '../../../shared/config/appContext';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { compressImageFile } from '../../../shared/utils/imageCompressor';
@@ -1269,7 +1270,7 @@ export default function ListTurfPage({ user, onSubmitted, onHome: onHomeProp }) 
 
 function RequestStatusPanel({ data, onHome }) {
   const [copied, setCopied] = useState(false);
-  const trackingUrl = data?.trackingUrl || `${window.location.origin}/application-status?token=${data?.trackingToken || ''}`;
+  const trackingUrl = data?.trackingUrl || `${getAppBaseUrl('user')}/application-status?token=${data?.trackingToken || ''}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(trackingUrl);

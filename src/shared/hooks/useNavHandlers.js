@@ -1,10 +1,10 @@
+import { appUrl } from '../config/appContext';
 import { useNavigate } from 'react-router-dom';
-import { usePlayerAuth, useOwnerAuth } from '../store/useAuthStore';
+import { usePlayerAuth } from '../store/useAuthStore';
 
 export function useNavHandlers() {
   const navigate = useNavigate();
   const playerAuth = usePlayerAuth();
-  const ownerAuth = useOwnerAuth();
 
   const user = playerAuth.user;
 
@@ -26,13 +26,10 @@ export function useNavHandlers() {
   };
 
   const handleDashboard = () => {
-    navigate('/dashboard');
+    window.location.assign(appUrl('partner', '/dashboard'));
   };
 
   const handleLogout = async () => {
-    if (ownerAuth.user) {
-      await ownerAuth.logout();
-    }
     if (playerAuth.user) {
       await playerAuth.logout();
     }
