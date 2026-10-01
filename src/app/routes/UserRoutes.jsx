@@ -50,8 +50,6 @@ const routes = [
       { path: '/find-turfs', element: <RedirectWithSearch to="/turfs" /> },
       { path: '/turfs/:slug', element: <TurfDetailsPageWrapper /> },
       { path: '/turfs/:slug/book', element: <BookingCheckoutPageWrapper /> },
-      { path: '/route', element: <TurfRoutePageWrapper /> },
-      { path: '/directions', element: <RedirectWithSearch to="/route" /> },
       { path: '/list-turf', element: <ListTurfPage /> },
       { path: '/application-status', element: <ApplicationStatusPage /> },
       {
@@ -67,6 +65,9 @@ const routes = [
       },
     ],
   },
+  // Navigation uses its own full-screen UI, so the public Navbar/top bar and Footer are intentionally omitted.
+  { path: '/route', element: <TurfRoutePageWrapper /> },
+  { path: '/directions', element: <RedirectWithSearch to="/route" /> },
   {
     element: <AuthLayout />,
     children: [

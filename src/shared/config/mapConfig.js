@@ -13,8 +13,8 @@
  */
 
 export const MAPTILER_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAPTILER_API_KEY) ||
-  '3XQZcNvQxsv8JKAmtB1a';
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAPTILER_API_KEY?.trim()) ||
+  '';
 
 // Default Kathmandu Valley center coordinates [lng, lat]
 export const DEFAULT_MAP_CENTER = [85.3331, 27.6915];
