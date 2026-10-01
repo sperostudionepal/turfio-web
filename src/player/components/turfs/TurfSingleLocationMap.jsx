@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// MapLibre GL JS v6 requires an explicit Vite-bundled worker URL in production.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 import {
   ExternalLink,
   Maximize2,
