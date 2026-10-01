@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { RouterProvider } from 'react-router-dom';
-import { router } from './app/routes/router';
+import AppRoutes from './app/routes/router';
+import { getAppContext } from './shared/config/appContext';
 import useAccessibilityStore from './shared/store/useAccessibilityStore';
 import { usePlayerAuth, useOwnerAuth, useSuperadminAuth } from './shared/store/useAuthStore';
 
@@ -9,10 +9,9 @@ export default function App() {
 
   useEffect(() => {
     initializeAccessibility();
-    usePlayerAuth.getState().initialize();
-    useOwnerAuth.getState().initialize();
-    useSuperadminAuth.getState().initialize();
+    const store = { user: usePlayerAuth, partner: useOwnerAuth, superadmin: useSuperadminAuth }[getAppContext()];
+    store?.getState().initialize();
   }, [initializeAccessibility]);
 
-  return <RouterProvider router={router} />;
+  return <AppRoutes />;
 }

@@ -53,28 +53,28 @@ export const ownerApplicationService = {
     if (q) params.set('q', q);
     params.set('page', page);
     params.set('limit', limit);
-    return apiClient.get(`/owner-applications?${params.toString()}`);
+    return apiClient.get(`/owner-applications?${params.toString()}`, { authScope: 'superadmin' });
   },
 
   /**
    * Get single application details
    */
   async get(id) {
-    return apiClient.get(`/owner-applications/${id}`);
+    return apiClient.get(`/owner-applications/${id}`, { authScope: 'superadmin' });
   },
 
   /**
    * Decide on application (approve / reject / needs_changes)
    */
   async decide(id, decision, note) {
-    return apiClient.patch(`/owner-applications/${id}/decision`, { decision, note });
+    return apiClient.patch(`/owner-applications/${id}/decision`, { decision, note }, { authScope: 'superadmin' });
   },
 
   /**
    * Resend the single-use dashboard setup link for an approved application
    */
   async resendSetup(id) {
-    return apiClient.post(`/owner-applications/${id}/resend-setup`);
+    return apiClient.post(`/owner-applications/${id}/resend-setup`, {}, { authScope: 'superadmin' });
   },
 };
 

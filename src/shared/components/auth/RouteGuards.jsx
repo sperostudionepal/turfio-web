@@ -1,9 +1,13 @@
+import { getAppContext } from '../../config/appContext';
+import { PortalRedirect } from '../../../app/routes/PortalRedirects';
 import { Navigate, useLocation } from 'react-router-dom';
 import { usePlayerAuth, useOwnerAuth, useSuperadminAuth } from '../../store/useAuthStore';
 
 export function RequirePlayer({ children }) {
   const { user, isInitializing } = usePlayerAuth();
   const location = useLocation();
+
+  if (getAppContext() !== 'user') return <PortalRedirect app="user" />;
 
   if (isInitializing) {
     return (
@@ -23,6 +27,8 @@ export function RequirePlayer({ children }) {
 export function RequireOwner({ children }) {
   const { user, isInitializing } = useOwnerAuth();
   const location = useLocation();
+
+  if (getAppContext() !== 'partner') return <PortalRedirect app="partner" />;
 
   if (isInitializing) {
     return (
@@ -44,6 +50,8 @@ export function RequireOwner({ children }) {
 export function RequireSuperadmin({ children }) {
   const { user, isInitializing } = useSuperadminAuth();
   const location = useLocation();
+
+  if (getAppContext() !== 'superadmin') return <PortalRedirect app="superadmin" />;
 
   if (isInitializing) {
     return (

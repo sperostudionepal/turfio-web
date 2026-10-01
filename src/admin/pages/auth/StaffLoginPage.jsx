@@ -1,3 +1,4 @@
+import { appUrl } from '../../../shared/config/appContext';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -114,7 +115,7 @@ export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN P
     <div className="min-h-screen w-screen bg-white text-slate-900 font-sans antialiased flex flex-col lg:flex-row selection:bg-lime-300 selection:text-slate-900 relative">
       {/* Top Right Link: New to Turfio? Visit Website */}
       <a
-        href="/"
+        href={appUrl('user', '/')}
         onClick={(e) => {
           if (onHome) {
             e.preventDefault();
@@ -302,7 +303,7 @@ export default function StaffLoginPage({ onLogin, onHome, portalTitle = 'ADMIN P
             {targetRole === 'admin' && (
               <button
                 type="button"
-                onClick={() => navigate('/superadmin/login')}
+                onClick={() => window.location.assign(appUrl('superadmin', '/superadmin/login'))}
                 className="block mx-auto pt-2 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline cursor-pointer"
               >
                 Open Superadmin Portal

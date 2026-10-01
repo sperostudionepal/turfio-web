@@ -7,7 +7,9 @@
     "dev": "vite --port 5173",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.js",
+    "test:bundle": "node scripts/check-app-bundles.js"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

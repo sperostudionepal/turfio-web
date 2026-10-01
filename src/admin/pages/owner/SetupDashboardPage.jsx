@@ -1,3 +1,4 @@
+import { appUrl } from '../../../shared/config/appContext';
 import { useState, useEffect } from 'react';
 import {
   Lock,
@@ -83,7 +84,7 @@ export default function SetupDashboardPage({ onSetupSuccess, onHome }) {
       if (onSetupSuccess) {
         onSetupSuccess(res.data);
       } else {
-        window.location.href = '/';
+        window.location.href = appUrl('user', '/');
       }
     } catch (err) {
       showToast(err.message || 'Account setup failed. Please try again.', 'error');
@@ -150,7 +151,7 @@ export default function SetupDashboardPage({ onSetupSuccess, onHome }) {
               <div className="pt-4">
                 <button
                   type="button"
-                  onClick={onHome || (() => (window.location.href = '/'))}
+                  onClick={onHome || (() => (window.location.href = appUrl('user', '/')))}
                   className="px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all cursor-pointer"
                 >
                   Return to Home

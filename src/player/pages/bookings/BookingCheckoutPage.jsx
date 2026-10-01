@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from '../../../shared/config/appContext';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -883,7 +884,7 @@ export default function BookingCheckoutPage({
   }, [confirmedBookingId, user]);
 
   const bookingPassUrl = confirmedBookingId && bookingPass?.qrToken
-    ? `${window.location.origin}/booking-pass/${encodeURIComponent(confirmedBookingId)}?token=${encodeURIComponent(bookingPass.qrToken)}`
+    ? `${getAppBaseUrl('user')}/booking-pass/${encodeURIComponent(confirmedBookingId)}?token=${encodeURIComponent(bookingPass.qrToken)}`
     : '';
 
   return (
