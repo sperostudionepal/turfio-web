@@ -1,5 +1,6 @@
 import { Outlet, ScrollRestoration, useSearchParams, Navigate } from 'react-router-dom';
-import GlobalWidgets from '../../shared/components/common/GlobalWidgets';
+import { lazy, Suspense } from 'react';
+const GlobalWidgets = lazy(() => import('../../shared/components/common/GlobalWidgets'));
 
 function LegacyQueryHandler({ children }) {
   const [searchParams] = useSearchParams();
@@ -42,12 +43,12 @@ function LegacyQueryHandler({ children }) {
   return children;
 }
 
-export default function RootLayout() {
+export default function RootLayout({ userApp = false }) {
   return (
     <LegacyQueryHandler>
       <ScrollRestoration />
       <Outlet />
-      <GlobalWidgets />
+      {userApp && <Suspense fallback={null}><GlobalWidgets /></Suspense>}
     </LegacyQueryHandler>
   );
 }
