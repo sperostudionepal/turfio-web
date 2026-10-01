@@ -22,7 +22,7 @@
     },
     {
       "source": "/api/:path*",
-      "destination": "https://turfio-server-1.onrender.com/api/:path*"
+      "destination": "https://goalmandu.onrender.com//api/:path*"
     },
     {
       "source": "/(.*)",
