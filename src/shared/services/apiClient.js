@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-import { roleContext } from '../config/appContext';
+import { getAppContext } from '../config/appContext';
+import { requestRoleContext } from '../config/requestScope';
 
 // Browser sessions always use the current host's /api proxy. An absolute API
 // origin would store all three sessions on that API hostname instead.
@@ -23,14 +24,8 @@ const apiClient = axios.create({
 // `withCredentials` above sends the correct portal cookie with API requests.
 // The non-secret role context only helps the server select between admin and superadmin
 // cookies when both portals are open; the server still verifies the JWT and required role.
-const inferAuthScope = (config) => {
-  const explicit = config.authScope || config.headers?.['X-Role-Context'];
-  if (explicit) return explicit === 'owner' ? 'admin' : explicit;
-  return roleContext() || 'player';
-};
-
 apiClient.interceptors.request.use((config) => {
-  config.headers['X-Role-Context'] = inferAuthScope(config);
+  config.headers['X-Role-Context'] = requestRoleContext(config, getAppContext());
   return config;
 }, (error) => Promise.reject(error));
 
