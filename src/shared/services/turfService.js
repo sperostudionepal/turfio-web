@@ -4,6 +4,9 @@ import { transformReview } from './reviewService';
 // Owner/admin calls explicitly select the staff credential namespace. Never infer identity from URL shape.
 const ownerRequest = { authScope: 'owner' };
 
+const TURF_CACHE_TTL_MS = 60_000;
+const turfDetailCache = new Map();
+
 /**
  * Fallback images for venues that don't have custom uploaded photos yet.
  */
@@ -134,15 +137,30 @@ export const turfService = {
   /**
    * Fetch a single turf by ID from backend and transform with adapter
    */
-  async getTurfById(id) {
+  async getTurfById(id, { signal, forceRefresh = false } = {}) {
+    const cacheKey = String(id);
+    const cached = turfDetailCache.get(cacheKey);
+    if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+
     try {
-      const response = await apiClient.get(`/turfs/${id}`);
+      const response = await apiClient.get(`/turfs/${id}`, { signal });
       const item = response?.data || response;
-      return transformTurf(item);
+      const value = transformTurf(item);
+      turfDetailCache.set(cacheKey, { value, expiresAt: Date.now() + TURF_CACHE_TTL_MS });
+      return value;
     } catch (err) {
-      console.warn(`Failed to fetch turf ${id} from backend API:`, err.message);
+      if (err?.code !== 'ERR_CANCELED' && err?.name !== 'CanceledError') {
+        if (import.meta.env.DEV) console.warn(`Failed to fetch turf ${id} from backend API:`, err.message);
+      }
       throw err;
     }
+  },
+
+  invalidateTurfCache(id) {
+    if (id == null) turfDetailCache.clear();
+    else turfDetailCache.delete(String(id));
   },
 
   /**
@@ -297,6 +315,7 @@ export const turfService = {
    */
   async updateTurf(turfId, updates) {
     const response = await apiClient.put(`/turfs/${turfId}`, updates, ownerRequest);
+    turfDetailCache.delete(String(turfId));
     return transformTurf(response?.data || response);
   },
 
@@ -416,6 +435,7 @@ export const turfService = {
    */
   async addCourt(turfId, courtData) {
     const response = await apiClient.post(`/turfs/${turfId}/courts`, courtData, ownerRequest);
+    turfDetailCache.delete(String(turfId));
     return response?.data || response;
   },
 
@@ -424,6 +444,7 @@ export const turfService = {
    */
   async updateCourt(turfId, courtId, courtData) {
     const response = await apiClient.put(`/turfs/${turfId}/courts/${courtId}`, courtData, ownerRequest);
+    turfDetailCache.delete(String(turfId));
     return response?.data || response;
   },
 
@@ -432,6 +453,7 @@ export const turfService = {
    */
   async deleteCourt(turfId, courtId) {
     const response = await apiClient.delete(`/turfs/${turfId}/courts/${courtId}`, ownerRequest);
+    turfDetailCache.delete(String(turfId));
     return response?.data || response;
   },
 
@@ -445,6 +467,7 @@ export const turfService = {
       headers: { 'Content-Type': 'multipart/form-data' },
       authScope: 'owner',
     });
+    turfDetailCache.delete(String(turfId));
     return response?.data || response;
   },
   /**
@@ -460,6 +483,7 @@ export const turfService = {
       authScope: 'owner',
     });
     const item = response?.data || response;
+    turfDetailCache.delete(String(turfId));
     return transformTurf(item);
   },
 
@@ -472,6 +496,7 @@ export const turfService = {
       authScope: 'owner',
     });
     const item = response?.data || response;
+    turfDetailCache.delete(String(turfId));
     return transformTurf(item);
   },
 
@@ -481,6 +506,7 @@ export const turfService = {
   async reorderTurfImages(turfId, images) {
     const response = await apiClient.put(`/turfs/${turfId}/images/reorder`, { images }, ownerRequest);
     const item = response?.data || response;
+    turfDetailCache.delete(String(turfId));
     return transformTurf(item);
   },
 

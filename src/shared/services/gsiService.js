@@ -20,6 +20,11 @@ let isPromptPending = false;
 
 let currentCredentialCallback = null;
 let currentReasonCallback = null;
+const isDev = import.meta.env.DEV;
+const devLog = (...args) => { if (isDev) console.log(...args); };
+const devWarn = (...args) => { if (isDev) console.warn(...args); };
+const devError = (...args) => { if (isDev) console.error(...args); };
+
 
 /**
  * Load Google Identity Services.
@@ -116,12 +121,12 @@ const handleCredentialResponse = (response) => {
   isPromptPending = false;
 
   if (!response?.credential) {
-    console.warn('[GSI] Google returned no credential.');
+    devWarn('[GSI] Google returned no credential.');
     return;
   }
 
   if (!currentCredentialCallback) {
-    console.warn('[GSI] No credential callback registered.');
+    devWarn('[GSI] No credential callback registered.');
     return;
   }
 
@@ -135,12 +140,12 @@ const handleCredentialResponse = (response) => {
  */
 export const initializeGsi = (clientId, callback) => {
   if (!clientId) {
-    console.error('[GSI] Google Client ID is missing.');
+    devError('[GSI] Google Client ID is missing.');
     return false;
   }
 
   if (!window.google?.accounts?.id) {
-    console.warn(
+    devWarn(
       '[GSI] Google Identity Services has not been loaded.'
     );
 
@@ -174,11 +179,11 @@ export const initializeGsi = (clientId, callback) => {
 
     isInitialized = true;
 
-    console.log('[GSI] Google Identity Services initialized.');
+    devLog('[GSI] Google Identity Services initialized.');
 
     return true;
   } catch (error) {
-    console.error(
+    devError(
       '[GSI] Failed to initialize Google Identity Services:',
       error
     );
@@ -195,12 +200,12 @@ export const initializeGsi = (clientId, callback) => {
  */
 export const showOneTapPrompt = (reasonCallback) => {
   if (!window.google?.accounts?.id) {
-    console.warn('[GSI] GSI is not available.');
+    devWarn('[GSI] GSI is not available.');
     return;
   }
 
   if (!isInitialized) {
-    console.warn('[GSI] GSI has not been initialized.');
+    devWarn('[GSI] GSI has not been initialized.');
     return;
   }
 
@@ -241,7 +246,7 @@ export const showOneTapPrompt = (reasonCallback) => {
         const reason =
           notification.getNotDisplayedReason?.() || 'unknown';
 
-        console.warn(
+        devWarn(
           `[GSI] One Tap not displayed: ${reason}`
         );
 
@@ -262,7 +267,7 @@ export const showOneTapPrompt = (reasonCallback) => {
         const reason =
           notification.getSkippedReason?.() || 'unknown';
 
-        console.warn(
+        devWarn(
           `[GSI] One Tap skipped: ${reason}`
         );
 
@@ -283,7 +288,7 @@ export const showOneTapPrompt = (reasonCallback) => {
         const reason =
           notification.getDismissedReason?.() || 'unknown';
 
-        console.warn(
+        devWarn(
           `[GSI] One Tap dismissed: ${reason}`
         );
 
@@ -298,7 +303,7 @@ export const showOneTapPrompt = (reasonCallback) => {
   } catch (error) {
     isPromptPending = false;
 
-    console.warn(
+    devWarn(
       '[GSI] Failed to show One Tap:',
       error
     );
@@ -318,7 +323,7 @@ export const cancelOneTap = () => {
   try {
     window.google.accounts.id.cancel();
   } catch (error) {
-    console.warn(
+    devWarn(
       '[GSI] Failed to cancel One Tap:',
       error
     );
@@ -339,7 +344,7 @@ export const disableAutoSelect = () => {
   try {
     window.google.accounts.id.disableAutoSelect();
   } catch (error) {
-    console.warn(
+    devWarn(
       '[GSI] Failed to disable auto select:',
       error
     );

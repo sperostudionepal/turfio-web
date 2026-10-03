@@ -6,6 +6,15 @@ import { Compass, Users, Car, Star, MapPin, Navigation } from 'lucide-react';
  * The location line sits under the rating; optional `status` renders below it.
  * Extra props (data-*, mouse handlers) are forwarded to the root element.
  */
+/**
+ * @typedef {Object} TurfCardProps
+ * @property {Object} turf
+ * @property {(turf: Object) => void} [onSelect]
+ * @property {(turf: Object) => void} [onDirections]
+ * @property {string|null} [status]
+ * @property {string} [className]
+ */
+/** @param {TurfCardProps & Record<string, unknown>} props */
 export default function TurfCard({ turf, onSelect, onDirections, status = null, className = '', ...rootProps }) {
   return (
     <div
@@ -18,6 +27,10 @@ export default function TurfCard({ turf, onSelect, onDirections, status = null, 
           <img
             src={turf.image}
             alt={turf.title}
+            width="800"
+            height="450"
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
               e.target.onerror = null;

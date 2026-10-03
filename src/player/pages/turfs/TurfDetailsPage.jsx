@@ -28,6 +28,7 @@ import {
   Flag,
   Coffee,
 } from 'lucide-react';
+import { AmenitiesModal, DURATION_OPTIONS, ImageLightbox, StarRating, allTurfs, amenityIconMap } from './TurfDetailsSupport.jsx';
 import { useNavHandlers } from '../../../shared/hooks/useNavHandlers';
 import CustomDropdown from '../../../shared/components/common/CustomDropdown';
 import CustomDatePicker from '../../../shared/components/common/CustomDatePicker';
@@ -37,253 +38,7 @@ import turfService from '../../../shared/services/turfService';
 import { getTodayNepalString, getNepalCurrentDateTime } from '../../../shared/utils/dateTime';
 import { useToast } from '../../../shared/components/common/toastContext';
 import useWishlistStore from '../../../shared/store/useWishlistStore';
-
-/* ─── Amenity Icon Mapping ─── */
-const amenityIconMap = {
-  Parking: Car,
-  WiFi: Wifi,
-  Washrooms: Droplets,
-  'Changing Rooms': Users,
-  Canteen: Coffee,
-  'First Aid': Shield,
-  Floodlights: Zap,
-  'Drinking Water': Droplets,
-  'Locker Rooms': Shield,
-  'Spectator Seating': Users,
-  'Bibs & Balls': Trophy,
-  'Air Conditioning': Zap,
-  'Shower Rooms': Droplets,
-  'Sound System': Zap,
-  'CCTV Security': Shield,
-};
-
-/* ─── Amenity Categories ─── */
-const amenityCategories = [
-  {
-    category: 'Field & Game',
-    items: ['Floodlights', 'Bibs & Balls', 'Spectator Seating', 'CCTV Security'],
-  },
-  {
-    category: 'Player Comfort',
-    items: ['Changing Rooms', 'Locker Rooms', 'Shower Rooms', 'Drinking Water', 'Washrooms'],
-  },
-  {
-    category: 'Facility & Tech',
-    items: ['Parking', 'WiFi', 'Canteen', 'First Aid'],
-  },
-];
-
-/* ─── Star Rating Component ─── */
-function StarRating({ rating, size = 'h-4 w-4' }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`${size} ${
-            i < Math.floor(rating)
-              ? 'fill-amber-400 text-amber-400'
-              : i < rating
-                ? 'fill-amber-400/50 text-amber-400'
-                : 'fill-slate-200 text-slate-200'
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Image Gallery Lightbox ─── */
-function ImageLightbox({ images, currentIndex, onClose, onPrev, onNext, onSelect }) {
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') onPrev();
-      if (e.key === 'ArrowRight') onNext();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, onPrev, onNext]);
-
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black/95 p-4 md:p-8 backdrop-blur-md animate-fadeIn">
-      {/* Top Bar */}
-      <div className="flex w-full max-w-7xl items-center justify-between text-white">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-wider text-slate-400">
-            PHOTO {currentIndex + 1} OF {images.length}
-          </span>
-        </div>
-        <button
-          onClick={onClose}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/25 hover:rotate-90 cursor-pointer"
-          aria-label="Close fullscreen gallery"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Main Preview Area */}
-      <div className="relative flex w-full max-w-6xl flex-1 items-center justify-center py-4">
-        <button
-          onClick={onPrev}
-          className="absolute left-2 md:left-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 cursor-pointer"
-          aria-label="Previous image"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-
-        <img
-          src={images[currentIndex]}
-          alt={`Arena photo ${currentIndex + 1}`}
-          className="max-h-[72vh] max-w-full rounded-2xl object-contain shadow-2xl transition-all duration-300 select-none"
-        />
-
-        <button
-          onClick={onNext}
-          className="absolute right-2 md:right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 cursor-pointer"
-          aria-label="Next image"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-      </div>
-
-      {/* Thumbnails Row */}
-      <div className="flex w-full max-w-4xl items-center justify-center gap-2 overflow-x-auto py-2">
-        {images.map((img, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => onSelect(idx)}
-            className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-all cursor-pointer ${
-              idx === currentIndex ? 'scale-105 opacity-100 shadow-md ring-2 ring-lime-400' : 'opacity-40 hover:opacity-80'
-            }`}
-          >
-            <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Amenities Full Modal ─── */
-function AmenitiesModal({ isOpen, onClose, amenities }) {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl"
-      >
-        <div className="flex items-center justify-between pb-5">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">All Venue Amenities & Facilities</h3>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">Everything available on-site for players and spectators</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-6">
-          {amenityCategories.map((group) => {
-            const activeItems = group.items.filter((item) => amenities.includes(item));
-            if (activeItems.length === 0) return null;
-            return (
-              <div key={group.category} className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{group.category}</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {activeItems.map((item) => {
-                    const Icon = amenityIconMap[item] || CheckCircle2;
-                    return (
-                      <div
-                        key={item}
-                        className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 text-slate-800"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-lime-700">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{item}</p>
-                          <p className="text-xs text-slate-500">Free access with booking</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-8 pt-4">
-          <button
-            onClick={onClose}
-            className="w-full rounded-full bg-slate-900 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-800 cursor-pointer"
-          >
-            Got it, Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Mock Similar Turfs ─── */
-const allTurfs = [
-  {
-    id: 1,
-    title: 'Great Himalayan Futsal',
-    type: 'Indoor',
-    size: '7v7',
-    rating: 4.5,
-    reviews: 321,
-    price: 'NPR 800/hr',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-    location: 'Hattiban, Lalitpur',
-  },
-  {
-    id: 2,
-    title: 'Prime Futsal Kathmandu',
-    type: 'Indoor',
-    size: '7v7',
-    rating: 4.2,
-    reviews: 511,
-    price: 'NPR 1,200/hr',
-    image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=800&q=80',
-    location: 'Baneshwor, Kathmandu',
-  },
-  {
-    id: 3,
-    title: 'The Ultimate Kick-Off',
-    type: 'Outdoor',
-    size: '7v7',
-    rating: 4.1,
-    reviews: 91,
-    price: 'NPR 900/hr',
-    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
-    location: 'Suryabinayak, Bhaktapur',
-  },
-];
-
-
-
-const DURATION_OPTIONS = [
-  { value: 1, label: '1 Hour' },
-  { value: 2, label: '2 Hours' },
-  { value: 3, label: '3 Hours' },
-  { value: 4, label: '4 Hours' },
-  { value: 5, label: '5 Hours' },
-  { value: 6, label: '6 Hours' },
-];
+import { assertFunctionProp, assertObjectProp } from '../../../shared/utils/componentContracts';
 
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT (BORDERLESS STYLING)
@@ -297,6 +52,10 @@ export default function TurfDetailsPage({
   onNavigateRoute,
   user,
 }) {
+  assertObjectProp('TurfDetailsPage', 'turf', turf);
+  assertFunctionProp('TurfDetailsPage', 'onBookNow', onBookNow);
+  assertFunctionProp('TurfDetailsPage', 'onViewTurfDetails', onViewTurfDetails);
+  assertFunctionProp('TurfDetailsPage', 'onNavigateRoute', onNavigateRoute);
   const { onHome: defaultOnHome, onFindTurfs: defaultOnFindTurfs } = useNavHandlers();
   const handleHome = onHome || defaultOnHome;
   const handleFindTurfs = onFindTurfs || defaultOnFindTurfs;
@@ -906,6 +665,7 @@ export default function TurfDetailsPage({
             <img
               src={gallery[0]}
               alt={`${turf.title} main pitch`}
+              width="1280" height="800" fetchPriority="high" decoding="async"
               className="h-full w-full object-cover transition-opacity duration-300"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
@@ -927,6 +687,10 @@ export default function TurfDetailsPage({
                 <img
                   src={imgSrc}
                   alt={`${turf.title} view ${index + 1}`}
+                  width="720"
+                  height="430"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover transition-opacity duration-300"
                 />
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -950,6 +714,7 @@ export default function TurfDetailsPage({
           <img
             src={gallery[activeImageIndex] || gallery[0]}
             alt={`${turf.title} mobile preview`}
+            width="1280" height="800" decoding="async"
             onClick={() => openLightbox(activeImageIndex)}
             className="h-full w-full object-cover"
           />
@@ -1166,6 +931,7 @@ export default function TurfDetailsPage({
                             <img
                               src={courtImg}
                               alt={court.name}
+                              width="192" height="160" loading="lazy" decoding="async"
                               className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           </div>
@@ -1237,6 +1003,7 @@ export default function TurfDetailsPage({
                         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
                       }
                       alt="Venue Owner"
+                      width="52" height="52" loading="lazy" decoding="async"
                       className="h-12 w-12 sm:h-13 sm:w-13 rounded-full object-cover ring-2 ring-white shadow-xs"
                     />
                     <BadgeCheck
@@ -1352,11 +1119,11 @@ export default function TurfDetailsPage({
               {ratingSummary.count > 0 ? (
                 <div className="flex flex-col items-center justify-center text-center">
                   <div className="flex items-center justify-center gap-6 mb-2">
-                    <img src="/grain_left.png" alt="left laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                    <img src="/grain_left.png" alt="left laurel" width="104" height="104" loading="lazy" decoding="async" className="h-24 sm:h-26 w-auto object-contain" />
                     <span className="text-[80px] font-extrabold text-slate-900 leading-none tracking-tight">
                       {ratingSummary.rating.toFixed(1)}
                     </span>
-                    <img src="/grain_right.png" alt="right laurel" className="h-24 sm:h-26 w-auto object-contain" />
+                    <img src="/grain_right.png" alt="right laurel" width="104" height="104" loading="lazy" decoding="async" className="h-24 sm:h-26 w-auto object-contain" />
                   </div>
                   <StarRating rating={ratingSummary.rating} size="h-5 w-5" />
                   <h3 className="text-2xl font-bold text-slate-900 tracking-tight mt-2">Players' favorite</h3>
@@ -1437,6 +1204,7 @@ export default function TurfDetailsPage({
                             <img
                               src={review.avatar}
                               alt={review.name}
+                              width="96" height="96" loading="lazy" decoding="async"
                               className="h-12 w-12 rounded-full object-cover ring-2 ring-slate-100 shrink-0 shadow-2xs"
                             />
                           ) : (
@@ -1486,6 +1254,7 @@ export default function TurfDetailsPage({
                                 <img
                                   src={imgUrl}
                                   alt={`Review photo by ${review.name}`}
+                                  width="192" height="192" loading="lazy" decoding="async"
                                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 />
                               </button>
@@ -1693,6 +1462,7 @@ export default function TurfDetailsPage({
                       <img
                         src={t.image}
                         alt={t.title}
+                        width="800" height="450" loading="lazy" decoding="async"
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           e.target.onerror = null;
@@ -1842,6 +1612,7 @@ export default function TurfDetailsPage({
             <img
               src={previewReviewImage}
               alt="Review attachment"
+              width="1200" height="900" decoding="async"
               className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain"
             />
           </div>

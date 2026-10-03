@@ -20,23 +20,25 @@ export function useTurf() {
     }
 
     let isMounted = true;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
 
-    turfService.getTurfById(idOrSlug)
+    turfService.getTurfById(idOrSlug, { signal: controller.signal })
       .then((data) => {
         if (!isMounted) return;
         setTurf(data);
         setLoading(false);
       })
       .catch((err) => {
-        if (!isMounted) return;
+        if (!isMounted || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
         setError(err.message || 'Failed to load turf details');
         setLoading(false);
       });
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, [idOrSlug]);
 
