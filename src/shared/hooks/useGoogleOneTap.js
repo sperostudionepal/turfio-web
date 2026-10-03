@@ -110,6 +110,7 @@ export function useGoogleOneTap() {
         );
 
         showOneTapPrompt((notification) => {
+          if (!import.meta.env.DEV) return;
           if (notification.isNotDisplayed()) {
             console.log(
               '[GoogleOneTap] One Tap not displayed reason:',
@@ -128,10 +129,7 @@ export function useGoogleOneTap() {
           }
         });
       } catch (error) {
-        console.error(
-          '[GoogleOneTap] Failed to initialize One Tap:',
-          error
-        );
+        if (import.meta.env.DEV) console.error('[GoogleOneTap] Failed to initialize One Tap:', error);
       }
     };
 
